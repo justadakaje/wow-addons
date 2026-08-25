@@ -1,0 +1,39 @@
+name: Validate
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  lua-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Lua
+        run: sudo apt-get update && sudo apt-get install -y lua5.1
+
+      - name: Check Lua syntax
+        run: |
+          set -e
+          status=0
+          while IFS= read -r -d '' file; do
+            if ! luac5.1 -p "$file"; then
+              echo "::error file=$file::Lua syntax check failed"
+              status=1
+            fi
+          done < <(find addons -type f -name '*.lua' -print0)
+          exit $status
+
+      - name: Check .toc files declare a known Interface version
+        run: |
+          set -e
+          status=0
+          while IFS= read -r -d '' toc; do
+            if ! grep -qE '^## Interface: ' "$toc"; then
+              echo "::error file=$toc::Missing ## Interface: line"
+              status=1
+            fi
+          done < <(find addons -type f -name '*.toc' -print0)
+          exit $status

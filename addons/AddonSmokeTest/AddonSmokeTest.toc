@@ -1,0 +1,7 @@
+## Interface: 20506
+## Title: AddonSmokeTest
+## Notes: Minimal addon confirming the dev/link/reload loop works end to end.
+## Author: justadakaje
+## Version: 1.0.0
+
+AddonSmokeTest.lua

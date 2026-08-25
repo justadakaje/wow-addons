@@ -1,0 +1,11 @@
+## Interface: 20506
+## Title: GoldFinder
+## Notes: Auction House tab surfacing raw-material flips and profitable known-recipe crafts.
+## Author: justadakaje
+## Version: 0.1.0
+## RequiredDeps: Auctionator
+## SavedVariables: GOLDFINDER_CONFIG
+
+Source\Mixin.lua
+Source\Tab.xml
+Source\Register.lua
