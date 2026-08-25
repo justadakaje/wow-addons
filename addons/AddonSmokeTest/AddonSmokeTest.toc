@@ -1,0 +1,7 @@
+## Interface: 20506
+## Title: Addon Smoke Test
+## Notes: Minimal proof-of-life addon
+## Author: justadakaje
+## Version: 0.0.1
+
+AddonSmokeTest.lua
