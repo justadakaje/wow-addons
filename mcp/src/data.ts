@@ -15,6 +15,8 @@ export interface Param {
   Type?: string;
   Nilable?: boolean;
   Default?: unknown;
+  /** Set on enumeration members (ForeverProbe 0.7.0+). */
+  EnumValue?: number | string;
 }
 
 export interface ApiFunction {

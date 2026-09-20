@@ -57,7 +57,12 @@ export function tableBlock(tbl: ApiTable): string {
     lines.push("```");
   } else if (tbl.Fields?.length) {
     lines.push("```lua");
-    for (const f of tbl.Fields) lines.push(param(f));
+    // An enumeration's fields are all typed as the enum itself, so rendering
+    // them as `Name: Type` just repeats the heading on every line.
+    const bare = tbl.Type === "Enumeration";
+    for (const f of tbl.Fields) {
+      lines.push(bare ? `${f.Name ?? "?"}${f.EnumValue !== undefined ? ` = ${String(f.EnumValue)}` : ""}` : param(f));
+    }
     lines.push("```");
   } else {
     lines.push("_No values or fields recorded._");

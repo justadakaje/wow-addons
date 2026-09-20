@@ -385,7 +385,10 @@ server.registerTool(
     }
 
     const parts = [`# ${name}`];
-    if (table) parts.push(tableBlock(table.table));
+    // For an enumeration the runtime values are a strict superset of the
+    // documented member list, so showing both just prints the names twice.
+    const supersededByRuntime = Boolean(values) && table?.table.Type === "Enumeration";
+    if (table && !supersededByRuntime) parts.push(tableBlock(table.table));
 
     // Runtime values beat documented ones: this is what the client compares
     // against, and Blizzard's docs name enum members without their numbers.
@@ -416,15 +419,19 @@ server.registerTool(
             `\`reference/api.json\` to populate enum and structure definitions.`,
       );
     }
-    const shown = refs.slice(0, 30);
-    parts.push(
-      "",
-      `## Used by (${refs.length})`,
-      "",
-      shown.map((r) => `- \`${r.qualified}\` (${r.role} \`${r.param.Name ?? "?"}\`)`).join("\n"),
-      refs.length > shown.length ? `\n_…and ${refs.length - shown.length} more._` : "",
-    );
-    return md(parts.join("\n"));
+    // An empty "Used by (0)" section is noise; a type can be reachable through
+    // the global Enum table without appearing in any documented signature.
+    if (refs.length) {
+      const shown = refs.slice(0, 30);
+      parts.push(
+        "",
+        `## Used by (${refs.length})`,
+        "",
+        shown.map((r) => `- \`${r.qualified}\` (${r.role} \`${r.param.Name ?? "?"}\`)`).join("\n"),
+        refs.length > shown.length ? `\n_…and ${refs.length - shown.length} more._` : "",
+      );
+    }
+    return md(parts.filter((p) => p !== "").join("\n"));
   },
 );
 
