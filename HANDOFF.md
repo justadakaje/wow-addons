@@ -25,9 +25,15 @@ Last updated 2026-09-20, against WoW: Forever beta build 69913.
 - Git: `https://github.com/justadakaje/wow-addons`, MIT, default branch `master`.
   Branch **`forever-probe` is one commit ahead of `master` and unpushed**
   (`70d2e9e`). The older handoff claimed the repo was uncommitted; it was not.
-- **`wow-api-mcp` is NOT attached in Claude Code.** Checked by direct lookup of
-  all seven tool names — none resolve. `AGENTS.md` requires saying so rather
-  than guessing, so say so. See Open questions for why its design should change.
+- **The `wow-api` MCP server IS attached**, and answers from this client's own
+  capture. Verified 2026-09-20: `lookup_api`, `search_api`, `get_enum`,
+  `get_event`, `get_namespace`, `get_widget_methods` and `list_deprecated` all
+  resolve. Every response footers `WoW: Forever 1.60.1 (build 69913), Interface
+  16001` — the same build as the ForeverProbe dump, so it is not a pre-1.60.1
+  public scrape. Coverage spot-checked on `C_AuctionHouse` and `C_Housing` (62
+  documented functions). This supersedes the previous handoff's "NOT attached",
+  which was true when written and is no longer. **For any single name prefer
+  `lookup_api` over `list_deprecated`** — see Legacy globals for why.
 
 ## Goal
 
@@ -60,10 +66,22 @@ All from build 69913 unless noted.
 
 ### Legacy globals are gone
 
-`GetItemInfo`, `GetSpellInfo`, `UnitAura`, `QueryAuctionItems`,
-`GetContainerItemInfo`, `GetContainerNumSlots`, `GetAddOnMetadata`,
-`GetNumAddOns`, `IsAddOnLoaded` and `LoadAddOn` all resolve to `nil`. Only the
-`C_*` forms exist. Any Classic-era addon leaning on the old globals breaks.
+`GetItemInfo`, `GetSpellInfo`, `GetTradeSkillInfo`, `UnitAura`,
+`QueryAuctionItems`, `GetContainerItemInfo`, `GetContainerNumSlots`,
+`GetAddOnMetadata`, `GetNumAddOns`, `IsAddOnLoaded` and `LoadAddOn` all resolve
+to `nil`. Only the `C_*` forms exist. Any Classic-era addon leaning on the old
+globals breaks.
+
+`GetTradeSkillInfo` came from the MCP's `list_deprecated`, not the original
+ForeverProbe walk — it was absent from this list until 2026-09-20.
+
+**`list_deprecated` is not exhaustive. Do not treat it as the authority.** It
+returns 10 removed globals and omits `LoadAddOn`, which ForeverProbe verified as
+`nil` and which `lookup_api("LoadAddOn")` independently confirms: a bare-name
+lookup returns only `C_AddOns.LoadAddOn`, no global. Two sources, each with a
+hole the other fills. For a specific name `lookup_api` is authoritative —
+absence from its output means the symbol does not exist on this client. Use
+`list_deprecated` as a starting list, never as a clean bill of health.
 
 `IsSpellKnown` survives as a global while `GetSpellInfo` does not. That
 inconsistency is unguessable and is the whole argument for probing over
@@ -73,6 +91,12 @@ Surface: 269 `C_*` namespaces, 4,912 namespaced functions, 5,889 global
 functions. Modern systems are all present — `C_Garrison` (227),
 `C_TransmogCollection`, `C_Commentator`, `C_Housing` (63). Modern engine,
 Classic content.
+
+Those are members found by walking `_G`, which is not the same measure the MCP
+reports: `get_namespace("C_Housing")` gives **62 documented functions** against
+the 63 members counted here. The one-item gap has not been diffed and is
+unexplained. Expect "exists on the client" and "is documented" to diverge
+slightly rather than assuming either number is wrong.
 
 ### There is a full API reference, and we have it
 
@@ -226,11 +250,13 @@ No Lua interpreter is installed on this machine, and there is no C compiler.
 
 1. **Does Auctionator actually break at an auctioneer on Forever?** Inferred, not
    observed. Decides upstream-vs-fork for the whole goal.
-2. **What should the WoW MCP server be, now?** The original plan was a lookup
-   service over scraped API data. That is the wrong shape for Forever: every
-   public source predates 1.60.1 and would return confident, wrong answers. We
-   now have 408 systems / 6,577 signatures generated from the client itself.
-   Build it on that.
+2. **~~What should the WoW MCP server be, now?~~ Resolved 2026-09-20.** It was
+   built on the client's own capture and is attached as `wow-api`; the
+   scraped-public-data shape was correctly rejected. What is left is a defect,
+   not a design question: `list_deprecated` returns an incomplete removed-list
+   (see Legacy globals). Reconcile it against the ForeverProbe dump so the two
+   sources agree. Keep the numbering in this section stable — Next steps
+   references these items by number.
 3. **Is the housing market live on the beta?** `C_Housing.IsHousingMarketEnabled`,
    `IsHousingMarketShopEnabled`, `IsHousingMarketCartFullRemoveEnabled` and
    `C_HousingCatalog.GetCatalogEntryRefundTimeStampByRecordID` describe an
