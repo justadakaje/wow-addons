@@ -1,0 +1,10 @@
+## Interface: 16001
+## Title: Forever Probe
+## Notes: Dumps the live 1.60.1 API surface and records events to SavedVariables. Read-only; no game state is modified.
+## Author: justadakaje
+## Version: 0.5.0
+## IconTexture: Interface\ICONS\INV_Misc_Spyglass_02
+## SavedVariables: ForeverProbeDB, ForeverProbeEventsDB
+
+ForeverProbe.lua
+Events.lua

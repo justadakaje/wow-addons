@@ -1,4 +1,4 @@
-## Interface: 20506
+## Interface: 20506, 16001
 ## Title: Addon Smoke Test
 ## Notes: Minimal proof-of-life addon
 ## Author: justadakaje
