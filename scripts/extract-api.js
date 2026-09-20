@@ -242,6 +242,13 @@ fs.writeFileSync(path.join(outDir, 'api.json'), JSON.stringify({
   build: build,
   generated: new Date().toISOString().slice(0, 10),
   counts: { systems: rows.length, functions: totalFns, events: totalEvs },
+  // Presence of legacy globals, verified against the live client. Blizzard's
+  // documentation carries no deprecation metadata, so whether a name resolves
+  // is the only reliable signal -- and it is what list_deprecated reports.
+  watchlist: db.watchlist || {},
+  // Enum/structure definitions. Empty for captures from ForeverProbe < 0.6.0.
+  tables: Array.isArray(doc.tables) ? doc.tables : [],
+  undocumented: undocumented,
   systems: systems,
 }));
 

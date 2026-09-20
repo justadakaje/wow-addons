@@ -8,7 +8,7 @@
 -- Read-only. Enumerates _G, reads Blizzard's own documentation tables if they
 -- exist, and calls GetBuildInfo(). Changes no game state.
 
-local SCHEMA_VERSION = 3
+local SCHEMA_VERSION = 4
 
 -- The documentation framework loads without its data: v2 found every
 -- APIDocumentation method present but `systems` empty. On modern clients the
@@ -71,6 +71,42 @@ local function SnapshotGlobals()
 
   table.sort(globalFunctions)
   return namespaces, globalFunctions, namespaceCount, memberCount
+end
+
+-- Enum and structure definitions live in APIDocumentation.tables, separate from
+-- the per-system Functions/Events. Without them a signature like
+-- `reason: InvalidPlotScreenshotReason` names a type nothing defines.
+local function CopyTables(list)
+  if type(list) ~= "table" then return nil end
+  local out = {}
+  for i = 1, #list do
+    local t = list[i]
+    if type(t) == "table" and t.Name then
+      local entry = { Name = t.Name, Type = t.Type }
+      if type(t.Values) == "table" then
+        local values = {}
+        for j = 1, #t.Values do
+          local v = t.Values[j]
+          if type(v) == "table" and v.Name then
+            values[#values + 1] = { Name = v.Name, EnumValue = v.EnumValue, Value = v.Value }
+          end
+        end
+        entry.Values = values
+      end
+      if type(t.Fields) == "table" then
+        local fields = {}
+        for j = 1, #t.Fields do
+          local f = t.Fields[j]
+          if type(f) == "table" and f.Name then
+            fields[#fields + 1] = { Name = f.Name, Type = f.Type, Nilable = f.Nilable, Default = f.Default }
+          end
+        end
+        entry.Fields = fields
+      end
+      out[#out + 1] = entry
+    end
+  end
+  return out
 end
 
 -- Copies the documented fields off an argument, return value, or event payload.
@@ -182,13 +218,21 @@ local function HarvestDocumentation()
     end
   end
 
+  local tables = CopyTables(rawget(docs, "tables"))
+
   return {
     available = true,
     harvested = true,
     shape = shape,
     loads = loads,
     systems = out,
-    counts = { systems = #out, functions = fnCount, events = evCount },
+    tables = tables,
+    counts = {
+      systems = #out,
+      functions = fnCount,
+      events = evCount,
+      tables = tables and #tables or 0,
+    },
   }
 end
 
@@ -255,8 +299,9 @@ local function Report()
   print(("  Global functions: %d"):format(fnCount))
 
   if docs and docs.harvested and docs.counts then
-    print(("|cff33ff99  API docs: %d systems, %d functions, %d events -- signatures captured|r")
-      :format(docs.counts.systems, docs.counts.functions, docs.counts.events))
+    print(("|cff33ff99  API docs: %d systems, %d functions, %d events, %d tables|r")
+      :format(docs.counts.systems, docs.counts.functions, docs.counts.events,
+              docs.counts.tables or 0))
   else
     print(("|cffff9900  API docs: unavailable -- %s|r"):format((docs and docs.reason) or "unknown"))
   end
