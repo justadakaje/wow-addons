@@ -116,6 +116,48 @@ under `documentation`.
 **Prefer reading these signatures over calling functions to find out.** That is
 not a style preference — see the crash in Corrections.
 
+### 408 vs 397 vs 394 — all three are right, and the gap hides a bug
+
+Three system counts are in circulation. They measure different things:
+
+- **408** — raw documented system entries (`api.json` `systems[]`), and what
+  `get_namespace()` with no argument lists. The figure quoted above.
+- **397** — `api.json` `counts.systems`, and the figure in commit `21ef99b`.
+  It is 408 minus **11 entries documenting neither a function nor an event**
+  (`AccessibilityOptions`, `BagIndexConstants`, `CursorUtil`, `Platform`,
+  `Pony`, `TraitConfig`, plus five `FrameAPI`/`SimpleAnim` shells), which
+  `extract-api.js:140` skips.
+- **394** — `.md` files in `reference/api/`. It is 397 minus **3 lost to
+  filename collisions**.
+
+That last subtraction is a defect, not a definition. **System and namespace are
+not 1:1** — three pairs of documented systems share one namespace:
+
+| namespace | documented systems | real functions |
+|---|---|---|
+| `C_PartyInfo` | `PartyInfo` (53 fns, 32 ev) + `PartyInfoSystemStatus` (2, 1) | 55 |
+| `C_PlayerInfo` | `PlayerInfo` (33) + `PlayerLocationInfo` (7) | 40 |
+| `C_SocialQueue` | `SocialQueue` (8, 2) + `SocialQueueSystemStatus` (2, 1) | 10 |
+
+`extract-api.js:189` names each file `Namespace || Name`, so the second write
+clobbers the first: `reference/api/C_PartyInfo.md` documents **2** functions
+where the client has **55**.
+
+**The same shadowing is in the MCP server.** `mcp/src/data.ts:128` does
+`bySystem.set(title.toLowerCase(), sys)` — last write wins, so
+`get_namespace("C_PartyInfo")` returns the 2-function entry and hides 53.
+
+**Scope, verified 2026-09-20.** `lookup_api` and `search_api` are *not*
+affected: both index every function of every entry, so
+`lookup_api("C_PartyInfo.ConvertToRaid")` and `search_api("ConvertToRaid")`
+each resolve the shadowed entry. Only `get_namespace` under-reports, and only
+for those three. "Absent from `lookup_api` means it does not exist" still
+holds. "Absent from `get_namespace` means it does not exist" does not.
+
+Fix is one line in each: key by namespace and merge entries instead of
+replacing. Not done — it needs a `mcp/dist` rebuild and a `reference/`
+regenerate from the 2.1 MB dump.
+
 ### Campsite is a rest area, not Housing
 
 Three independent signals: no housing event fired during a campsite visit,
