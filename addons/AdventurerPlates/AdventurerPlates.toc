@@ -1,0 +1,12 @@
+## Interface: 16001
+## Title: Adventurer Plates
+## Notes: An Adventurer Plate for your character -- portrait, playstyle, active hours and motto. Inspired by FFXIV's Adventurer Plate.
+## Author: justadakaje
+## Version: 0.1.0-probe
+## IconTexture: Interface\ICONS\INV_Misc_Note_01
+## SavedVariables: AdventurerPlatesDB
+## X-Target-Client: WoW: Forever (camelot)
+## X-Tested-Build: 1.60.1.69913
+
+Core.lua
+Probe.lua

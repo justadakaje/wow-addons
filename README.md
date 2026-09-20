@@ -32,7 +32,9 @@ wow-addons/
 
 | Addon | Client(s) | Status |
 | --- | --- | --- |
-| AddonSmokeTest | Classic Era (Interface 20506) | Proof-of-life, working |
+| AddonSmokeTest | Classic Era (20506), Forever (16001) | Proof-of-life, working |
+| ForeverProbe | Forever (16001) | Read-only API/event capture, working |
+| AdventurerPlates | Forever (16001) | v0.1.0-probe — capability probe; plate UI not built yet |
 
 ## Related repos
 
