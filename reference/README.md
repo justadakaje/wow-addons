@@ -6,7 +6,7 @@ Harvested from the running client by `addons/ForeverProbe`, rendered by
 `scripts/extract-api.js`. Forever has no public API reference; this is
 Blizzard's own in-game documentation, extracted.
 
-- **397** systems
+- **394** systems
 - **6577** documented functions
 - **1802** documented events
 - **627** namespaced functions that exist but are **not** documented
@@ -202,8 +202,7 @@ node scripts/extract-api.js "<WoW>/WTF/Account/<id>/SavedVariables/ForeverProbe.
 | [C_NeighborhoodInitiative](api/C_NeighborhoodInitiative.md) | 20 | 6 |
 | [C_NewItems](api/C_NewItems.md) | 3 | 0 |
 | [C_PaperDollInfo](api/C_PaperDollInfo.md) | 21 | 23 |
-| [C_PartyInfo](api/C_PartyInfo.md) | 53 | 32 |
-| [C_PartyInfo](api/C_PartyInfo.md) | 2 | 1 |
+| [C_PartyInfo](api/C_PartyInfo.md) | 55 | 33 |
 | [C_PartyPose](api/C_PartyPose.md) | 4 | 1 |
 | [C_PerksActivities](api/C_PerksActivities.md) | 10 | 4 |
 | [C_PerksProgram](api/C_PerksProgram.md) | 24 | 15 |
@@ -214,8 +213,7 @@ node scripts/extract-api.js "<WoW>/WTF/Account/<id>/SavedVariables/ForeverProbe.
 | [C_Ping](api/C_Ping.md) | 6 | 1 |
 | [C_PingSecure](api/C_PingSecure.md) | 19 | 2 |
 | [C_PlayerChoice](api/C_PlayerChoice.md) | 7 | 2 |
-| [C_PlayerInfo](api/C_PlayerInfo.md) | 33 | 0 |
-| [C_PlayerInfo](api/C_PlayerInfo.md) | 7 | 0 |
+| [C_PlayerInfo](api/C_PlayerInfo.md) | 40 | 0 |
 | [C_PlayerInteractionManager](api/C_PlayerInteractionManager.md) | 8 | 2 |
 | [C_PlayerMentorship](api/C_PlayerMentorship.md) | 5 | 2 |
 | [C_ProfSpecs](api/C_ProfSpecs.md) | 27 | 2 |
@@ -245,8 +243,7 @@ node scripts/extract-api.js "<WoW>/WTF/Account/<id>/SavedVariables/ForeverProbe.
 | [C_SecureTransfer](api/C_SecureTransfer.md) | 11 | 5 |
 | [C_SettingsUtil](api/C_SettingsUtil.md) | 2 | 2 |
 | [C_SkillInfo](api/C_SkillInfo.md) | 8 | 1 |
-| [C_SocialQueue](api/C_SocialQueue.md) | 8 | 2 |
-| [C_SocialQueue](api/C_SocialQueue.md) | 2 | 1 |
+| [C_SocialQueue](api/C_SocialQueue.md) | 10 | 3 |
 | [C_SocialRestrictions](api/C_SocialRestrictions.md) | 9 | 3 |
 | [C_SocialUI](api/C_SocialUI.md) | 1 | 1 |
 | [C_Soulbinds](api/C_Soulbinds.md) | 39 | 13 |

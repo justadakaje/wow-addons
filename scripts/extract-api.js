@@ -132,7 +132,31 @@ const stamp = 'WoW: Forever ' + (build.version || '?') +
 const documented = new Set();
 const rows = [];
 
+// Two documented systems can share one namespace: C_PartyInfo is documented as
+// both PartyInfo (53 functions) and PartyInfoSystemStatus (2). Naming each file
+// after the namespace let the second write clobber the first, so
+// reference/api/C_PartyInfo.md described 2 functions where the client has 55.
+// Collapse onto the namespace before emitting anything.
+const mergedSystems = new Map();
 for (const sys of systems) {
+  const key = sys.Namespace || sys.Name || 'Global';
+  const prev = mergedSystems.get(key);
+  if (!prev) {
+    mergedSystems.set(key, {
+      Name: sys.Name,
+      Namespace: sys.Namespace || '',
+      Functions: (sys.Functions || []).slice(),
+      Events: (sys.Events || []).slice(),
+    });
+    continue;
+  }
+  const haveFn = new Set(prev.Functions.map((f) => f.Name));
+  for (const f of sys.Functions || []) if (!haveFn.has(f.Name)) prev.Functions.push(f);
+  const haveEv = new Set(prev.Events.map((e) => e.Name));
+  for (const e of sys.Events || []) if (!haveEv.has(e.Name)) prev.Events.push(e);
+}
+
+for (const sys of mergedSystems.values()) {
   const ns = sys.Namespace || '';
   const title = ns || sys.Name || 'Global';
   const fns = (sys.Functions || []).slice().sort((a, b) => a.Name.localeCompare(b.Name));

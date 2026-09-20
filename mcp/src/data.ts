@@ -59,6 +59,35 @@ export interface ApiFile {
   systems: ApiSystem[];
 }
 
+/** Two documented systems can share one namespace: C_PartyInfo is documented
+ *  as both PartyInfo (53 functions) and PartyInfoSystemStatus (2). Merge them
+ *  instead of letting one replace the other. Names are disjoint across all
+ *  three real collisions; dedupe anyway so a future capture cannot double an
+ *  entry. */
+function mergeNamed<T extends { Name?: string }>(...groups: (T[] | undefined)[]): T[] {
+  const out: T[] = [];
+  const seen = new Set<string>();
+  for (const group of groups) {
+    for (const item of group ?? []) {
+      const key = (item?.Name ?? "").toLowerCase();
+      if (key && seen.has(key)) continue;
+      if (key) seen.add(key);
+      out.push(item);
+    }
+  }
+  return out;
+}
+
+function mergeSystems(a: ApiSystem, b: ApiSystem): ApiSystem {
+  return {
+    Name: a.Name,
+    Namespace: a.Namespace || b.Namespace,
+    Functions: mergeNamed(a.Functions, b.Functions),
+    Events: mergeNamed(a.Events, b.Events),
+    Tables: mergeNamed(a.Tables, b.Tables),
+  };
+}
+
 export interface FunctionHit {
   system: string;
   namespace: string;
@@ -122,9 +151,21 @@ export class ApiIndex {
       if (tbl?.Name) this.tables.set(tbl.Name.toLowerCase(), { system: "(global)", table: tbl });
     }
 
+    // Collapse systems onto their namespace before indexing. Setting bySystem
+    // straight from the raw list let a second entry replace the first, which
+    // hid 53 of C_PartyInfo's 55 functions from get_namespace.
+    const merged = new Map<string, ApiSystem>();
     for (const sys of this.file.systems) {
       const title = sys.Namespace || sys.Name || "";
       if (!title) continue;
+      const key = title.toLowerCase();
+      const prev = merged.get(key);
+      merged.set(key, prev ? mergeSystems(prev, sys) : sys);
+    }
+
+    for (const sys of merged.values()) {
+      const title = sys.Namespace || sys.Name || "";
+      // Both keys must point at the SAME object: searchSystems dedupes by identity.
       this.bySystem.set(title.toLowerCase(), sys);
       // C_Housing is also reachable as "housing"
       if (/^C_/.test(title)) this.bySystem.set(title.slice(2).toLowerCase(), sys);
@@ -288,7 +329,8 @@ export class ApiIndex {
   }
 
   systemNames(): string[] {
-    return this.file.systems.map((s) => s.Namespace || s.Name || "").filter(Boolean).sort();
+    // Deduped: two documented systems can share one namespace.
+    return [...new Set(this.file.systems.map((s) => s.Namespace || s.Name || "").filter(Boolean))].sort();
   }
 
   getEvent(name: string): EventHit | undefined {

@@ -116,19 +116,25 @@ under `documentation`.
 **Prefer reading these signatures over calling functions to find out.** That is
 not a style preference — see the crash in Corrections.
 
-### 408 vs 397 vs 394 — all three are right, and the gap hides a bug
+### 408 vs 405 vs 394 — the counts, and the bug the old gap hid
+
+**Fixed 2026-09-20.** Historical note kept because the shape recurs.
 
 Three system counts are in circulation. They measure different things:
 
-- **408** — raw documented system entries (`api.json` `systems[]`), and what
-  `get_namespace()` with no argument lists. The figure quoted above.
-- **397** — `api.json` `counts.systems`, and the figure in commit `21ef99b`.
-  It is 408 minus **11 entries documenting neither a function nor an event**
-  (`AccessibilityOptions`, `BagIndexConstants`, `CursorUtil`, `Platform`,
-  `Pony`, `TraitConfig`, plus five `FrameAPI`/`SimpleAnim` shells), which
-  `extract-api.js:140` skips.
-- **394** — `.md` files in `reference/api/`. It is 397 minus **3 lost to
-  filename collisions**.
+- **408** — raw documented system entries (`api.json` `systems[]`). Still 408:
+  the extractor preserves the capture verbatim and merges only on the way out.
+- **405** — distinct namespaces, and what `get_namespace()` with no argument
+  now lists. 408 minus the 3 collisions below.
+- **394** — `.md` files in `reference/api/`, and now also `counts.systems`.
+  It is 405 minus **11 namespaces documenting neither a function nor an
+  event** (`C_AccessibilityOptions`, `BagIndexConstants`, `C_CursorUtil`,
+  `C_Platform`, `C_Pony`, `C_TraitConfig`, plus five `FrameAPI`/`SimpleAnim`
+  shells), which `extract-api.js` skips.
+
+`counts.systems` **was 397** before the fix, counting non-empty *entries*
+rather than non-empty *namespaces*. It disagreed with the file count for the
+same reason the reference was lossy.
 
 That last subtraction is a defect, not a definition. **System and namespace are
 not 1:1** — three pairs of documented systems share one namespace:
@@ -139,13 +145,17 @@ not 1:1** — three pairs of documented systems share one namespace:
 | `C_PlayerInfo` | `PlayerInfo` (33) + `PlayerLocationInfo` (7) | 40 |
 | `C_SocialQueue` | `SocialQueue` (8, 2) + `SocialQueueSystemStatus` (2, 1) | 10 |
 
-`extract-api.js:189` names each file `Namespace || Name`, so the second write
-clobbers the first: `reference/api/C_PartyInfo.md` documents **2** functions
-where the client has **55**.
+`extract-api.js` named each file `Namespace || Name`, so the second write
+clobbered the first: `reference/api/C_PartyInfo.md` documented **2** functions
+where the client has **55**. The same shadowing was in the MCP server, where
+`bySystem.set(title.toLowerCase(), sys)` let the last write win, so
+`get_namespace("C_PartyInfo")` returned the 2-function entry and hid 53.
 
-**The same shadowing is in the MCP server.** `mcp/src/data.ts:128` does
-`bySystem.set(title.toLowerCase(), sys)` — last write wins, so
-`get_namespace("C_PartyInfo")` returns the 2-function entry and hides 53.
+Both now collapse systems onto their namespace before indexing or emitting
+(`extract-api.js:140`, `mcp/src/data.ts:81` and `:157`), deduping by member
+name. Verified after the fix: `C_PartyInfo` 55, `C_PlayerInfo` 40,
+`C_SocialQueue` 10, `C_Housing` 62 and `C_AuctionHouse` 85 unchanged, no
+duplicates in the system list, totals still 6,577 functions / 1,802 events.
 
 **Scope, verified 2026-09-20.** `lookup_api` and `search_api` are *not*
 affected: both index every function of every entry, so
@@ -154,9 +164,20 @@ each resolve the shadowed entry. Only `get_namespace` under-reports, and only
 for those three. "Absent from `lookup_api` means it does not exist" still
 holds. "Absent from `get_namespace` means it does not exist" does not.
 
-Fix is one line in each: key by namespace and merge entries instead of
-replacing. Not done — it needs a `mcp/dist` rebuild and a `reference/`
-regenerate from the 2.1 MB dump.
+**`mcp/dist/` is gitignored**, so the committed fix is source-only. Anyone
+pulling this must run `npm run build` in `mcp/` and restart the MCP server
+before `get_namespace` is correct in their session.
+
+`scripts/extract-api.js` needs `luaparse` at the repo root (`npm install
+luaparse`; the root `package.json` and `node_modules/` are gitignored for
+exactly this). Regenerate with:
+
+```
+node scripts/extract-api.js "<path to>/SavedVariables/ForeverProbe.lua"
+```
+
+Still open, and a *different* defect: `list_deprecated`'s removed-list is
+incomplete (it omits `LoadAddOn`). See Open questions 2.
 
 ### Campsite is a rest area, not Housing
 
