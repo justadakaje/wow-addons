@@ -102,12 +102,17 @@ Without that, this server would produce exactly the bug it exists to prevent.
 
 ## Known gaps
 
-- **Enum values are not populated yet.** Definitions live in
-  `APIDocumentation.tables`, which ForeverProbe only began harvesting in 0.6.0;
-  `reference/api.json` was generated from an earlier capture. `get_enum` still
-  reports which functions use a type, and says plainly that values are missing
-  rather than implying the type has none. Re-run the probe on 0.6.0+ and
-  regenerate to fill it.
+- **129 of 778 referenced types have no definition** — 83% resolve. The
+  remainder are opaque handles (`ItemLocation`, `ClubId`, `SpellIdentifier`,
+  `TooltipData`) that you obtain from another call rather than construct;
+  Blizzard documents no fields for them. `get_enum` says so explicitly and
+  lists the functions that produce the type, instead of implying a stale
+  capture.
+- **Enum member numbers need a ForeverProbe 0.7.0 capture.** Blizzard's
+  documentation names enum members without their values, so 0.7.0 additionally
+  snapshots the global `Enum` table, which is what the client actually compares
+  against. Until that capture exists, `get_enum` shows member names and
+  structure fields but not the numbers.
 - **`get_widget_methods` covers only the 18 `FrameAPI*` families** Blizzard
   documents. Common frame methods (`SetPoint`, `Show`, `SetScript`) are not in
   the documentation tables at all.

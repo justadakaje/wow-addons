@@ -248,6 +248,8 @@ fs.writeFileSync(path.join(outDir, 'api.json'), JSON.stringify({
   watchlist: db.watchlist || {},
   // Enum/structure definitions. Empty for captures from ForeverProbe < 0.6.0.
   tables: Array.isArray(doc.tables) ? doc.tables : [],
+  // Real numeric values from the global Enum table. Empty before 0.7.0.
+  enums: db.enums || {},
   undocumented: undocumented,
   systems: systems,
 }));

@@ -8,7 +8,7 @@
 -- Read-only. Enumerates _G, reads Blizzard's own documentation tables if they
 -- exist, and calls GetBuildInfo(). Changes no game state.
 
-local SCHEMA_VERSION = 4
+local SCHEMA_VERSION = 5
 
 -- The documentation framework loads without its data: v2 found every
 -- APIDocumentation method present but `systems` empty. On modern clients the
@@ -98,7 +98,13 @@ local function CopyTables(list)
         for j = 1, #t.Fields do
           local f = t.Fields[j]
           if type(f) == "table" and f.Name then
-            fields[#fields + 1] = { Name = f.Name, Type = f.Type, Nilable = f.Nilable, Default = f.Default }
+            -- EnumValue carries an enumeration member's actual number. Omitting
+            -- it (as 0.6.0 did) leaves an enum that names its members but
+            -- cannot tell you what to compare against.
+            fields[#fields + 1] = {
+              Name = f.Name, Type = f.Type, Nilable = f.Nilable,
+              Default = f.Default, EnumValue = f.EnumValue,
+            }
           end
         end
         entry.Fields = fields
@@ -107,6 +113,30 @@ local function CopyTables(list)
     end
   end
   return out
+end
+
+-- The global Enum table holds the real numeric values at runtime. It is a
+-- better source than the documentation for this one thing: it is what the
+-- client actually compares against, and it covers enums the docs omit.
+local function SnapshotEnums()
+  local root = rawget(_G, "Enum")
+  if type(root) ~= "table" then return nil, 0 end
+  local out, count = {}, 0
+  for name, members in pairs(root) do
+    if type(name) == "string" and type(members) == "table" then
+      local entry = {}
+      for key, value in pairs(members) do
+        if type(key) == "string" and (type(value) == "number" or type(value) == "string") then
+          entry[key] = value
+        end
+      end
+      if next(entry) ~= nil then
+        out[name] = entry
+        count = count + 1
+      end
+    end
+  end
+  return out, count
 end
 
 -- Copies the documented fields off an argument, return value, or event payload.
@@ -263,6 +293,8 @@ local function Capture()
     watchlist[path] = (Resolve(path) ~= nil)
   end
 
+  local enums, enumCount = SnapshotEnums()
+
   local ok, documentation = pcall(HarvestDocumentation)
   if not ok then
     documentation = { available = false, reason = "harvest error: " .. tostring(documentation) }
@@ -282,13 +314,15 @@ local function Capture()
     watchlist       = watchlist,
     documentation   = documentation,
     projectConstants = SnapshotConstants(),
+    enums           = enums,
   }
 
-  return tocVersion, version, build, namespaceCount, memberCount, #globalFunctions, documentation
+  return tocVersion, version, build, namespaceCount, memberCount, #globalFunctions,
+         documentation, enumCount
 end
 
 local function Report()
-  local tocVersion, version, build, nsCount, memberCount, fnCount, docs = Capture()
+  local tocVersion, version, build, nsCount, memberCount, fnCount, docs, enumCount = Capture()
 
   print("|cff33ff99ForeverProbe|r captured:")
   -- If the client withholds a value we say so, rather than printing a
@@ -305,6 +339,8 @@ local function Report()
   else
     print(("|cffff9900  API docs: unavailable -- %s|r"):format((docs and docs.reason) or "unknown"))
   end
+
+  print(("  Enum globals: %d"):format(enumCount or 0))
 
   local pid = rawget(_G, "WOW_PROJECT_ID")
   print(("  WOW_PROJECT_ID: %s"):format(tostring(pid)))

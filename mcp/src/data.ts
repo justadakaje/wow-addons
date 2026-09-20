@@ -51,6 +51,8 @@ export interface ApiFile {
   counts?: { systems?: number; functions?: number; events?: number };
   /** Enum/structure definitions. Present only for ForeverProbe 0.6.0+ captures. */
   tables?: ApiTable[];
+  /** Real numeric values from the global Enum table. ForeverProbe 0.7.0+. */
+  enums?: Record<string, Record<string, number | string>>;
   watchlist?: Record<string, boolean>;
   systems: ApiSystem[];
 }
@@ -174,6 +176,23 @@ export class ApiIndex {
 
   get hasTables(): boolean {
     return this.tables.size > 0;
+  }
+
+  /** Runtime values from the global Enum table, keyed case-insensitively. */
+  private enumsLower: Map<string, Record<string, number | string>> | null = null;
+
+  enumValues(name: string): Record<string, number | string> | undefined {
+    if (!this.enumsLower) {
+      this.enumsLower = new Map();
+      for (const [k, v] of Object.entries(this.file.enums ?? {})) {
+        this.enumsLower.set(k.toLowerCase(), v);
+      }
+    }
+    return this.enumsLower.get(name.trim().toLowerCase());
+  }
+
+  get hasEnums(): boolean {
+    return Object.keys(this.file.enums ?? {}).length > 0;
   }
 
   /** Exact match on a qualified name, else every namespace carrying that bare name. */

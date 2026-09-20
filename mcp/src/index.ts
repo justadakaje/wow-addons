@@ -365,8 +365,9 @@ server.registerTool(
   async ({ name, response_format }) => {
     const table = index.getTable(name);
     const refs = index.typeReferences(name);
+    const values = index.enumValues(name);
 
-    if (!table && !refs.length) {
+    if (!table && !refs.length && !values) {
       return text(
         `Type "${name}" does not appear in any signature on ${CLIENT}. ` +
           `Check the spelling against a signature from lookup_api.`,
@@ -378,21 +379,41 @@ server.registerTool(
         type: name,
         definition: table?.table ?? null,
         definitionAvailable: Boolean(table),
+        runtimeValues: values ?? null,
         referencedBy: refs.map((r) => ({ function: r.qualified, role: r.role })),
       });
     }
 
     const parts = [`# ${name}`];
-    if (table) {
-      parts.push(tableBlock(table.table));
-    } else {
-      // Honest about the gap rather than implying the type has no values.
+    if (table) parts.push(tableBlock(table.table));
+
+    // Runtime values beat documented ones: this is what the client compares
+    // against, and Blizzard's docs name enum members without their numbers.
+    if (values) {
+      const rows = Object.entries(values).sort((a, b) =>
+        typeof a[1] === "number" && typeof b[1] === "number" ? a[1] - b[1] : a[0].localeCompare(b[0]),
+      );
       parts.push(
-        `**Values not available in this capture.**`,
-        "",
-        `Blizzard's \`APIDocumentation.tables\` holds enum and structure definitions, but ` +
-          `captures from ForeverProbe before 0.6.0 harvested only Functions and Events. ` +
-          `Re-run the probe on 0.6.0+ and regenerate \`reference/api.json\` to populate this.`,
+        table ? "\n## Runtime values (global `Enum`)" : "",
+        "```lua",
+        rows.map(([k, v]) => `Enum.${name}.${k} = ${String(v)}`).join("\n"),
+        "```",
+      );
+    }
+
+    if (!table && !values) {
+      // Distinguish "we never captured definitions" from "Blizzard defines none
+      // for this type" -- conflating them sends the reader to re-run a probe
+      // that would not help.
+      parts.push(
+        index.hasTables
+          ? `**Referenced in signatures, but Blizzard's documentation defines no values or fields for it.** ` +
+            `About 129 of the 778 referenced types are like this — typically opaque handles ` +
+            `(\`ItemLocation\`, \`ClubId\`, \`SpellIdentifier\`) that you obtain from another call ` +
+            `rather than construct. Treat it as a token to pass through, and check the functions below ` +
+            `for one that produces it.`
+          : `**No type definitions in this capture.** Re-run ForeverProbe 0.6.0+ and regenerate ` +
+            `\`reference/api.json\` to populate enum and structure definitions.`,
       );
     }
     const shown = refs.slice(0, 30);
