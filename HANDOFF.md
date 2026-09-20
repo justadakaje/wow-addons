@@ -3,7 +3,28 @@
 Working context for picking this repo up cold. Read `AGENTS.md` too — it holds
 the rules; this holds the findings, the dead ends, and the open questions.
 
-Last updated 2026-09-20, against WoW: Forever beta build 69913.
+Last updated 2026-09-20 (second pass, AdventurerPlates session), against WoW:
+Forever beta build 69913.
+
+**If you are a new session picking this up:** the active work is
+`addons/AdventurerPlates/`, not the gold/AH goal below. Read
+`addons/AdventurerPlates/README.md` first, then the "Current work" section
+here. The gold goal is real but parked and blocked — see Goal.
+
+> ⚠️ **`AGENTS.md` is stale as of 2026-09-20.** It still warns that
+> `get_namespace` under-reports `C_PartyInfo`, `C_PlayerInfo` and
+> `C_SocialQueue`. Commit `740a476` ("Merge documented systems that share a
+> namespace") **fixed that** — `mcp/src/data.ts` now keys by namespace and
+> merges, and `reference/api/` was regenerated (`C_PartyInfo.md` went from 2
+> functions to the real 55). A session running the rebuilt server can trust
+> `get_namespace` again. Someone should delete that sentence from `AGENTS.md`;
+> it was left in place only to avoid a concurrent-edit collision.
+>
+> ⚠️ **This repo has had more than one agent session working in it at once.**
+> Commits `740a476` and `755c2ba` landed on branch `adventurer-plates` from a
+> parallel session *after* `6dc0a5f`. Nothing was lost, but check
+> `git log --oneline -5` and `git status` before assuming the tree matches what
+> you last read. A file read early in a session may be stale by the end of it.
 
 ## Environment facts
 
@@ -23,8 +44,12 @@ Last updated 2026-09-20, against WoW: Forever beta build 69913.
 - Classic Era (`_classic_era_`) is Interface **20506** and still valid for
   anything targeting that client. Multi-client addons want both numbers.
 - Git: `https://github.com/justadakaje/wow-addons`, MIT, default branch `master`.
-  Branch **`forever-probe` is one commit ahead of `master` and unpushed**
-  (`70d2e9e`). The older handoff claimed the repo was uncommitted; it was not.
+  **Corrected 2026-09-20:** `forever-probe` is **fully merged into `master`**
+  (`git branch --merged master` lists it; `master...forever-probe` is 6/0). The
+  earlier claim that it was one commit ahead and unpushed is stale — that
+  branch is safe to delete. Current state: branch **`adventurer-plates`** is 1
+  ahead of `master`, `master` is 2 ahead of `origin/master`. **Nothing is
+  pushed.**
 - **The `wow-api` MCP server IS attached**, and answers from this client's own
   capture. Verified 2026-09-20: `lookup_api`, `search_api`, `get_enum`,
   `get_event`, `get_namespace`, `get_widget_methods` and `list_deprecated` all
@@ -35,10 +60,134 @@ Last updated 2026-09-20, against WoW: Forever beta build 69913.
   which was true when written and is no longer. **For any single name prefer
   `lookup_api` over `list_deprecated`** — see Legacy globals for why.
 
+## Current work — AdventurerPlates
+
+**This is what the last session was doing and where a new session should start.**
+
+### What it is
+
+An FFXIV-style **Adventurer Plate** for Forever: a character card carrying
+portrait, title, guild + rank, level/race/class, playstyle tags, a weekday /
+weekend active-hours grid, and a motto.
+
+Origin: a post by Shobek (`https://x.com/Shobektv/status/2101665615115153745`)
+asking for the feature in Forever. The mockup in that post is the entire
+requirements document — the thread replies add nothing. Nothing here depends on
+Blizzard shipping it.
+
+**Naming, researched:** FFXIV calls it the **Adventurer Plate** — singular, no
+apostrophe. The pose/lighting/framing editor is a *separate* system called
+**Portraits**. Some third-party guides write "Adventurer's Plate"; that is
+wrong. The addon is named "Adventurer Plates" (plural) deliberately, because
+that is the phrasing people will search for. CurseForge had no collision for
+any spelling as of 2026-09-20.
+
+### State: written, syntax-checked, NEVER RUN IN-GAME
+
+Committed as `6dc0a5f` on branch `adventurer-plates`. **The probe has not been
+executed once.** Every statement about this client in the addon README is
+"verified against the ForeverProbe dump or the `wow-api` index", never
+"observed live". Do not upgrade that language until it actually runs.
+
+`/reload` then `/advplate probe` is the next action, and it is a deliberate
+on-stream moment — the user is recording a UAT demo.
+
+### Why a probe before a UI
+
+Three things could not be settled offline, and `AGENTS.md` says verify rather
+than guess:
+
+1. **Which model widget exists.** `FrameAPICharacterModelBase` is documented and
+   `DressUpModel` / `ModelSceneFrame` are documented widget types, but
+   `PlayerModel` is not in that list. The probe creates all six candidates.
+2. **How the right-click menu works.** `Menu.ModifyMenu` has **zero occurrences**
+   in this client's surface — the modern context-menu API is absent. Only
+   `UnitPopup_OpenMenu` and the legacy `UIDropDownMenu_*` family survive, and
+   the legacy path needs the `UnitPopupButtons` / `UnitPopupMenus` *tables*,
+   which are tables and so were invisible to the ForeverProbe function walk.
+3. **What the undocumented globals return.** `GetGuildInfo`, `GetProfessions`,
+   `GetProfessionInfo`, `GetAchievementInfo` all exist in `_G` with no
+   documentation entry.
+
+It also measures the wire format, which decides the whole sharing design.
+
+### Probe design — respect the two tiers
+
+- `/advplate probe` — **Tier A**, documented API and pure Lua only. Safe.
+- `/advplate report` — reprint the last Tier A result.
+- `/advplate risky [n]` — **Tier B**, calls the four undocumented globals.
+
+Tier B announces every call *before* making it and is resumable from any step,
+because `pcall` catches Lua errors but does **not** stop a native crash —
+`C_Housing.GetMaxHouseLevel` access-violates despite being a documented
+no-argument getter. If the client dies, the last chat line names the culprit and
+`/advplate risky <n>` resumes from the next step.
+
+Nothing in either tier runs at load, and nothing runs in the save path. That is
+not stylistic: ForeverProbe lost a 98-minute session to a crasher sitting in
+`PLAYER_LOGOUT`.
+
+### Verified API this is built on
+
+Checked against `wow-api` (build 69913) or the ForeverProbe `_G` dump.
+
+**Present and load-bearing**
+
+- `C_EncodingUtil` — `SerializeCBOR`, `CompressString`, `EncodeBase64` and
+  inverses. Native serialisation, so **no LibSerialize, no LibDeflate, no Ace**.
+  `Enum.CompressionMethod.Deflate = 0`,
+  `Enum.CompressionLevel.OptimizeForSize = 2`, `Enum.Base64Variant.Standard = 0`.
+- `C_ChatInfo.SendAddonMessage` / `SendAddonMessageLogged` /
+  `RegisterAddonMessagePrefix` / `IsAddonMessagePrefixRegistered` /
+  `GetRegisteredAddonMessagePrefixes`, `CHAT_MSG_ADDON`, and a full
+  `SendAddonMessageResult` enum.
+- Titles: `GetNumTitles`, `GetTitleName`, `IsTitleKnown`, `GetCurrentTitle`.
+- `RequestTimePlayed` + `TIME_PLAYED_MSG`, `GetServerTime`, `GetGameTime`.
+- `CanInspect` / `NotifyInspect` / `INSPECT_READY`.
+- Templates `BackdropTemplate`, `UIPanelButtonTemplate`, `InputBoxTemplate`,
+  `UICheckButtonTemplate`, `UIPanelScrollFrameTemplate`, `UIPanelCloseButton` —
+  all already in use by APLForever on this client, so not in question.
+
+**Absent — design around these**
+
+- `UnitPVPRank`, `GetPVPRankInfo` — gone. No Classic PvP rank badge. Forever
+  reworked honor; `UnitHonor`, `UnitHonorLevel`, `GetPVPLifetimeStats` exist.
+- `GetSkillLineInfo`, `GetNumSkillLines` — gone.
+- `Menu.ModifyMenu` — does not exist.
+- `C_AchievementInfo` exposes five stubs only.
+
+### Decisions already made — do not relitigate
+
+- **Transport for v0.3 is Chomp** (`wow-rp-addons/Chomp`, ISC). Its `.toc`
+  already declares `16001`. Not adopted yet, because v0.1 is local-only and
+  taking a dependency before measuring the payload is premature. Pinned so
+  nobody builds a worse queue. Full reasoning in the addon README's Prior art
+  section.
+- **Total RP 3 is not a duplicate.** It is in-character identity; this is
+  out-of-character social matchmaking. It also does not run on Forever
+  (`## Interface: 120100`, gates omit `camelot`).
+- **Base64 vs `LibDeflate:EncodeForWoWChatChannel` is deliberately OPEN.**
+  Base64 is native and costs a flat +33%. Decide after the probe prints the
+  real byte count. Two chunks → stay native; four or five → revisit.
+- **Portrait fallback:** a 3D model renders only for a unit the client can see.
+  Target / mouseover / party → live model. Anyone else → class-crest
+  composition, and the UI says why. Missing data becomes a sentence, never a
+  fabricated picture.
+
+### Roadmap
+
+- **v0.1** local plate + editor, persisted, no network.
+- **v0.2** Portraits — pose, rotation, zoom, camera, background, frame. Kept
+  separate from the plate exactly as FFXIV splits them.
+- **v0.3** sharing over Chomp, whisper-pull + presence ping, privacy enforced on
+  the responder.
+
 ## Goal
 
 Surface gold-making opportunities in-game: raw materials listed below market
 value, and craftables sellable above crafting cost.
+
+**Parked, not cancelled** — the AdventurerPlates work above is what is active.
 
 **This is currently blocked on Forever** — see the Auctionator finding below.
 The goal has not changed; the target client moved out from under it.
@@ -54,6 +203,10 @@ The goal has not changed; the target client moved out from under it.
   - `/fpevents [housing]` — event summary. **Stages in memory only.**
   - `/fphouse` — read `C_Housing`. Explicit-only and genuinely risky; see below.
   - Output: `WTF/Account/<id>/SavedVariables/ForeverProbe.lua` (~2.1 MB).
+- `addons/AdventurerPlates/` — **the active work.** `Core.lua` (namespace,
+  SavedVariables with schema check, chat output, slash dispatch) and `Probe.lua`
+  (the two-tier capability probe). Written and syntax-checked, never run. See
+  "Current work" above and the addon's own README.
 - `addons/AddonSmokeTest/` — minimal proof-of-life addon, `20506, 16001`.
 - `scripts/link-addons.ps1` — symlinks `addons/*` into a client. Needs elevation
   or Developer Mode. Editing in the repo is then live in-game.
@@ -331,10 +484,30 @@ No Lua interpreter is installed on this machine, and there is no C compiler.
 
 ## Next steps, in order
 
+**Reordered 2026-09-20 — AdventurerPlates is the active track.**
+
+0. **`/reload`, then `/advplate probe`, then `/advplate risky`.** Paste the chat
+   output back. This unblocks the whole v0.1 UI and is the single highest-value
+   action available. Nothing else in this list should happen first.
+0b. Once the probe has run, update the addon README to say "observed" instead of
+   "verified against the index", and record the measured chunk count so the
+   Base64-vs-LibDeflate decision can close.
+0c. Build v0.1 — the plate frame and editor — on whatever the probe reported.
+
+The items below are the parked gold/AH track and the standing infra debt.
+
 1. Open an auctioneer on Forever. Settle question 1.
-2. Push `forever-probe` and merge to `master`.
+2. ~~Push `forever-probe` and merge to `master`.~~ **Done — it is merged.** What
+   remains is pushing: `master` is 2 ahead of `origin/master` and
+   `adventurer-plates` is 1 ahead of `master`, none of it pushed.
 3. Move the luaparse checker into the repo and wire `luacheck` into
    `validate.yml`, with a `.luacheckrc` generated from the ForeverProbe dump.
+   **New lead:** Total RP 3 ships a `.luacheckrc` with a custom `wow` std
+   listing hundreds of globals — use its *structure* as the template, but
+   populate the std from the ForeverProbe dump, because theirs is a Retail list
+   and this client removed `GetItemInfo`, `GetSpellInfo`, `UnitPVPRank` et al.
+   The checker currently lives only in a session scratchpad (`luaparse` 0.3.1 +
+   a `check.js`); it is not in the repo and will be lost.
 4. Extract the housing/AH signatures from the dump into a readable reference —
    the first genuinely shareable artifact here, and the MCP's seed.
 5. Depending on 1: fork Auctionator to add `camelot` gates, or re-evaluate
@@ -350,3 +523,20 @@ the assumption and proceed rather than blocking on a question. Prefer
 incremental, reversible, testable changes. Call out failure modes, rate limits
 and validation steps explicitly. Complete code blocks over fragments unless
 isolating a specific fix. Say plainly when something could not be verified.
+
+### This work is being recorded
+
+As of 2026-09-20 the user streams/records this development (Streamlabs Desktop,
+YouTube target, channel "Kenneth Henseler", on-screen label "Adventurer Plates
+Addon Dev"). Practical consequences:
+
+- **Forever beta is confirmed NDA-free** — verified by the user in a separate
+  session. Showing client internals, the API dump and build numbers is fine.
+- **Do not surface the WTF account ID on camera.** SavedVariables live at
+  `WTF/Account/1283889#1/...` and that path shows up in tool output. Prefer
+  relative paths or elide the account segment when printing.
+- Terminal output is being read aloud and shown at 1080p. Favour short, legible
+  blocks over wide tables; assume text gets downscaled to phone screens.
+- Scene collection is "WoW Forever - Duo" with scenes `Forever Only`,
+  `Forever + Claude`, `Claude Only`. The user switches via hotkey, so a long
+  silent tool-running stretch is dead air — say what is running.

@@ -100,10 +100,10 @@ All checked against `wow-api` (build 69913, Interface 16001) or the ForeverProbe
 - **v0.2** Portraits: pose, rotation, zoom, camera, background, frame — kept
   separate from the plate, as FFXIV does.
 - **v0.3** sharing: whisper-pull request/response, CBOR → Deflate → Base64,
-  chunked under a registered prefix, cached against a content hash. Light
-  presence ping on GUILD/PARTY/RAID. Privacy enforced on the responder:
-  Everyone / Guild & Friends / Friends / Nobody. No hidden global chat channel
-  by default.
+  cached against a content hash. Light presence ping on GUILD/PARTY/RAID.
+  Privacy enforced on the responder: Everyone / Guild & Friends / Friends /
+  Nobody. No hidden global chat channel by default.
+  **Transport is Chomp, not hand-rolled** — see Prior art below.
 
 ### Portrait fallback
 
@@ -121,6 +121,115 @@ Mentor · Explorer · **Camping** · **Housing**
 The last two are Forever-specific. Camping introduces no new API (it fires
 `PLAYER_UPDATE_RESTING`, not housing events), so the tag is self-declared;
 Housing is a real 13-namespace system that a later version could read from.
+
+## Prior art
+
+Surveyed 2026-09-20, after the probe was written and before any sharing code.
+
+### Total RP 3 — overlapping plumbing, different product
+
+[Total-RP/Total-RP-3](https://github.com/Total-RP/Total-RP-3), Apache-2.0.
+
+**Not a duplicate of this addon.** TRP3 is an *in-character* identity system:
+custom RP name, race, class, physical description, backstory, "Currently",
+relationship status, IC/OOC toggle. It answers *who is my character in the
+fiction*. An Adventurer Plate is *out-of-character* social matchmaking — real
+class/level/guild, what content you like, when you actually play. It answers
+*should we group up*. Square Enix shipped these as separate systems for the
+same reason: Play Style tags and an Active Time grid only mean anything OOC.
+TRP3's closest field is a single free-text "OOC information" box — prose, not
+queryable tags or an hours histogram.
+
+**TRP3 does not run on Forever.** `## Interface: 120100` (Retail 12.1, single
+value, no `16001`), and its `AllowLoadGameType` gates list `vanilla`, `tbc`,
+`mainline`, `mists`, `wrath` — no `camelot`. That is the same split-brain the
+repo HANDOFF documents for Auctionator: Lua reports mainline so the branches
+take the Retail path, while the `.toc` sees `camelot` and never loads the gated
+files. There is currently no RP-profile addon serving Forever players at all.
+
+*Verification depth: the `.toc` was read through a summarising fetch, not raw.
+The Interface number is certain; the gate list is worth a `grep camelot` on a
+clone before anyone relies on it.*
+
+### Decision: use Chomp for v0.3 transport
+
+[wow-rp-addons/Chomp](https://github.com/wow-rp-addons/Chomp), **ISC** licensed,
+by Justin Snelgrove. It is the transport layer TRP3 sits on, and its `.toc`
+already declares Forever:
+
+```
+## Interface: 120105, 120100, 50504, 30802, 20506, 16001, 11509
+```
+
+A rewrite of ChatThrottleLib with automatic message splitting, priority queues,
+Battle.net game-data messaging and prefix management:
+
+```lua
+AddOn_Chomp.RegisterAddonPrefix(prefix, callback, prefixSettings)
+AddOn_Chomp.SmartAddonMessage(prefix, data, kind, target, messageOptions)
+AddOn_Chomp.SendAddonMessage(prefix, text, kind, target, priority, queue, callback, callbackArg)
+```
+
+That is the whole chunking-and-throttling problem, already solved and throttle-
+tested at RP-server scale, under a license that asks only that the header be
+kept.
+
+It spans Interface 11509 through 120105 because its version-fragile surface is
+tiny: it calls only `C_ChatInfo.RegisterAddonMessagePrefix` and
+`IsAddonMessagePrefixRegistered` directly, and reaches the send path through
+ChatThrottleLib. Both of those exist here, and `SendAddonMessageLogged` and
+`C_BattleNet.SendGameData` both appear in this client's
+`SendAddonMessageResult` consumers, so Chomp's full send surface is present.
+
+**Not adopted yet, deliberately.** v0.1 is local-only with no comms at all, and
+taking a dependency before the payload is measured is premature. The decision is
+pinned so nobody spends a session building a worse queue.
+
+### Patterns worth imitating, not copying
+
+From `totalRP3/Core/CommunicationProtocol.lua` (Apache-2.0 — copying is legal
+with attribution; the value is the shape):
+
+```lua
+Communications.sendObject(prefix, object, channel, target, priority, messageToken, useLoggedMessages, queue)
+Communications.registerSubSystemPrefix(prefix, callback)
+Communications.registerMessageTokenProgressHandler(messageToken, sender, onProgressCallback)
+Communications.estimateStructureSize(object, shouldBeCompressed)
+```
+
+- **Message tokens** — a short id tying multi-chunk transfers together, with an
+  attachable progress handler, so a slow fetch shows a spinner instead of
+  hanging.
+- **One registered prefix, sub-system routing underneath.** Blizzard caps
+  registered prefixes. TRP3 registers exactly `"TRP3.3"` and multiplexes.
+
+### Independent confirmation of the wire format
+
+`totalRP3/Core/EncodingUtil.lua` wraps **`C_EncodingUtil.CompressString` /
+`DecompressString`** and native Base64. A long-lived addon with a very large
+install base chose the same native path over LibDeflate. That is about as good a
+confirmation as an unrun design gets.
+
+### One open trade they resolved differently
+
+`totalRP3/Core/Compression.lua` does not use Base64 for the wire-safe step — it
+uses `LibDeflate:EncodeForWoWChatChannel`. Addon message channels cannot carry
+arbitrary bytes, so compressed output must be escaped. Base64 is the obvious
+safe choice at a flat **+33%**; LibDeflate's encoding is denser because it only
+escapes the byte values the chat protocol actually chokes on.
+
+**Hold this decision until the probe prints the real byte count.** If Base64
+lands at two chunks, adding a dependency to save a third of ~400 bytes is a bad
+trade. If it pushes to four or five, revisit.
+
+### Also worth lifting
+
+TRP3 ships a `.luacheckrc` with a custom `wow` std listing hundreds of globals —
+which is repo HANDOFF next-step #3 sitting on a shelf. Caveat matching this
+repo's own rule: theirs is a **Retail** list, and this client removed
+`GetItemInfo`, `GetSpellInfo`, `UnitPVPRank` and friends. Use their file as the
+structural template and populate the `std` from the ForeverProbe dump, which is
+this client's actual surface.
 
 ## Client support
 
