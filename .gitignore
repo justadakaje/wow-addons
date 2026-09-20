@@ -39,3 +39,8 @@ luac.out
 *.x86_64
 *.hex
 
+
+# Node tooling for scripts/extract-api.js (npm install luaparse)
+node_modules/
+package-lock.json
+package.json
