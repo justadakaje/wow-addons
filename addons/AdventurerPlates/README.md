@@ -11,34 +11,45 @@ Named after the FFXIV feature it borrows from. FFXIV splits the idea in two: the
 Origin: [a post by Shobek](https://x.com/Shobektv/status/2101665615115153745)
 asking for the feature in Forever. Nothing here depends on Blizzard shipping it.
 
+> **A landscape fork exists.** [`AdventurerPlatesCard`](../AdventurerPlatesCard)
+> reshapes this into an 800x420 card after a real FFXIV Adventurer Plate. It is a
+> separate addon with its own saved data and its own `/advcard` command, so both
+> run side by side. This portrait layout is not deprecated.
+
 ## Status
 
-**v0.1.0-probe — capability probe only. No plate UI yet.**
+**v0.1 — plate + editor, local only. Probe run 2026-09-20 on build 69913.**
 
-The probe exists because three things could not be settled from the API index
-offline, and the repo rule is to verify rather than guess:
+Both probe tiers completed and nothing crashed. Everything in *Observed on this
+client* below was seen on the running client, not inferred from the
+documentation index. Where the two disagreed, the observation won — and those
+disagreements turned out to be the most valuable thing the probe produced.
 
-1. **Which model widget this client gives us.** `FrameAPICharacterModelBase` is
-   documented, and `DressUpModel` / `ModelSceneFrame` are documented widget
-   types, but `PlayerModel` is not in that list. The probe creates all six
-   candidates and reports which exist and which methods each carries.
-2. **How the right-click menu works here.** `Menu.ModifyMenu` — the modern
-   context-menu API — has **zero occurrences** in this client's surface. Only
-   `UnitPopup_OpenMenu` and the legacy `UIDropDownMenu_*` family survive. The
-   legacy path needs the `UnitPopupButtons` / `UnitPopupMenus` *tables*, which
-   are tables and so were invisible to the ForeverProbe function walk.
-3. **What the undocumented globals actually return.** `GetGuildInfo`,
-   `GetProfessions`, `GetProfessionInfo` and `GetAchievementInfo` all exist in
-   `_G` but carry no entry in the client's own documentation, so their
-   signatures are unknown.
+### The correction worth reading twice
 
-It also measures the wire format, which decides the whole sharing design.
+The earlier claim — "`Menu.ModifyMenu` has zero occurrences in this client's
+surface" — was a true statement about the **documentation index** and a false
+statement about the **client**. `Menu.ModifyMenu` is a live function here.
+
+`search_api("ModifyMenu")` genuinely does return nothing, because `Menu` is a
+FrameXML **Lua** table and the index documents the **C** API. The `ForeverProbe`
+`_G` dump should have caught it and did not, for a second and independent
+reason: it walks top-level global *functions* and `C_*` namespaces. `Menu` is a
+plain non-`C_` global *table*, so its contents were invisible — the same blind
+spot that hid `UnitPopupMenus`.
+
+**"Absent from `lookup_api`" means "absent from the C API", not "absent from the
+client".** For anything Lua-side — `Menu`, `UnitPopupMenus`, `UIDropDownMenu_*`
+— both offline sources are structurally blind, and only an in-client `type()`
+check answers the question. That is this probe justifying its own existence.
 
 ## Commands
 
 | Command | What it does |
 | --- | --- |
 | `/advplate` | command list (also `/aplate`) |
+| `/advplate show` | show or hide your Adventurer Plate |
+| `/advplate edit` | open the plate editor |
 | `/advplate probe` | **Tier A** — documented API and pure Lua only. Safe. |
 | `/advplate report` | reprint the last Tier A result |
 | `/advplate risky` | **Tier B** — calls undocumented globals. Can crash the client. |
@@ -60,10 +71,132 @@ Nothing in either tier runs at load, and nothing runs in the save path —
 SavedVariables are written by the client only, on `/reload` or logout. Results
 are printed to chat immediately for exactly that reason.
 
+## Observed on this client
+
+Measured by `/advplate probe` on 2026-09-20, build 69913. These are readings,
+not documentation lookups.
+
+### Wire format — decision closed
+
+```
+CBOR      386 B
+Deflate   293 B   (-24%)
+Base64    392 B   (+34%)
+JSON      517 B   (for contrast)
+
+round trip: LOSSLESS
+chunks:     2  at 240 B
+```
+
+**Two chunks, so the native Base64 path stays.** No `LibDeflate` dependency.
+The pre-registered rule was "two chunks → stay native; four or five → revisit",
+and it came in at two.
+
+The Deflate step still earns its place, and the numbers show exactly why:
+Base64 of *raw* CBOR would be ~515 B, which is **three** chunks. Compressing
+first buys precisely one chunk. Note that the Base64 output (392 B) is larger
+than the CBOR it started from (386 B) — the compression is not paying for the
+encoding, it is paying for the chunk boundary.
+
+Sample plate was a realistic one: 6 tags, both 24-hour grids, guild, rank,
+title, motto, portrait settings.
+
+### Model widgets — all six exist
+
+| widget | documented 24 | legacy 15 |
+| --- | --- | --- |
+| `PlayerModel` | 24/24 | 15/15 |
+| `DressUpModel` | 24/24 | 15/15 |
+| `CinematicModel` | 24/24 | 15/15 |
+| `TabardModel` | 24/24 | 15/15 |
+| `Model` | 24/24 | 15/15 |
+| `ModelScene` | **0/24** | 1/15 |
+
+`PlayerModel` is **not** one of the 18 documented `FrameAPI*` families and works
+regardless. Five types share an identical surface; `ModelScene` carries none of
+it, which is correct — it is a scene that hosts actors, not a model itself.
+
+**No `docMissing` on any model type.** Nothing documented was absent.
+
+The full legacy camera set is present — `SetCamera`, `SetPosition`, `SetFacing`,
+`SetLight`, `SetCustomCamera`, `SetPitch`, `SetViewTranslation`. v0.2 Portraits
+has what it needs.
+
+### Two model results that are NOT yet answers
+
+- **`SetUnit("player")` returned `false`, displayID `0`.** Do not read this as
+  "the client cannot render the player". The probe calls `model:Hide()` *before*
+  `SetUnit()`, and a hidden model frame will not load geometry unless
+  `SetKeepModelOnHide(true)` is set first. **The test was confounded by its own
+  setup** and has to be re-run on a visible frame before it means anything.
+- **`CanSetUnit` returned `nil` for all six tokens**, including `player` and
+  including a deliberately invalid one. Its documented signature lists no return
+  value, so index and observation agree: it is not a predicate on this build and
+  cannot be used as a portrait-eligibility test.
+
+### Right-click menu — inverted from the earlier assumption
+
+```
+Menu                   table
+Menu.ModifyMenu        function     <-- EXISTS
+UnitPopupMenus         table, 39 menus
+UnitPopup_OpenMenu     function
+UnitPopupManager       table
+
+UnitPopupButtons       nil          <-- legacy button table GONE
+UnitPopup_OnClick      nil
+UnitPopup_ShowMenu     nil
+UnitPopup_HideButtons  nil
+```
+
+The modern API is live and the legacy path is the broken one — `UnitPopupButtons`
+being `nil` means the legacy button-table model cannot work at all. Right-click
+integration targets `Menu.ModifyMenu`.
+
+The 39 menus include `DISCORD_USER`, `DISCORD_USER_SELF` and
+`NEIGHBORHOOD_ROSTER`, which do not exist in Classic.
+
+### Undocumented globals — Tier B, all four survived
+
+```
+GetGuildInfo("player")  ->  nil, nil, 0, nil        (no guild on the test char)
+GetProfessions()        ->  5, 7, nil, 6, nil, nil
+GetAchievementInfo(6)   ->  all nil
+
+GetProfessionInfo:
+  [5] "Leatherworking", 136247, 42, 75, 1, 20, 165, 0
+  [7] "Skinning",       134366, 72, 75, 2, 25, 393, 0
+  [6] "Fishing",        136245,  8, 75, 2, 22, 356, 0
+```
+
+`GetProfessionInfo` returns eight values and the 7th is the canonical skill-line
+ID — 165 Leatherworking, 393 Skinning, 356 Fishing. Real structured data.
+`GetGuildInfo` confirms `(name, rankName, rankIndex, realm)`.
+`GetAchievementInfo` returning all `nil` matches `C_AchievementInfo` being five
+stubs: achievements are not a player-facing system here.
+
+### Character shape — two surprises
+
+```
+UnitFullName  ->  "Aeldorath Zephrai", "ClassicBetaPvE2"
+UnitRace      ->  "Windshaper Skyborne", "Skyborne", 96
+```
+
+- **Names contain a space.** Forever has a surname system
+  (`C_PlayerInfo.ShouldDisplaySurname` exists). Any name parsing that assumes a
+  single token breaks — this matters for plate layout now and for whisper
+  targeting in v0.3.
+- **Race `Skyborne`, ID 96** — not a Classic race. A race→icon map built from
+  Classic IDs will not cover it.
+
+Also observed: all 8 frame templates present; prefix registration returned `0` =
+`Enum.SendAddonMessageResult.Success`; 111 titles exist but **0 known** on the
+test character, so the empty-title path is the default case, not an edge case.
+
 ## Verified API this is built on
 
-All checked against `wow-api` (build 69913, Interface 16001) or the ForeverProbe
-`_G` dump — none recalled from memory.
+Checked against `wow-api` (build 69913, Interface 16001) — none recalled from
+memory.
 
 **Present and load-bearing**
 
@@ -87,16 +220,24 @@ All checked against `wow-api` (build 69913, Interface 16001) or the ForeverProbe
 
 - `UnitPVPRank` / `GetPVPRankInfo` — gone. No Classic PvP rank badge. Forever
   reworked honor; `UnitHonor`, `UnitHonorLevel` and `GetPVPLifetimeStats` exist.
-- `GetSkillLineInfo` / `GetNumSkillLines` — gone.
-- `Menu.ModifyMenu` — does not exist on this client.
-- `C_AchievementInfo` exposes five stubs only. Whether achievements are real
-  player-facing data here is what Tier B step 4 is for.
+- `GetSkillLineInfo` / `GetNumSkillLines` — gone. Use `GetProfessions` /
+  `GetProfessionInfo` instead; undocumented, but observed working.
+- `C_GuildInfo` has 39 functions and **none of them returns your own guild name
+  or rank**. The undocumented `GetGuildInfo("player")` is the only path, and
+  Tier B confirmed it works.
+- `C_AchievementInfo` exposes five stubs only, and `GetAchievementInfo(6)`
+  returned all `nil`. Achievements are not a player-facing system here —
+  settled, not assumed.
+
+~~`Menu.ModifyMenu` — does not exist on this client.~~ **Wrong.** It exists.
+See *The correction worth reading twice* above.
 
 ## Planned
 
-- **v0.1** local plate + editor: portrait, name/realm, title, guild + rank,
-  level/race/class, Playstyle & Focus tags, weekday/weekend active-hours grid,
-  motto. Persisted, no network.
+- **v0.1 — BUILT.** Local plate + editor: portrait, name/realm, title, guild +
+  rank, level/race/class, Playstyle & Focus tags (max 6), weekday/weekend
+  active-hours grid, motto (140 chars). Persisted to SavedVariables under
+  schema 2, no network.
 - **v0.2** Portraits: pose, rotation, zoom, camera, background, frame — kept
   separate from the plate, as FFXIV does.
 - **v0.3** sharing: whisper-pull request/response, CBOR → Deflate → Base64,

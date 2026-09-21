@@ -11,14 +11,17 @@ Forever beta build 69913.
 `addons/AdventurerPlates/README.md` first, then the "Current work" section
 here. The gold goal is real but parked and blocked — see Goal.
 
-> ⚠️ **`AGENTS.md` is stale as of 2026-09-20.** It still warns that
-> `get_namespace` under-reports `C_PartyInfo`, `C_PlayerInfo` and
-> `C_SocialQueue`. Commit `740a476` ("Merge documented systems that share a
-> namespace") **fixed that** — `mcp/src/data.ts` now keys by namespace and
-> merges, and `reference/api/` was regenerated (`C_PartyInfo.md` went from 2
-> functions to the real 55). A session running the rebuilt server can trust
-> `get_namespace` again. Someone should delete that sentence from `AGENTS.md`;
-> it was left in place only to avoid a concurrent-edit collision.
+> ✅ **`get_namespace` is trustworthy again — confirmed live 2026-09-20.**
+> Commit `740a476` ("Merge documented systems that share a namespace") fixed
+> the shadowing: `mcp/src/data.ts` keys by namespace and merges, and
+> `reference/api/` was regenerated. Confirmed in a fresh session against a
+> rebuilt server: `C_PartyInfo` 55, `C_PlayerInfo` 40, `C_SocialQueue` 10. The
+> stale warning has been removed from `AGENTS.md`.
+>
+> **Still a live trap:** `mcp/dist/` is gitignored, so a session whose server
+> was never rebuilt still sees the old 2-function `C_PartyInfo`. Before
+> trusting `get_namespace`, check it reports those three counts; if it does
+> not, run `npm run build` in `mcp/` and restart the server.
 >
 > ⚠️ **This repo has had more than one agent session working in it at once.**
 > Commits `740a476` and `755c2ba` landed on branch `adventurer-plates` from a
@@ -82,15 +85,27 @@ wrong. The addon is named "Adventurer Plates" (plural) deliberately, because
 that is the phrasing people will search for. CurseForge had no collision for
 any spelling as of 2026-09-20.
 
-### State: written, syntax-checked, NEVER RUN IN-GAME
+### State: PROBE RUN 2026-09-20, both tiers, nothing crashed
 
-Committed as `6dc0a5f` on branch `adventurer-plates`. **The probe has not been
-executed once.** Every statement about this client in the addon README is
-"verified against the ForeverProbe dump or the `wow-api` index", never
-"observed live". Do not upgrade that language until it actually runs.
+Tier A and Tier B both completed on build 69913. Results are in SavedVariables
+under `AdventurerPlatesDB.probe`. The addon README now says **observed** rather
+than verified-against-the-index, and carries the measured numbers.
 
-`/reload` then `/advplate probe` is the next action, and it is a deliberate
-on-stream moment — the user is recording a UAT demo.
+Headline results:
+
+- **Wire format: 2 chunks.** CBOR 386 B -> Deflate 293 B -> Base64 392 B, round
+  trip lossless. The Base64-vs-LibDeflate decision is **closed in favour of
+  native Base64**.
+- **`Menu.ModifyMenu` EXISTS.** The earlier "zero occurrences" claim was true of
+  the documentation index and false of the client.
+- **All six model widget types exist**, `PlayerModel` included.
+- **All four Tier B globals returned cleanly.** No crash.
+
+Two model readings are NOT yet answers: `SetUnit` returned `false` and
+`CanSetUnit` returned `nil` for every token. The `SetUnit` test is confounded —
+the probe hides the frame before calling it, and a hidden model will not load
+geometry without `SetKeepModelOnHide(true)`. Re-run on a visible frame before
+concluding anything about rendering.
 
 ### Why a probe before a UI
 
@@ -100,7 +115,12 @@ than guess:
 1. **Which model widget exists.** `FrameAPICharacterModelBase` is documented and
    `DressUpModel` / `ModelSceneFrame` are documented widget types, but
    `PlayerModel` is not in that list. The probe creates all six candidates.
-2. **How the right-click menu works.** `Menu.ModifyMenu` has **zero occurrences**
+2. ~~**How the right-click menu works.**~~ **SETTLED, AND THE PREMISE WAS
+   WRONG** — `Menu.ModifyMenu` exists on this client. The claim below was true
+   of the documentation index only. `Menu` is a FrameXML *Lua* table; the index
+   documents the *C* API, and the ForeverProbe dump walks only top-level
+   functions and `C_*` namespaces, so a plain global table was invisible to
+   both. Kept for the record: `Menu.ModifyMenu` has **zero occurrences**
    in this client's surface — the modern context-menu API is absent. Only
    `UnitPopup_OpenMenu` and the legacy `UIDropDownMenu_*` family survive, and
    the legacy path needs the `UnitPopupButtons` / `UnitPopupMenus` *tables*,
@@ -153,8 +173,12 @@ Checked against `wow-api` (build 69913) or the ForeverProbe `_G` dump.
 - `UnitPVPRank`, `GetPVPRankInfo` — gone. No Classic PvP rank badge. Forever
   reworked honor; `UnitHonor`, `UnitHonorLevel`, `GetPVPLifetimeStats` exist.
 - `GetSkillLineInfo`, `GetNumSkillLines` — gone.
-- `Menu.ModifyMenu` — does not exist.
-- `C_AchievementInfo` exposes five stubs only.
+- ~~`Menu.ModifyMenu` — does not exist.~~ **WRONG, corrected 2026-09-20.** It
+  exists and is the path to use; it is `UnitPopupButtons` that is `nil`.
+- `C_AchievementInfo` exposes five stubs only — and `GetAchievementInfo(6)`
+  returned all `nil`, so achievements are confirmed not player-facing here.
+- `C_GuildInfo` (39 functions) has no getter for your own guild name or rank.
+  Undocumented `GetGuildInfo("player")` is the only path; observed working.
 
 ### Decisions already made — do not relitigate
 
@@ -166,9 +190,11 @@ Checked against `wow-api` (build 69913) or the ForeverProbe `_G` dump.
 - **Total RP 3 is not a duplicate.** It is in-character identity; this is
   out-of-character social matchmaking. It also does not run on Forever
   (`## Interface: 120100`, gates omit `camelot`).
-- **Base64 vs `LibDeflate:EncodeForWoWChatChannel` is deliberately OPEN.**
-  Base64 is native and costs a flat +33%. Decide after the probe prints the
-  real byte count. Two chunks → stay native; four or five → revisit.
+- **Base64 vs `LibDeflate:EncodeForWoWChatChannel` is CLOSED — native Base64.**
+  Measured 2026-09-20: CBOR 386 B -> Deflate 293 B -> Base64 392 B = **2 chunks**
+  at 240 B, round trip lossless. The pre-registered rule was "two chunks -> stay
+  native", and it came in at two. Deflate still earns its place: Base64 of raw
+  CBOR would be ~515 B, i.e. three chunks.
 - **Portrait fallback:** a 3D model renders only for a unit the client can see.
   Target / mouseover / party → live model. Anyone else → class-crest
   composition, and the UI says why. Missing data becomes a sentence, never a
@@ -207,6 +233,12 @@ The goal has not changed; the target client moved out from under it.
   SavedVariables with schema check, chat output, slash dispatch) and `Probe.lua`
   (the two-tier capability probe). Written and syntax-checked, never run. See
   "Current work" above and the addon's own README.
+- `addons/AdventurerPlatesCard/` — **landscape fork** of AdventurerPlates,
+  reshaped after a real FFXIV Adventurer Plate (800x420, portrait as a
+  full-height hero on the right, playstyle as badges, hours labelled only at
+  12am/12pm). Separate SavedVariables (`AdventurerPlatesCardDB`) and separate
+  slash (`/advcard`), so both run side by side and the portrait layout stays
+  available. Built and syntax-checked; NOT yet run in game.
 - `addons/AddonSmokeTest/` — minimal proof-of-life addon, `20506, 16001`.
 - `scripts/link-addons.ps1` — symlinks `addons/*` into a client. Needs elevation
   or Developer Mode. Editing in the repo is then live in-game.
@@ -310,12 +342,13 @@ name. Verified after the fix: `C_PartyInfo` 55, `C_PlayerInfo` 40,
 `C_SocialQueue` 10, `C_Housing` 62 and `C_AuctionHouse` 85 unchanged, no
 duplicates in the system list, totals still 6,577 functions / 1,802 events.
 
-**Scope, verified 2026-09-20.** `lookup_api` and `search_api` are *not*
-affected: both index every function of every entry, so
+**Scope of the original defect, verified 2026-09-20.** `lookup_api` and
+`search_api` were never affected: both index every function of every entry, so
 `lookup_api("C_PartyInfo.ConvertToRaid")` and `search_api("ConvertToRaid")`
-each resolve the shadowed entry. Only `get_namespace` under-reports, and only
-for those three. "Absent from `lookup_api` means it does not exist" still
-holds. "Absent from `get_namespace` means it does not exist" does not.
+resolved the shadowed entry even before the fix. Only `get_namespace`
+under-reported, and only for those three. On a rebuilt server all three agree,
+so "absent from `get_namespace` means it does not exist" holds again — but only
+once the three counts above check out.
 
 **`mcp/dist/` is gitignored**, so the committed fix is source-only. Anyone
 pulling this must run `npm run build` in `mcp/` and restart the MCP server
