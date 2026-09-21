@@ -159,7 +159,9 @@ end
 local function Build()
     local f = CreateFrame("Frame", "AdventurerPlatesFrame", UIParent, "BackdropTemplate")
     f:SetSize(WIDTH, HEIGHT)
-    f:SetPoint("CENTER")
+    -- Offset from dead centre. The card fork also defaults to CENTER, and two
+    -- windows opening perfectly stacked is unusable when comparing layouts.
+    f:SetPoint("CENTER", -170, 60)
     f:SetFrameStrata("DIALOG")
     f:SetMovable(true)
     f:EnableMouse(true)
@@ -167,6 +169,11 @@ local function Build()
     f:SetScript("OnDragStart", f.StartMoving)
     f:SetScript("OnDragStop", f.StopMovingOrSizing)
     f:SetClampedToScreen(true)
+    -- Click-to-front. Two windows in one strata otherwise keep whatever
+    -- relative order they were given, and there is no way to get at the one
+    -- underneath. SetToplevel makes a click raise this frame within DIALOG,
+    -- which is what every other window on screen already does.
+    f:SetToplevel(true)
     Backdrop(f)
     f:Hide()
 
