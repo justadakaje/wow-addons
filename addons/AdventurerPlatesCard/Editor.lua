@@ -61,12 +61,32 @@ local function Divider(parent, y)
     return line
 end
 
--- The editor and the plate are separate top-level frames, and in the same
--- strata their children interleave by frame level rather than by which window
--- you think is "in front". That is what made plate text punch through the
--- editor panel. Putting the editor one strata up makes the ordering explicit
--- instead of incidental.
-local EDITOR_STRATA = "FULLSCREEN_DIALOG"
+-- The editor and the card are separate top-level frames, and in the same
+-- strata their children interleave by frame LEVEL rather than by which window
+-- you think is "in front". That is what made card text punch through the
+-- editor panel.
+--
+-- Fixed with a level, not a strata. An earlier version jumped the editor to
+-- FULLSCREEN_DIALOG, which beat the card but also beat everything else in
+-- DIALOG -- including BugSack, which sits at DIALOG level 1000. Covering the
+-- error window with an editor panel is precisely backwards: an error is the
+-- one thing that must stay readable.
+--
+-- Staying in DIALOG and claiming a level just above the card orders the two
+-- frames we own without outranking frames we do not.
+local EDITOR_STRATA = "DIALOG"
+local EDITOR_LEVEL_GAP = 20
+
+-- Frame levels are assigned by the client, so read the anchor frame at open
+-- time rather than caching a number that may no longer be true.
+local function RaiseAboveAnchor(f)
+    local anchor = ns.Card and ns.Card.frame
+    if not anchor then return end
+    local ok, level = pcall(anchor.GetFrameLevel, anchor)
+    if ok and type(level) == "number" then
+        pcall(f.SetFrameLevel, f, level + EDITOR_LEVEL_GAP)
+    end
+end
 
 -- Side by side when the screen can take it, offset-overlap when it cannot.
 -- The card is 800 wide, so blindly anchoring a 540-wide editor to its right
@@ -488,6 +508,7 @@ function E.Open()
     -- Re-anchor beside the plate every time, so the two windows never open
     -- stacked even if one of them was dragged earlier in the session.
     PositionBeside(E.frame)
+    RaiseAboveAnchor(E.frame)
 
     local stored, why = D.Load()
     if not stored then
