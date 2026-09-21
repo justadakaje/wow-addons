@@ -8,9 +8,9 @@ ns.addonName = ADDON
 ns.version   = C_AddOns.GetAddOnMetadata(ADDON, "Version") or "unknown"
 
 -- SavedVariables format version. Bump this whenever the persisted shape
--- changes, and handle the migration explicitly -- never trust a stored table
--- whose schema does not match.
-ns.DB_SCHEMA = 1
+-- changes, and add a matching entry to MIGRATIONS below -- never trust a
+-- stored table whose schema does not match, and never discard one either.
+ns.DB_SCHEMA = 2
 
 local LABEL = "|cff8fd3ffAdventurer Plates|r"
 
@@ -51,6 +51,23 @@ end
 -- SavedVariables
 --------------------------------------------------------------------------
 
+-- Migrations are keyed by the schema they upgrade FROM, and each one returns
+-- the schema it produced. Adding a key is how you add a migration.
+--
+-- Deliberately NOT "wipe on mismatch". The previous version did that, and it
+-- would have destroyed the probe results the moment DB_SCHEMA went 1 -> 2 --
+-- discarding data we had just spent a live client session collecting. Wiping
+-- is only correct when the stored shape genuinely cannot be carried forward,
+-- and that has not happened yet.
+local MIGRATIONS = {
+    -- 1 -> 2: added `plates`. Nothing stored under schema 1 changes shape, so
+    -- this is purely additive and `probe` carries over untouched.
+    [1] = function(db)
+        if type(db.plates) ~= "table" then db.plates = {} end
+        return 2
+    end,
+}
+
 local function InitDB()
     if type(AdventurerPlatesDB) ~= "table" then
         AdventurerPlatesDB = {}
@@ -58,15 +75,51 @@ local function InitDB()
 
     local db = AdventurerPlatesDB
 
-    if db.schema ~= nil and db.schema ~= ns.DB_SCHEMA then
-        ns.Warn("stored data is schema %s, this build expects %s -- starting fresh.",
-            tostring(db.schema), tostring(ns.DB_SCHEMA))
-        AdventurerPlatesDB = {}
-        db = AdventurerPlatesDB
+    -- A fresh table starts at the current schema; there is nothing to migrate.
+    if db.schema == nil then
+        db.schema = ns.DB_SCHEMA
     end
 
-    db.schema = ns.DB_SCHEMA
-    if type(db.probe) ~= "table" then db.probe = {} end
+    -- Walk forward one step at a time so a database two versions behind still
+    -- arrives intact. The loop is bounded by the migration table, not by a
+    -- guess, so a missing step stops it rather than spinning.
+    local guard = 0
+    while db.schema ~= ns.DB_SCHEMA do
+        local step = MIGRATIONS[db.schema]
+        if not step then
+            ns.Bad("no migration from schema %s to %s. Leaving stored data ALONE "
+                .. "-- nothing has been deleted. Plate features are disabled this session.",
+                tostring(db.schema), tostring(ns.DB_SCHEMA))
+            ns.db = nil
+            return
+        end
+
+        local from = db.schema
+        local ok, produced = pcall(step, db)
+        if not ok then
+            ns.Bad("migration from schema %s failed: %s. Stored data left ALONE.",
+                tostring(from), tostring(produced))
+            ns.db = nil
+            return
+        end
+
+        db.schema = produced
+        ns.Print("migrated saved data from schema %s to %s.",
+            tostring(from), tostring(produced))
+
+        guard = guard + 1
+        if guard > 16 then
+            ns.Bad("migration did not converge; stopping. Stored data left ALONE.")
+            ns.db = nil
+            return
+        end
+    end
+
+    -- Type-check every top-level container before anything trusts it. A
+    -- corrupted SavedVariables file is a plain Lua file someone may have
+    -- hand-edited; it is not guaranteed to match what we wrote.
+    if type(db.probe)  ~= "table" then db.probe  = {} end
+    if type(db.plates) ~= "table" then db.plates = {} end
 
     ns.db = db
 end
