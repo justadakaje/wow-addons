@@ -91,14 +91,44 @@ local MODEL_FRAME_TYPES = {
     "PlayerModel", "DressUpModel", "ModelScene", "CinematicModel", "TabardModel", "Model",
 }
 
--- Documented on FrameAPICharacterModelBase, plus a few the portrait editor
--- will want that are NOT in the documented list -- their absence is a finding.
-local MODEL_METHODS = {
-    "SetUnit", "SetPortraitZoom", "SetRotation", "SetAnimation", "SetCamDistanceScale",
-    "GetDisplayInfo", "SetDisplayInfo", "SetCreature", "RefreshCamera", "RefreshUnit",
-    "HasAnimation", "SetItem", "FreezeAnimation", "SetKeepModelOnHide",
+-- Two lists, because "absent" means the opposite thing for each of them.
+--
+-- DOCUMENTED is the complete FrameAPICharacterModelBase surface exactly as the
+-- wow-api index reports it for build 69913 -- 24 methods, transcribed from
+-- get_widget_methods, not recalled. A frame that reports itself as a character
+-- model and is MISSING one of these has diverged from the client's own
+-- documentation, which is a finding in its own right.
+local MODEL_METHODS_DOCUMENTED = {
+    "ApplySpellVisualKit", "CanSetUnit", "FreezeAnimation", "GetDisplayInfo",
+    "GetDoBlend", "GetKeepModelOnHide", "HasAnimation", "PlayAnimKit",
+    "RefreshCamera", "RefreshUnit", "SetAnimation", "SetBarberShopAlternateForm",
+    "SetCamDistanceScale", "SetCreature", "SetDisplayInfo", "SetDoBlend",
+    "SetItem", "SetItemAppearance", "SetKeepModelOnHide", "SetPortraitZoom",
+    "SetRotation", "SetUnit", "StopAnimKit", "ZeroCachedCenterXY",
+}
+
+-- SPECULATIVE is the legacy `Model` camera/placement surface. None of these
+-- carry an entry in this client's documentation -- `Model` is not one of the
+-- 18 documented FrameAPI widget families -- so these names are candidates
+-- drawn from the older Model API, NOT verified signatures. Their PRESENCE is
+-- the finding: they are what v0.2 Portraits (pose, camera, lighting) would be
+-- built on, and if they are gone that feature needs a different design.
+--
+-- Probing a name is not calling it. Each is tested with a type() check only.
+local MODEL_METHODS_SPECULATIVE = {
     "SetPosition", "SetFacing", "SetModelScale", "SetLight", "SetCustomCamera",
-    "SetViewTranslation", "SetPitch",
+    "SetViewTranslation", "SetPitch", "SetCamera", "SetSequence", "SetModel",
+    "ClearModel", "GetFacing", "GetModelScale", "GetPosition", "GetLight",
+}
+
+-- Which units can the client actually render? The portrait design assumes a
+-- live model only works for a unit that is currently visible, with a
+-- class-crest composition as the fallback and the UI saying why. CanSetUnit is
+-- documented on FrameAPICharacterModelBase, so this is answerable in Tier A
+-- rather than by guessing. The last token is deliberately invalid -- a client
+-- that returns true for it is not really answering the question.
+local MODEL_UNIT_TOKENS = {
+    "player", "target", "mouseover", "party1", "focus", "definitely_not_a_unit",
 }
 
 local TEMPLATES = {
@@ -129,20 +159,32 @@ local function ProbeWidgets()
     for _, frameType in ipairs(MODEL_FRAME_TYPES) do
         local ok, obj = pcall(CreateFrame, frameType, nil, UIParent)
         if ok and obj then
-            local present, missing = {}, {}
-            for _, m in ipairs(MODEL_METHODS) do
-                if type(obj[m]) == "function" then
-                    present[#present + 1] = m
-                else
-                    missing[#missing + 1] = m
+            -- Index through pcall. A widget's __index is normally a plain
+            -- table lookup, but this client is not one to take on trust, and
+            -- 38 protected reads per frame type costs nothing.
+            local function split(list)
+                local present, missing = {}, {}
+                for _, m in ipairs(list) do
+                    local okIdx, member = pcall(function() return obj[m] end)
+                    if okIdx and type(member) == "function" then
+                        present[#present + 1] = m
+                    else
+                        missing[#missing + 1] = m
+                    end
                 end
+                return present, missing
             end
+
+            local docPresent, docMissing = split(MODEL_METHODS_DOCUMENTED)
+            local specPresent = split(MODEL_METHODS_SPECULATIVE)
+
             local okType, objectType = pcall(obj.GetObjectType, obj)
             out[frameType] = {
-                created    = true,
-                objectType = okType and objectType or "?",
-                present    = present,
-                missing    = missing,
+                created     = true,
+                objectType  = okType and objectType or "?",
+                docPresent  = docPresent,
+                docMissing  = docMissing,
+                specPresent = specPresent,
             }
             pcall(obj.Hide, obj)
         else
@@ -164,6 +206,21 @@ local function ProbeModel()
     pcall(model.SetSize, model, 200, 260)
     pcall(model.SetPoint, model, "CENTER")
     pcall(model.Hide, model)
+
+    -- Ask before telling: CanSetUnit is the documented way to find out which
+    -- units this client will render, and it decides the portrait fallback.
+    -- Strictly less invasive than SetUnit, which we call immediately below.
+    local okCanIdx, canSetUnit = pcall(function() return model.CanSetUnit end)
+    if okCanIdx and type(canSetUnit) == "function" then
+        local can = {}
+        for _, token in ipairs(MODEL_UNIT_TOKENS) do
+            local okCan, result = pcall(model.CanSetUnit, model, token)
+            can[token] = okCan and tostring(result) or ("error: " .. tostring(result))
+        end
+        res.canSetUnit = can
+    else
+        res.canSetUnitAbsent = true
+    end
 
     local okSet, success = pcall(model.SetUnit, model, "player", false)
     res.setUnit = okSet and tostring(success) or ("error: " .. tostring(success))
@@ -326,16 +383,29 @@ local function ProbeCharacter()
     local function try(key, fn, ...)
         res[key] = collect(pcall(fn, ...))
     end
+    -- Every name below resolves in the wow-api index for build 69913, which is
+    -- what makes this Tier A. Re-check before adding to this list.
     try("UnitName",               UnitName, "player")
     try("UnitFullName",           UnitFullName, "player")
     try("UnitRace",               UnitRace, "player")
     try("UnitClass",              UnitClass, "player")
     try("UnitLevel",              UnitLevel, "player")
     try("UnitSex",                UnitSex, "player")
-    try("GetAverageItemLevel",    GetAverageItemLevel)
     try("GetNormalizedRealmName", GetNormalizedRealmName)
     try("GetServerTime",          GetServerTime)
     try("GetGameTime",            GetGameTime)
+
+    -- GetAverageItemLevel is NOT in the index for this client. It used to be
+    -- called here, which quietly broke Tier A's "documented API only" promise:
+    -- pcall would have caught a Lua error, but pcall does not stop a native
+    -- crash, and that is the whole reason Tier B exists.
+    --
+    -- Item level is not a v0.1 plate field anyway, so report whether the
+    -- symbol exists and leave calling it to a deliberate Tier B decision.
+    -- Reading a global is not calling one.
+    res.GetAverageItemLevel = ("%s (undocumented on this client -- not called)")
+        :format(type(_G.GetAverageItemLevel))
+
     return res
 end
 
@@ -363,12 +433,20 @@ function P.ReportSafe(t)
         elseif not w.created then
             ns.Line("    %-15s |cffff4040no|r -- %s", frameType, tostring(w.err))
         else
-            local present = #(w.present or {})
-            local total = present + #(w.missing or {})
-            ns.Line("    %-15s |cff40ff40yes|r (%s) %d/%d methods",
-                frameType, tostring(w.objectType), present, total)
-            if w.missing and #w.missing > 0 then
-                ns.Line("        absent: %s", table.concat(w.missing, ", "))
+            local docPresent = #(w.docPresent or {})
+            local docTotal = docPresent + #(w.docMissing or {})
+            ns.Line("    %-15s |cff40ff40yes|r (%s) documented %d/%d, legacy %d/%d",
+                frameType, tostring(w.objectType), docPresent, docTotal,
+                #(w.specPresent or {}), #MODEL_METHODS_SPECULATIVE)
+            -- A documented method that is absent is a divergence; say so loudly.
+            if w.docMissing and #w.docMissing > 0 then
+                ns.Line("        |cffff4040documented but absent|r: %s",
+                    table.concat(w.docMissing, ", "))
+            end
+            -- An undocumented method that is present is free capability.
+            if w.specPresent and #w.specPresent > 0 then
+                ns.Line("        |cff40ff40undocumented but present|r: %s",
+                    table.concat(w.specPresent, ", "))
             end
         end
     end
@@ -376,6 +454,16 @@ function P.ReportSafe(t)
     local m = t.model or {}
     ns.Line("  |cffffd100PlayerModel|r available=%s SetUnit=%s displayID=%s",
         tostring(m.available), tostring(m.setUnit), tostring(m.displayIDImmediate))
+
+    if m.canSetUnitAbsent then
+        ns.Line("    |cffff4040CanSetUnit absent|r -- portrait eligibility cannot be asked, only tried")
+    elseif m.canSetUnit then
+        local parts = {}
+        for _, token in ipairs(MODEL_UNIT_TOKENS) do
+            parts[#parts + 1] = ("%s=%s"):format(token, tostring(m.canSetUnit[token]))
+        end
+        ns.Line("    CanSetUnit: %s", table.concat(parts, " "))
+    end
 
     local okTpl, badTpl = {}, {}
     for name, present in pairs(t.templates or {}) do
