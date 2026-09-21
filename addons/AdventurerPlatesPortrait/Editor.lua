@@ -1,6 +1,6 @@
--- Adventurer Plates (Card) -- the editor
+-- Adventurer Plates -- the editor
 --
--- Edits a working COPY of the card and only writes it back on Save, so
+-- Edits a working COPY of the plate and only writes it back on Save, so
 -- Cancel is a real cancel and a half-finished edit never reaches disk.
 --
 -- SavedVariables are flushed by the client on /reload or logout, never by us.
@@ -61,18 +61,18 @@ local function Divider(parent, y)
     return line
 end
 
--- The editor and the card are separate top-level frames, and in the same
+-- The editor and the plate are separate top-level frames, and in the same
 -- strata their children interleave by frame LEVEL rather than by which window
--- you think is "in front". That is what made card text punch through the
+-- you think is "in front". That is what made plate text punch through the
 -- editor panel.
 --
 -- Fixed with a level, not a strata. An earlier version jumped the editor to
--- FULLSCREEN_DIALOG, which beat the card but also beat everything else in
+-- FULLSCREEN_DIALOG, which beat the plate but also beat everything else in
 -- DIALOG -- including BugSack, which sits at DIALOG level 1000. Covering the
 -- error window with an editor panel is precisely backwards: an error is the
 -- one thing that must stay readable.
 --
--- Staying in DIALOG and claiming a level just above the card orders the two
+-- Staying in DIALOG and claiming a level just above the plate orders the two
 -- frames we own without outranking frames we do not.
 local EDITOR_STRATA = "DIALOG"
 local EDITOR_LEVEL_GAP = 20
@@ -80,7 +80,7 @@ local EDITOR_LEVEL_GAP = 20
 -- Frame levels are assigned by the client, so read the anchor frame at open
 -- time rather than caching a number that may no longer be true.
 local function RaiseAboveAnchor(f)
-    local anchor = ns.Card and ns.Card.frame
+    local anchor = ns.Plate and ns.Plate.frame
     if not anchor then return end
     local ok, level = pcall(anchor.GetFrameLevel, anchor)
     if ok and type(level) == "number" then
@@ -88,30 +88,16 @@ local function RaiseAboveAnchor(f)
     end
 end
 
--- Side by side when the screen can take it, offset-overlap when it cannot.
--- The card is 800 wide, so blindly anchoring a 540-wide editor to its right
--- edge would push it off anything narrower than ~2560. Measure rather than
--- assume; the strata bump makes overlapping legible when it has to happen.
+-- Open beside the plate rather than on top of it. Anchored on each open, so
+-- dragging either window during a session still works and the next open tidies
+-- up again.
 local function PositionBeside(f)
     f:ClearAllPoints()
-
-    local card = ns.Card and ns.Card.frame
-    if not (card and card:IsShown()) then
-        f:SetPoint("CENTER")
-        return
-    end
-
-    local ok, fits = pcall(function()
-        local screenW   = UIParent:GetWidth()
-        local cardRight = card:GetRight()
-        return (cardRight and screenW and (cardRight + 12 + f:GetWidth() <= screenW)) and true or false
-    end)
-
-    if ok and fits then
-        f:SetPoint("TOPLEFT", card, "TOPRIGHT", 12, 0)
+    local plate = ns.Plate and ns.Plate.frame
+    if plate and plate:IsShown() then
+        f:SetPoint("TOPLEFT", plate, "TOPRIGHT", 12, 0)
     else
-        -- Offset so the card's name, level block and portrait stay visible.
-        f:SetPoint("TOPLEFT", card, "TOPLEFT", 150, -30)
+        f:SetPoint("CENTER")
     end
 end
 
@@ -190,7 +176,7 @@ end
 --------------------------------------------------------------------------
 
 local function Build()
-    local f = CreateFrame("Frame", "AdventurerPlatesCardEditor", UIParent, "BackdropTemplate")
+    local f = CreateFrame("Frame", "AdventurerPlatesPortraitEditor", UIParent, "BackdropTemplate")
     f:SetSize(WIDTH, HEIGHT)
     f:SetPoint("CENTER")
     f:SetFrameStrata(EDITOR_STRATA)
@@ -214,7 +200,7 @@ local function Build()
 
     local heading = Text(f, "GameFontNormalLarge")
     heading:SetPoint("TOPLEFT", 14, -12)
-    heading:SetText("Edit Adventurer Card")
+    heading:SetText("Edit Adventurer Plate")
     heading:SetTextColor(COL_LABEL.r, COL_LABEL.g, COL_LABEL.b)
     Divider(f, -34)
 
@@ -556,8 +542,8 @@ function E.Save()
 
     ns.Good("plate saved. It reaches disk on your next /reload or logout.")
     E.Close()
-    if ns.Card and ns.Card.frame and ns.Card.frame:IsShown() then
-        ns.Card.Refresh()
+    if ns.Plate and ns.Plate.frame and ns.Plate.frame:IsShown() then
+        ns.Plate.Refresh()
     end
 end
 
@@ -583,4 +569,4 @@ end
 -- commands
 --------------------------------------------------------------------------
 
-ns.RegisterCommand("edit", function() E.Toggle() end, "open the card editor")
+ns.RegisterCommand("edit", function() E.Toggle() end, "open the plate editor")

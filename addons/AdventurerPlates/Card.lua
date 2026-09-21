@@ -214,7 +214,7 @@ end
 --------------------------------------------------------------------------
 
 local function Build()
-    local f = CreateFrame("Frame", "AdventurerPlatesCardFrame", UIParent, "BackdropTemplate")
+    local f = CreateFrame("Frame", "AdventurerPlatesFrame", UIParent, "BackdropTemplate")
     f:SetSize(WIDTH, HEIGHT)
     -- Offset opposite to the portrait original, which also defaults to CENTER.
     -- Both title bars stay reachable when the two are open together.

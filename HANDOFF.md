@@ -233,12 +233,10 @@ The goal has not changed; the target client moved out from under it.
   SavedVariables with schema check, chat output, slash dispatch) and `Probe.lua`
   (the two-tier capability probe). Written and syntax-checked, never run. See
   "Current work" above and the addon's own README.
-- `addons/AdventurerPlatesCard/` — **landscape fork** of AdventurerPlates,
-  reshaped after a real FFXIV Adventurer Plate (800x420, portrait as a
-  full-height hero on the right, playstyle as badges, hours labelled only at
-  12am/12pm). Separate SavedVariables (`AdventurerPlatesCardDB`) and separate
-  slash (`/advcard`), so both run side by side and the portrait layout stays
-  available. Built and syntax-checked; NOT yet run in game.
+- `addons/AdventurerPlatesPortrait/` — the **shelved** portrait layout
+  (440x604). Kept for comparison, not deprecated. Own SavedVariables
+  (`AdventurerPlatesPortraitDB`) and own slash (`/advportrait`); starts empty,
+  since the dataset it used to own was inherited by the card on promotion.
 - `addons/AddonSmokeTest/` — minimal proof-of-life addon, `20506, 16001`.
 - `scripts/link-addons.ps1` — symlinks `addons/*` into a client. Needs elevation
   or Developer Mode. Editing in the repo is then live in-game.

@@ -157,7 +157,7 @@ end
 --------------------------------------------------------------------------
 
 local function Build()
-    local f = CreateFrame("Frame", "AdventurerPlatesFrame", UIParent, "BackdropTemplate")
+    local f = CreateFrame("Frame", "AdventurerPlatesPortraitFrame", UIParent, "BackdropTemplate")
     f:SetSize(WIDTH, HEIGHT)
     -- Offset from dead centre. The card fork also defaults to CENTER, and two
     -- windows opening perfectly stacked is unusable when comparing layouts.

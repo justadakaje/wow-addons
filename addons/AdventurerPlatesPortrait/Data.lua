@@ -24,32 +24,24 @@ ns.Data = D
 
 -- Order is display order. `key` is what reaches SavedVariables and, later,
 -- the wire -- so keys are short and must never be renamed without a migration.
---
--- `abbr` and `rgb` exist for the card layout's badge row. FFXIV uses real icon
--- art here; we do not, deliberately. Icon art means a texture path, and there
--- is no verified source of playstyle-category art on this client -- guessing an
--- "Interface\\ICONS\\..." string from memory is exactly the mistake that
--- produced the Menu.ModifyMenu error. A coloured badge carrying two letters is
--- honest, needs no path, and reads at a glance. Swapping in real art later is a
--- texture call, not a re-layout.
 D.TAGS = {
-    { key = "dungeon",  label = "Dungeon Delver",        abbr = "DD", rgb = { 0.45, 0.62, 0.95 } },
-    { key = "raid",     label = "Raider",                abbr = "RD", rgb = { 0.72, 0.42, 0.95 } },
-    { key = "worldpvp", label = "World PvP",             abbr = "WP", rgb = { 0.90, 0.30, 0.30 } },
-    { key = "bg",       label = "Battlegrounds",         abbr = "BG", rgb = { 0.95, 0.48, 0.28 } },
-    { key = "leveling", label = "Casual Leveling",       abbr = "CL", rgb = { 0.40, 0.80, 0.55 } },
-    { key = "hardcore", label = "Hardcore / Survival",   abbr = "HC", rgb = { 0.80, 0.18, 0.22 } },
-    { key = "rp",       label = "Roleplay",              abbr = "RP", rgb = { 0.85, 0.62, 0.90 } },
-    { key = "prof",     label = "Professions & Crafting",abbr = "PR", rgb = { 0.85, 0.70, 0.35 } },
-    { key = "gold",     label = "Gold Making",           abbr = "GM", rgb = { 0.95, 0.82, 0.25 } },
-    { key = "collect",  label = "Collector",             abbr = "CO", rgb = { 0.40, 0.75, 0.82 } },
-    { key = "mentor",   label = "Mentor",                abbr = "MT", rgb = { 0.55, 0.85, 0.40 } },
-    { key = "explore",  label = "Explorer",              abbr = "EX", rgb = { 0.50, 0.70, 0.90 } },
+    { key = "dungeon",  label = "Dungeon Delver" },
+    { key = "raid",     label = "Raider" },
+    { key = "worldpvp", label = "World PvP" },
+    { key = "bg",       label = "Battlegrounds" },
+    { key = "leveling", label = "Casual Leveling" },
+    { key = "hardcore", label = "Hardcore / Survival" },
+    { key = "rp",       label = "Roleplay" },
+    { key = "prof",     label = "Professions & Crafting" },
+    { key = "gold",     label = "Gold Making" },
+    { key = "collect",  label = "Collector" },
+    { key = "mentor",   label = "Mentor" },
+    { key = "explore",  label = "Explorer" },
     -- Forever-specific. Camping introduces no new API (it fires
     -- PLAYER_UPDATE_RESTING, not housing events) so it is self-declared;
     -- Housing is a real 13-namespace system a later version could read.
-    { key = "camping",  label = "Camping",               abbr = "CP", rgb = { 0.62, 0.52, 0.36 } },
-    { key = "housing",  label = "Housing",               abbr = "HO", rgb = { 0.72, 0.60, 0.48 } },
+    { key = "camping",  label = "Camping" },
+    { key = "housing",  label = "Housing" },
 }
 
 D.TAG_BY_KEY = {}

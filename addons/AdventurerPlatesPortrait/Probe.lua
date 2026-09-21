@@ -6,8 +6,8 @@
 -- really is, and what the undocumented globals return.
 --
 -- Two tiers, deliberately separated:
---   Tier A (/advcard probe) -- documented API and pure Lua only.
---   Tier B (/advcard risky) -- calls globals that exist in _G but carry no
+--   Tier A (/advportrait probe) -- documented API and pure Lua only.
+--   Tier B (/advportrait risky) -- calls globals that exist in _G but carry no
 --     entry in the documentation this client ships. C_Housing.GetMaxHouseLevel
 --     proved a *documented* getter can access-violate, so an undocumented one
 --     gets announced before it is called and is resumable from any step.
@@ -415,7 +415,7 @@ end
 
 function P.ReportSafe(t)
     if type(t) ~= "table" then
-        ns.Warn("no Tier A probe stored yet -- run |cffffd100/advcard probe|r.")
+        ns.Warn("no Tier A probe stored yet -- run |cffffd100/advportrait probe|r.")
         return
     end
 
@@ -631,7 +631,7 @@ function P.RunRisky(arg)
 
     ns.Warn("Tier B calls UNDOCUMENTED globals. pcall does not stop a native crash.")
     ns.Warn("Every step prints before it runs -- if the client dies, the last line")
-    ns.Warn("on screen names the call that did it. Resume with /advcard risky <n>.")
+    ns.Warn("on screen names the call that did it. Resume with /advportrait risky <n>.")
 
     for i = first, #RISKY_STEPS do
         local step = RISKY_STEPS[i]
@@ -661,4 +661,4 @@ ns.RegisterCommand("report", function()
 end, "reprint the last Tier A result")
 
 ns.RegisterCommand("risky", function(arg) P.RunRisky(arg) end,
-    "Tier B: undocumented globals, can crash the client; /advcard risky <n> resumes")
+    "Tier B: undocumented globals, can crash the client; /advportrait risky <n> resumes")

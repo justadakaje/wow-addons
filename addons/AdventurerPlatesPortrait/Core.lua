@@ -12,7 +12,7 @@ ns.version   = C_AddOns.GetAddOnMetadata(ADDON, "Version") or "unknown"
 -- stored table whose schema does not match, and never discard one either.
 ns.DB_SCHEMA = 2
 
-local LABEL = "|cff8fd3ffAdventurer Plates|r |cff707070(Card)|r"
+local LABEL = "|cff8fd3ffAdventurer Plates|r"
 
 local function emit(colour, msg, ...)
     if select("#", ...) > 0 then
@@ -69,11 +69,11 @@ local MIGRATIONS = {
 }
 
 local function InitDB()
-    if type(AdventurerPlatesCardDB) ~= "table" then
-        AdventurerPlatesCardDB = {}
+    if type(AdventurerPlatesPortraitDB) ~= "table" then
+        AdventurerPlatesPortraitDB = {}
     end
 
-    local db = AdventurerPlatesCardDB
+    local db = AdventurerPlatesPortraitDB
 
     -- A fresh table starts at the current schema; there is nothing to migrate.
     if db.schema == nil then
@@ -141,7 +141,7 @@ local function Usage()
     for name in pairs(ns.commands) do names[#names + 1] = name end
     table.sort(names)
     for _, name in ipairs(names) do
-        ns.Line("  |cffffd100/advcard %s|r -- %s", name, ns.commands[name].help or "")
+        ns.Line("  |cffffd100/advportrait %s|r -- %s", name, ns.commands[name].help or "")
     end
 end
 
@@ -179,9 +179,9 @@ loader:SetScript("OnEvent", function(self, event, loadedAddon)
 
     InitDB()
 
-    SLASH_ADVENTURERPLATESCARD1 = "/advcard"
-    SLASH_ADVENTURERPLATESCARD2 = "/acard"
-    SlashCmdList["ADVENTURERPLATESCARD"] = Dispatch
+    SLASH_ADVENTURERPLATESPORTRAIT1 = "/advportrait"
+    SLASH_ADVENTURERPLATESPORTRAIT2 = "/aportrait"
+    SlashCmdList["ADVENTURERPLATESPORTRAIT"] = Dispatch
 
-    ns.Print("v%s loaded. |cffffd100/advcard|r for commands.", ns.version)
+    ns.Print("v%s loaded. |cffffd100/advportrait|r for commands.", ns.version)
 end)

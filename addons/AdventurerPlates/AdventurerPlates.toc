@@ -10,6 +10,6 @@
 
 Core.lua
 Data.lua
-Plate.lua
+Card.lua
 Editor.lua
 Probe.lua
