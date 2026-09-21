@@ -3,8 +3,8 @@
 Working context for picking this repo up cold. Read `AGENTS.md` too — it holds
 the rules; this holds the findings, the dead ends, and the open questions.
 
-Last updated 2026-09-20 (second pass, AdventurerPlates session), against WoW:
-Forever beta build 69913.
+Last updated 2026-09-21 (AdventurerPlates v0.1 through v0.3 session), against
+WoW: Forever beta build 69913.
 
 **If you are a new session picking this up:** the active work is
 `addons/AdventurerPlates/`, not the gold/AH goal below. Read
@@ -65,148 +65,133 @@ here. The gold goal is real but parked and blocked — see Goal.
 
 ## Current work — AdventurerPlates
 
-**This is what the last session was doing and where a new session should start.**
+**This is the active work. Read `addons/AdventurerPlates/README.md` first.**
 
-### What it is
+### State as of 2026-09-21: v0.3 built, sharing untested
 
-An FFXIV-style **Adventurer Plate** for Forever: a character card carrying
-portrait, title, guild + rank, level/race/class, playstyle tags, a weekday /
-weekend active-hours grid, and a motto.
+Two addons, both loading clean on build 69913:
 
-Origin: a post by Shobek (`https://x.com/Shobektv/status/2101665615115153745`)
-asking for the feature in Forever. The mockup in that post is the entire
-requirements document — the thread replies add nothing. Nothing here depends on
-Blizzard shipping it.
+| folder | title | command | SavedVariables | shape |
+| --- | --- | --- | --- | --- |
+| `AdventurerPlates` | Adventurer Plates | `/advplate` | `AdventurerPlatesDB` | 800x448 landscape |
+| `AdventurerPlatesPortrait` | (Portrait, shelved) | `/advportrait` | `AdventurerPlatesPortraitDB` | 440x604 portrait |
 
-**Naming, researched:** FFXIV calls it the **Adventurer Plate** — singular, no
-apostrophe. The pose/lighting/framing editor is a *separate* system called
-**Portraits**. Some third-party guides write "Adventurer's Plate"; that is
-wrong. The addon is named "Adventurer Plates" (plural) deliberately, because
-that is the phrasing people will search for. CurseForge had no collision for
-any spelling as of 2026-09-20.
+**The landscape card is canonical.** The portrait layout is shelved for
+comparison, not deprecated. They share no globals — verified mechanically, not
+by eye — so both can run at once.
 
-### State: PROBE RUN 2026-09-20, both tiers, nothing crashed
+Branch `adventurer-plates`, pushed, PR #2 open against `master`.
 
-Tier A and Tier B both completed on build 69913. Results are in SavedVariables
-under `AdventurerPlatesDB.probe`. The addon README now says **observed** rather
-than verified-against-the-index, and carries the measured numbers.
+### What is verified in game, and what is not
 
-Headline results:
+**Run and confirmed working:**
 
-- **Wire format: 2 chunks.** CBOR 386 B -> Deflate 293 B -> Base64 392 B, round
-  trip lossless. The Base64-vs-LibDeflate decision is **closed in favour of
-  native Base64**.
-- **`Menu.ModifyMenu` EXISTS.** The earlier "zero occurrences" claim was true of
-  the documentation index and false of the client.
-- **All six model widget types exist**, `PlayerModel` included.
-- **All four Tier B globals returned cleanly.** No crash.
+- Capability probe, both tiers, no crash
+- v0.1 plate and editor; tags, hours and motto round-trip through
+  SavedVariables and survive a reload
+- The live 3D portrait renders
+- Schema migrations 1→2 and 2→3, each preserving prior data
+- Window layering and click-to-front across four frames from two addons
+- v0.3 loads with all four vendored libraries present (no Chomp warning on
+  load, which is the check that proves it)
 
-Two model readings are NOT yet answers: `SetUnit` returned `false` and
-`CanSetUnit` returned `nil` for every token. The `SetUnit` test is confounded —
-the probe hides the frame before calling it, and a hidden model will not load
-geometry without `SetKeepModelOnHide(true)`. Re-run on a visible frame before
-concluding anything about rendering.
+**Written and NEVER exercised — treat as unverified:**
 
-### Why a probe before a UI
+- **All of sharing.** No plate has been sent or received. Most of it cannot be
+  tested alone: `ask` needs a second character running the addon. The solo
+  checks that do pass are that the prefix registers and `ask <yourself>`
+  refuses.
+- **Guild display.** The test character has no guild, so every run has taken
+  the "Not in a guild." branch. `D.Guild()` calls the undocumented
+  `GetGuildInfo`, which Tier B observed returning
+  `(name, rankName, rankIndex, realm)` — but only ever as all-nil.
+- **Title display.** 111 titles exist, 0 are known on the test character, so
+  only the empty branch has rendered. Forever beta caps at level 20, so a title
+  may not be obtainable at all before the cap.
+- **The portrait fallback sentence.** The model has loaded on every single run,
+  so the `success == false` path has never appeared on screen.
 
-Three things could not be settled offline, and `AGENTS.md` says verify rather
-than guess:
+That is roughly a third of the card's fields in a correct-looking but
+unexercised state. It is the single biggest risk to publishing.
 
-1. **Which model widget exists.** `FrameAPICharacterModelBase` is documented and
-   `DressUpModel` / `ModelSceneFrame` are documented widget types, but
-   `PlayerModel` is not in that list. The probe creates all six candidates.
-2. ~~**How the right-click menu works.**~~ **SETTLED, AND THE PREMISE WAS
-   WRONG** — `Menu.ModifyMenu` exists on this client. The claim below was true
-   of the documentation index only. `Menu` is a FrameXML *Lua* table; the index
-   documents the *C* API, and the ForeverProbe dump walks only top-level
-   functions and `C_*` namespaces, so a plain global table was invisible to
-   both. Kept for the record: `Menu.ModifyMenu` has **zero occurrences**
-   in this client's surface — the modern context-menu API is absent. Only
-   `UnitPopup_OpenMenu` and the legacy `UIDropDownMenu_*` family survive, and
-   the legacy path needs the `UnitPopupButtons` / `UnitPopupMenus` *tables*,
-   which are tables and so were invisible to the ForeverProbe function walk.
-3. **What the undocumented globals return.** `GetGuildInfo`, `GetProfessions`,
-   `GetProfessionInfo`, `GetAchievementInfo` all exist in `_G` with no
-   documentation entry.
+### The correction that matters most
 
-It also measures the wire format, which decides the whole sharing design.
+**`Menu.ModifyMenu` EXISTS on this client.** The earlier claim that it had
+"zero occurrences" was true of the *documentation index* and false of the
+*client*. Two independent blind spots produced it:
 
-### Probe design — respect the two tiers
+1. `Menu` is a FrameXML **Lua** table; the `wow-api` index documents the **C**
+   API, so `search_api("ModifyMenu")` correctly returns nothing.
+2. The `ForeverProbe` `_G` dump walks top-level *functions* and `C_*`
+   namespaces. A plain non-`C_` global *table* is invisible to it.
 
-- `/advplate probe` — **Tier A**, documented API and pure Lua only. Safe.
-- `/advplate report` — reprint the last Tier A result.
-- `/advplate risky [n]` — **Tier B**, calls the four undocumented globals.
+**General rule, now proven: "absent from `lookup_api`" means "absent from the C
+API", not "absent from the client."** For anything Lua-side — `Menu`,
+`UnitPopupMenus`, `UIDropDownMenu_*` — both offline sources are structurally
+blind and only an in-client `type()` check answers the question.
 
-Tier B announces every call *before* making it and is resumable from any step,
-because `pcall` catches Lua errors but does **not** stop a native crash —
-`C_Housing.GetMaxHouseLevel` access-violates despite being a documented
-no-argument getter. If the client dies, the last chat line names the culprit and
-`/advplate risky <n>` resumes from the next step.
+The real menu picture is inverted from the old assumption: the modern API is
+live, and it is the legacy path that is gutted (`UnitPopupButtons` is `nil`).
 
-Nothing in either tier runs at load, and nothing runs in the save path. That is
-not stylistic: ForeverProbe lost a 98-minute session to a crasher sitting in
-`PLAYER_LOGOUT`.
+### Measured, not estimated
 
-### Verified API this is built on
+Wire format, from the probe on build 69913:
 
-Checked against `wow-api` (build 69913) or the ForeverProbe `_G` dump.
+```
+CBOR 386 B -> Deflate 293 B -> Base64 392 B = 2 chunks at 240 B, lossless
+```
 
-**Present and load-bearing**
+**Base64 stays.** The pre-registered rule was "two chunks → stay native", and
+it came in at two, so there is no LibDeflate dependency. Deflate still earns
+its place: Base64 of raw CBOR would be ~515 B, i.e. three chunks.
 
-- `C_EncodingUtil` — `SerializeCBOR`, `CompressString`, `EncodeBase64` and
-  inverses. Native serialisation, so **no LibSerialize, no LibDeflate, no Ace**.
-  `Enum.CompressionMethod.Deflate = 0`,
-  `Enum.CompressionLevel.OptimizeForSize = 2`, `Enum.Base64Variant.Standard = 0`.
-- `C_ChatInfo.SendAddonMessage` / `SendAddonMessageLogged` /
-  `RegisterAddonMessagePrefix` / `IsAddonMessagePrefixRegistered` /
-  `GetRegisteredAddonMessagePrefixes`, `CHAT_MSG_ADDON`, and a full
-  `SendAddonMessageResult` enum.
-- Titles: `GetNumTitles`, `GetTitleName`, `IsTitleKnown`, `GetCurrentTitle`.
-- `RequestTimePlayed` + `TIME_PLAYED_MSG`, `GetServerTime`, `GetGameTime`.
-- `CanInspect` / `NotifyInspect` / `INSPECT_READY`.
-- Templates `BackdropTemplate`, `UIPanelButtonTemplate`, `InputBoxTemplate`,
-  `UICheckButtonTemplate`, `UIPanelScrollFrameTemplate`, `UIPanelCloseButton` —
-  all already in use by APLForever on this client, so not in question.
+### Two traps found the hard way
 
-**Absent — design around these**
-
-- `UnitPVPRank`, `GetPVPRankInfo` — gone. No Classic PvP rank badge. Forever
-  reworked honor; `UnitHonor`, `UnitHonorLevel`, `GetPVPLifetimeStats` exist.
-- `GetSkillLineInfo`, `GetNumSkillLines` — gone.
-- ~~`Menu.ModifyMenu` — does not exist.~~ **WRONG, corrected 2026-09-20.** It
-  exists and is the path to use; it is `UnitPopupButtons` that is `nil`.
-- `C_AchievementInfo` exposes five stubs only — and `GetAchievementInfo(6)`
-  returned all `nil`, so achievements are confirmed not player-facing here.
-- `C_GuildInfo` (39 functions) has no getter for your own guild name or rank.
-  Undocumented `GetGuildInfo("player")` is the only path; observed working.
+- **ASCII 31 is not a usable field separator.** Chomp's `CheckLoggedContents`
+  rejects `[%z\001-\009\011-\031\127]` as `ASCII_CONTROL` and *errors the
+  send*. The separator is `~`: outside the Base64 alphabet, not a WoW text
+  escape, no Lua pattern meaning, illegal in names.
+- **Chomp's `Libs/` is empty in git.** It is filled at package time from
+  CurseForge SVN via its `.pkgmeta`, so a plain `git clone` of Chomp does not
+  run. All three of LibStub, CallbackHandler-1.0 and ChatThrottleLib are hard
+  requirements despite the `## OptionalDeps` line. All four are now vendored
+  under `libs/` — see `libs/README.md` for versions, licenses and provenance.
 
 ### Decisions already made — do not relitigate
 
-- **Transport for v0.3 is Chomp** (`wow-rp-addons/Chomp`, ISC). Its `.toc`
-  already declares `16001`. Not adopted yet, because v0.1 is local-only and
-  taking a dependency before measuring the payload is premature. Pinned so
-  nobody builds a worse queue. Full reasoning in the addon README's Prior art
-  section.
-- **Total RP 3 is not a duplicate.** It is in-character identity; this is
-  out-of-character social matchmaking. It also does not run on Forever
-  (`## Interface: 120100`, gates omit `camelot`).
-- **Base64 vs `LibDeflate:EncodeForWoWChatChannel` is CLOSED — native Base64.**
-  Measured 2026-09-20: CBOR 386 B -> Deflate 293 B -> Base64 392 B = **2 chunks**
-  at 240 B, round trip lossless. The pre-registered rule was "two chunks -> stay
-  native", and it came in at two. Deflate still earns its place: Base64 of raw
-  CBOR would be ~515 B, i.e. three chunks.
-- **Portrait fallback:** a 3D model renders only for a unit the client can see.
-  Target / mouseover / party → live model. Anyone else → class-crest
-  composition, and the UI says why. Missing data becomes a sentence, never a
-  fabricated picture.
+- **Landscape card is the design.** Decided against a real FFXIV Adventurer
+  Plate screenshot. Portrait layout is shelved, not deleted.
+- **Base64, not LibDeflate.** Closed by measurement, see above.
+- **Chomp is the transport, vendored.** Four libraries, ~2,500 lines, roughly
+  61% of the shipped addon. The cost was larger than the original decision
+  assumed; it was taken anyway, knowingly.
+- **Sharing is pull-only.** No broadcast in 0.3.0. A presence ping is planned
+  but deliberately deferred until request/response is proven.
+- **Privacy is enforced on the responder.** A requester cannot assert identity.
+  Ignored players get no reply at all, because a refusal confirms you are
+  online and running the addon.
+- **No guessed texture paths, ever.** Playstyle badges are coloured two-letter
+  glyphs rather than icon art, because no verified source of category artwork
+  exists on this client. `abbr` and `rgb` live on `D.TAGS`, so real art later is
+  a texture change, not a re-layout.
+- **Total RP 3 is not a duplicate**, and does not run on Forever.
 
-### Roadmap
+### Next steps, in order
 
-- **v0.1** local plate + editor, persisted, no network.
-- **v0.2** Portraits — pose, rotation, zoom, camera, background, frame. Kept
-  separate from the plate exactly as FFXIV splits them.
-- **v0.3** sharing over Chomp, whisper-pull + presence ping, privacy enforced on
-  the responder.
+1. **Test sharing with a second character.** Needs Ava or a second account.
+   This is the only way to exercise any of v0.3.
+2. **Find a guild and a title.** Clears the largest unverified surface. Level
+   20 is the beta cap, so a title may be unobtainable — if so, record that
+   rather than leaving the gap open.
+3. **Claim the CurseForge project.** `scripts/package-addon.ps1 -Addon
+   AdventurerPlates` produces a verified zip. Be explicit on the page about
+   what is and is not tested.
+4. **v0.2 Portraits** — pose, camera, lighting. Unblocked: the probe confirmed
+   the full legacy model camera surface is present on all five model widget
+   types.
+5. **Richer Playstyle & Focus display.** The badges are a deliberate
+   placeholder.
+6. **Auctionator fork** — see the AH section below; it is unblocked now.
 
 ## Goal
 
@@ -215,8 +200,12 @@ value, and craftables sellable above crafting cost.
 
 **Parked, not cancelled** — the AdventurerPlates work above is what is active.
 
-**This is currently blocked on Forever** — see the Auctionator finding below.
-The goal has not changed; the target client moved out from under it.
+**No longer blocked, as of 2026-09-20.** An auctioneer was finally opened and
+the auction house works: modern `C_AuctionHouse` with all 85 functions present,
+browse queries returning results, and zero legacy AH events. Auctionator
+degrades silently rather than erroring. The remaining work is a fork adding
+`camelot` to five `AllowLoadGameType` gates — see the Auctionator finding below
+for the evidence and the exact lines.
 
 ## What is built
 
@@ -229,15 +218,24 @@ The goal has not changed; the target client moved out from under it.
   - `/fpevents [housing]` — event summary. **Stages in memory only.**
   - `/fphouse` — read `C_Housing`. Explicit-only and genuinely risky; see below.
   - Output: `WTF/Account/<id>/SavedVariables/ForeverProbe.lua` (~2.1 MB).
-- `addons/AdventurerPlates/` — **the active work.** `Core.lua` (namespace,
-  SavedVariables with schema check, chat output, slash dispatch) and `Probe.lua`
-  (the two-tier capability probe). Written and syntax-checked, never run. See
-  "Current work" above and the addon's own README.
+- `addons/AdventurerPlates/` — **the active addon.** Landscape card, editor,
+  persistence, and v0.3 sharing over vendored Chomp. Probe still present but
+  not shipped in release packages. See "Current work" above and its README.
 - `addons/AdventurerPlatesPortrait/` — the **shelved** portrait layout
   (440x604). Kept for comparison, not deprecated. Own SavedVariables
   (`AdventurerPlatesPortraitDB`) and own slash (`/advportrait`); starts empty,
   since the dataset it used to own was inherited by the card on promotion.
 - `addons/AddonSmokeTest/` — minimal proof-of-life addon, `20506, 16001`.
+- `scripts/check-lua.js` — Lua 5.1 syntax check via `luaparse`. There is no Lua
+  interpreter on this machine, so this is the only pre-flight there is. Carries
+  a documented workaround for luaparse 0.3.1 wrongly rejecting `break;`.
+- `scripts/check-toc.js` — verifies every file a `.toc` references exists, and
+  that it carries an `## Interface:` line. Written after a mangled path produced
+  a `.toc` that read plausibly and pointed at nothing; the game does not warn
+  about this, it just half-loads.
+- `scripts/package-addon.ps1` — builds a CurseForge-ready zip: stages the addon,
+  drops dev-only files, rewrites the `.toc` to match, adds LICENSE, and zips
+  with one correctly-named top-level folder. `Probe.lua` does not ship.
 - `scripts/link-addons.ps1` — symlinks `addons/*` into a client. Needs elevation
   or Developer Mode. Editing in the repo is then live in-game.
 - `.github/workflows/validate.yml` — checks each addon has a `.toc` with an
@@ -394,10 +392,52 @@ So the surviving Lua believes it is running on Retail while the Retail *files*
 were never loaded. Split-brain, not graceful degradation — it should throw
 rather than no-op once the AH is actually opened.
 
-**Unverified:** nobody has opened an auctioneer yet. This is inferred from toc
-gating plus constant logic. Ten seconds in front of an auctioneer confirms or
-kills it, and it decides whether the goal above is blocked on upstream or needs
-a fork of Auctionator.
+**TESTED 2026-09-20 at an auctioneer in Valanaar. The goal is UNBLOCKED, and
+the prediction above was wrong in the direction that helps.**
+
+Auctionator threw **no errors** — BugSack stayed empty. It degrades silently
+rather than splitting its brain, so the surviving ungated `Source/` checks for
+its AH layer before using it.
+
+The Blizzard auction house itself works fine. From the `ForeverProbe` event
+tape, which was recording passively via `RegisterAllEvents`:
+
+```
+AUCTION_HOUSE_SHOW                     1
+AUCTION_HOUSE_BROWSE_RESULTS_ADDED     3
+AUCTION_HOUSE_BROWSE_RESULTS_UPDATED   1
+AUCTION_HOUSE_NEW_RESULTS_RECEIVED     4
+AUCTION_HOUSE_THROTTLED_MESSAGE_SENT   9
+AUCTION_HOUSE_CLOSED                   1
+
+legacy AUCTION_ITEM_LIST_UPDATE and friends:  ZERO
+```
+
+Browse queries ran and returned results. Nine throttled round-trips completed.
+**Not one legacy Classic AH event fired**, and `C_AuctionHouse` has all 85
+functions present at runtime.
+
+So this client runs the **modern** `C_AuctionHouse` system exclusively — which
+also tells us *which* Auctionator bundle is correct. Before this test the toc
+gating alone could not say, because `camelot` is missing from both the Modern
+and Legacy lists.
+
+Read directly from `Auctionator.toc`, not inferred:
+
+```
+Libs_ModernAH      [AllowLoadGameType cata, mists, mainline]
+Imports_ModernAH   [AllowLoadGameType cata, mists, mainline]
+Assets_ModernAH    [AllowLoadGameType cata, mists, mainline]
+Source_ModernAH    [AllowLoadGameType cata, mists, mainline]
+Source_Mainline    [AllowLoadGameType mainline]
+```
+
+**Five gates, not four** — the earlier note missed `Source_Mainline`.
+
+**The hypothesis to test next:** add `camelot` to those five `AllowLoadGameType`
+lists in a fork and see what happens. It is falsifiable, not a fix — ModernAH
+may still call Retail APIs this client lacks. But `C_AuctionHouse` being fully
+present is the dependency that mattered most, and it is there.
 
 ## Verified findings — reusable components
 
