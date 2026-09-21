@@ -72,16 +72,28 @@ but it covers professions only, not "Mentor" or "World PvP".
 | Command | What it does |
 | --- | --- |
 | `/advplate` | command list (also `/aplate`) |
-| `/advplate show` | show or hide your Adventurer Card |
-| `/advplate edit` | open the card editor |
+| `/advplate show` | show or hide your Adventurer Plate |
+| `/advplate edit` | open the plate editor |
+
+### Development-only commands
+
+**These are not in released builds.** `scripts/package-addon.ps1` drops
+`Probe.lua` from the package, because `/advplate risky` calls undocumented
+globals and can crash the client -- a reasonable thing for the author to run
+deliberately, and a bad thing for a curious user to find in a command list.
+Run the addon from a checkout to get them.
+
+| Command | What it does |
+| --- | --- |
 | `/advplate probe` | **Tier A** capability probe — documented API only. Safe. |
 | `/advplate report` | reprint the last Tier A result |
 | `/advplate risky` | **Tier B** — calls undocumented globals. Can crash the client. |
+| `/advplate risky <n>` | resume Tier B from step `n` |
 
-The capability probe is carried over unchanged. It is duplicated rather than
-shared because `AGENTS.md` requires each addon to be self-contained and forbids
-reaching across addon folders; the duplication is the sanctioned cost. Its
-findings are recorded in the original addon's README and are not repeated here.
+The probe is duplicated in the shelved portrait addon rather than shared,
+because `AGENTS.md` requires each addon to be self-contained and forbids
+reaching across addon folders. Its findings are recorded above under *Observed
+on this client*.
 
 ## Status
 
