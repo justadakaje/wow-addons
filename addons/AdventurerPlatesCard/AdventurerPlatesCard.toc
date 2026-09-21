@@ -1,0 +1,15 @@
+## Interface: 16001
+## Title: Adventurer Plates (Card)
+## Notes: Landscape card layout of the Adventurer Plate. Fork of Adventurer Plates; both can run side by side.
+## Author: justadakaje
+## Version: 0.1.0
+## IconTexture: Interface\ICONS\INV_Misc_Note_01
+## SavedVariables: AdventurerPlatesCardDB
+## X-Target-Client: WoW: Forever (camelot)
+## X-Tested-Build: 1.60.1.69913
+
+Core.lua
+Data.lua
+Card.lua
+Editor.lua
+Probe.lua
