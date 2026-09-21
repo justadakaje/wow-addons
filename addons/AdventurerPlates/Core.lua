@@ -10,7 +10,7 @@ ns.version   = C_AddOns.GetAddOnMetadata(ADDON, "Version") or "unknown"
 -- SavedVariables format version. Bump this whenever the persisted shape
 -- changes, and add a matching entry to MIGRATIONS below -- never trust a
 -- stored table whose schema does not match, and never discard one either.
-ns.DB_SCHEMA = 2
+ns.DB_SCHEMA = 3
 
 local LABEL = "|cff8fd3ffAdventurer Plates|r"
 
@@ -66,6 +66,14 @@ local MIGRATIONS = {
         if type(db.plates) ~= "table" then db.plates = {} end
         return 2
     end,
+
+    -- 2 -> 3: added `share` (privacy setting and the received-plate cache).
+    -- Also additive; existing plates are untouched.
+    [2] = function(db)
+        if type(db.share) ~= "table" then db.share = {} end
+        if type(db.share.cache) ~= "table" then db.share.cache = {} end
+        return 3
+    end,
 }
 
 local function InitDB()
@@ -120,6 +128,8 @@ local function InitDB()
     -- hand-edited; it is not guaranteed to match what we wrote.
     if type(db.probe)  ~= "table" then db.probe  = {} end
     if type(db.plates) ~= "table" then db.plates = {} end
+    if type(db.share)  ~= "table" then db.share  = {} end
+    if type(db.share.cache) ~= "table" then db.share.cache = {} end
 
     ns.db = db
 end
@@ -182,6 +192,13 @@ loader:SetScript("OnEvent", function(self, event, loadedAddon)
     SLASH_ADVENTURERPLATES1 = "/advplate"
     SLASH_ADVENTURERPLATES2 = "/aplate"
     SlashCmdList["ADVENTURERPLATES"] = Dispatch
+
+    -- Sharing registers its addon-message prefix only after SavedVariables
+    -- are ready, because the privacy setting lives there and we must never
+    -- answer a request before knowing what the user allows.
+    if ns.db and ns.Share and ns.Share.Init then
+        ns.Share.Init()
+    end
 
     ns.Print("v%s loaded. |cffffd100/advplate|r for commands.", ns.version)
 end)

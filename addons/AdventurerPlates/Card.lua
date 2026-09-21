@@ -103,7 +103,11 @@ local function BuildPortrait(parent)
     return holder
 end
 
-local function RefreshPortrait(holder, race, class)
+-- `unit` is the token to render, or nil when there is nobody the client can
+-- see. For your own card that is always "player". For someone else's it is
+-- "target" or "mouseover" when they happen to be in front of you, and nil
+-- otherwise -- a model can only be drawn for a unit the client has loaded.
+local function RefreshPortrait(holder, raceLabel, classLabel, unit, whoFor)
     local model, fallback = holder.model, holder.fallback
 
     local function giveUp(reason)
@@ -116,17 +120,26 @@ local function RefreshPortrait(holder, race, class)
         return giveUp("This client did not provide a model frame, so there is no portrait.")
     end
 
+    local who = (raceLabel and classLabel)
+        and ("%s %s"):format(raceLabel, classLabel)
+        or "this character"
+
+    if not unit then
+        -- Missing data becomes a sentence. Say what we do know -- race and
+        -- class came over the wire -- and why there is no picture, rather than
+        -- drawing something that implies we have one.
+        return giveUp(("%s is a %s.\n\nNo portrait: a 3D model can only be drawn for someone the client can currently see. Target them or mouse over them, then open this again.")
+            :format(whoFor or "This character", who))
+    end
+
     model:Show()
     fallback:Hide()
 
-    local ok, success = pcall(model.SetUnit, model, "player", false)
+    local ok, success = pcall(model.SetUnit, model, unit, false)
     if not ok then
         return giveUp("The portrait could not be loaded: " .. tostring(success))
     end
     if success == false then
-        local who = (race and class)
-            and ("%s %s"):format(race.label or "?", class.label or "?")
-            or "this character"
         return giveUp(("The client declined to render a model for %s, so no portrait is shown.")
             :format(who))
     end
@@ -346,13 +359,22 @@ local function Build()
     f.motto:SetJustifyV("TOP")
 
     -------------------------------------------------------------- actions
-    local edit = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    edit:SetSize(104, 20)
-    edit:SetPoint("BOTTOMLEFT", PAD, 12)
-    edit:SetText("Edit Card")
-    edit:SetScript("OnClick", function()
+    f.editButton = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    f.editButton:SetSize(104, 20)
+    f.editButton:SetPoint("BOTTOMLEFT", PAD, 12)
+    f.editButton:SetText("Edit Plate")
+    f.editButton:SetScript("OnClick", function()
         if ns.Editor then ns.Editor.Toggle() end
     end)
+
+    -- Occupies the same slot as Edit. Shown only while viewing someone else's
+    -- plate, so the action row itself tells you whose card you are looking at.
+    f.backButton = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    f.backButton:SetSize(104, 20)
+    f.backButton:SetPoint("BOTTOMLEFT", PAD, 12)
+    f.backButton:SetText("My Plate")
+    f.backButton:SetScript("OnClick", function() C.Show() end)
+    f.backButton:Hide()
 
     f.stamp = Text(f, "GameFontDisableSmall")
     f.stamp:SetPoint("BOTTOMLEFT", PAD + 116, 17)
@@ -364,84 +386,144 @@ end
 -- refresh
 --------------------------------------------------------------------------
 
-function C.Refresh()
+-- Which unit token, if any, the client can render for a given character.
+-- Checked in order of how likely the model is already loaded.
+local function VisibleUnitFor(name)
+    if not name then return nil end
+    for _, token in ipairs({ "target", "mouseover", "focus",
+                             "party1", "party2", "party3", "party4" }) do
+        local ok, unitName = pcall(UnitName, token)
+        if ok and unitName and unitName == name then return token end
+    end
+    return nil
+end
+
+-- Renders either your own card or one that arrived over the wire.
+--
+-- `remote` is nil for your own, or a sanitised payload from Share.Decode.
+-- Everything the card shows is read from one `view` table built here, so the
+-- drawing code below does not care which it is -- the alternative was a branch
+-- at every single field, which is where this sort of thing rots.
+function C.Refresh(remote)
     local f = C.frame
     if not f then return end
 
-    local plate, why = D.Load()
-    if not plate then
-        f.name:SetText("Card unavailable")
-        f.name:SetTextColor(1, 0.4, 0.4)
-        f.title:SetText(why or "Saved data could not be read.")
-        f.levelSmall:SetText("")
-        f.className:SetText("")
-        f.raceName:SetText("")
-        f.guild:SetText("")
-        f.guildRank:SetText("")
-        f.noTags:SetText("")
-        f.motto:SetText("")
-        f.stamp:SetText("")
-        return
+    local view, plate
+
+    if remote then
+        plate = remote
+        view = {
+            name      = remote.name or "Unknown",
+            realm     = remote.realm,
+            level     = remote.level,
+            raceLabel = remote.race,
+            className = remote.class,
+            classFile = remote.classFile,
+            guildName = remote.guild,
+            guildRank = remote.rank,
+            titleText = nil,   -- titles are client-local; see below
+            isRemote  = true,
+        }
+    else
+        local stored, why = D.Load()
+        if not stored then
+            f.name:SetText("Card unavailable")
+            f.name:SetTextColor(1, 0.4, 0.4)
+            f.title:SetText(why or "Saved data could not be read.")
+            f.levelSmall:SetText("")
+            f.className:SetText("")
+            f.raceName:SetText("")
+            f.guild:SetText("")
+            f.guildRank:SetText("")
+            f.noTags:SetText("")
+            f.motto:SetText("")
+            f.stamp:SetText("")
+            return
+        end
+
+        plate = stored
+        local id    = D.Name()
+        local class = D.Class()
+        local race  = D.Race()
+        -- One call, both returns: D.Guild() hits an undocumented global, so
+        -- calling it twice to get the reason string would double that risk for
+        -- no reason.
+        local guild, guildWhy = D.Guild()
+        view = {
+            name      = id and id.name or "Unknown character",
+            realm     = id and id.realm or nil,
+            level     = D.Level(),
+            raceLabel = race and race.label or nil,
+            className = class and class.label or nil,
+            classFile = class and class.file or nil,
+            guildName = guild and guild.name or nil,
+            guildRank = guild and guild.rank or nil,
+            guildWhy  = guildWhy,
+            isRemote  = false,
+        }
     end
 
-    local id     = D.Name()
-    local class  = D.Class()
-    local race   = D.Race()
-    local level  = D.Level()
-    local colour = D.ClassColor(class and class.file)
+    local colour = D.ClassColor(view.classFile)
+
+    -- The card has no title bar by design -- the name is the heading. So
+    -- "whose plate is this" is signalled by swapping the action row rather
+    -- than by adding chrome: you cannot edit someone else's plate.
+    f.editButton:SetShown(not view.isRemote)
+    f.backButton:SetShown(view.isRemote)
 
     -- name + realm
-    if id then
-        f.name:SetText(id.name)
-        f.name:SetTextColor(colour.r, colour.g, colour.b)
-        f.realm:SetText(id.realm or "Realm unknown")
-    else
-        f.name:SetText("Unknown character")
-        f.name:SetTextColor(1, 1, 1)
-        f.realm:SetText("")
-    end
+    f.name:SetText(view.name)
+    f.name:SetTextColor(colour.r, colour.g, colour.b)
+    f.realm:SetText(view.realm or "Realm unknown")
 
-    -- title
-    local titleID = plate.titleID or D.CurrentTitleID()
+    -- Title. GetTitleName resolves against the LOCAL client's title table, so
+    -- a remote titleID is only meaningful if this client knows that id too.
+    -- Resolving it is correct; inventing a name for an unknown id is not.
+    local titleID = plate.titleID or (not view.isRemote and D.CurrentTitleID()) or nil
     local titleText = titleID and D.TitleText(titleID) or nil
     if titleText then
         f.title:SetText(titleText)
         f.title:SetTextColor(1, 1, 1)
     else
-        f.title:SetText("No title set.")
+        f.title:SetText(view.isRemote and (titleID and "Title unknown to this client." or "No title set.")
+                                       or "No title set.")
         f.title:SetTextColor(COL_DIM.r, COL_DIM.g, COL_DIM.b)
     end
 
     -- level / class / race
-    f.levelSmall:SetText(level and ("LEVEL %d"):format(level) or "LEVEL ?")
-    if class then
-        f.className:SetText(class.label:upper())
+    f.levelSmall:SetText(view.level and ("LEVEL %d"):format(view.level) or "LEVEL ?")
+    if view.className then
+        f.className:SetText(view.className:upper())
         f.className:SetTextColor(colour.r, colour.g, colour.b)
     else
         f.className:SetText("CLASS UNKNOWN")
         f.className:SetTextColor(COL_DIM.r, COL_DIM.g, COL_DIM.b)
     end
-    f.raceName:SetText(race and race.label or "The client did not return a race.")
+    f.raceName:SetText(view.raceLabel or "Race not reported.")
 
     -- guild
-    local guild, guildWhy = D.Guild()
-    if guild then
-        f.guild:SetText("<" .. guild.name .. ">")
+    if view.guildName then
+        f.guild:SetText("<" .. view.guildName .. ">")
         f.guild:SetTextColor(0.6, 0.9, 0.6)
-        f.guildRank:SetText(guild.rank or "Rank not reported.")
+        f.guildRank:SetText(view.guildRank or "Rank not reported.")
     else
-        f.guild:SetText(guildWhy or "Not in a guild.")
+        f.guild:SetText(view.guildWhy or "Not in a guild.")
         f.guild:SetTextColor(COL_DIM.r, COL_DIM.g, COL_DIM.b)
         f.guildRank:SetText("")
     end
 
-    -- portrait
-    RefreshPortrait(f.portrait, race, class)
+    -- portrait: your own is always renderable; someone else's only if the
+    -- client currently has them loaded.
+    local unit = view.isRemote and VisibleUnitFor(view.name) or "player"
+    RefreshPortrait(f.portrait, view.raceLabel, view.className, unit,
+        view.isRemote and view.name or nil)
 
     -- badges
     local shown = RefreshBadges(f.badges, plate)
     if shown == 0 then
-        f.noTags:SetText("No playstyle tags chosen yet. Use Edit Card to add some.")
+        f.noTags:SetText(view.isRemote
+            and "No playstyle tags on this plate."
+            or "No playstyle tags chosen yet. Use Edit Plate to add some.")
     else
         f.noTags:SetText("")
     end
@@ -464,21 +546,33 @@ function C.Refresh()
         f.motto:SetText(plate.motto)
         f.motto:SetTextColor(1, 1, 1)
     else
-        f.motto:SetText("No motto written yet.")
+        f.motto:SetText(view.isRemote and "No motto on this plate." or "No motto written yet.")
         f.motto:SetTextColor(COL_DIM.r, COL_DIM.g, COL_DIM.b)
     end
 
     -- stamp
     if plate.updated and plate.updated > 0 then
-        f.stamp:SetText("Last edited " .. date("%Y-%m-%d %H:%M", plate.updated))
+        f.stamp:SetText((view.isRemote and "They last edited " or "Last edited ")
+            .. date("%Y-%m-%d %H:%M", plate.updated))
     else
-        f.stamp:SetText("Never edited.")
+        f.stamp:SetText(view.isRemote and "Never edited by them." or "Never edited.")
     end
 end
 
 function C.Show()
     if not C.frame then C.frame = Build() end
+    C.viewing = nil
     C.Refresh()
+    C.frame:Show()
+end
+
+-- Show a plate that arrived over the wire. Only ever called for a plate we
+-- asked for -- Share.lua will not open this on an unsolicited message, because
+-- a stranger must not be able to put a window on your screen.
+function C.ShowRemote(sender, payload)
+    if not C.frame then C.frame = Build() end
+    C.viewing = { sender = sender, payload = payload }
+    C.Refresh(payload)
     C.frame:Show()
 end
 
@@ -487,7 +581,11 @@ function C.Hide()
 end
 
 function C.Toggle()
-    if C.frame and C.frame:IsShown() then C.Hide() else C.Show() end
+    if C.frame and C.frame:IsShown() and not C.viewing then
+        C.Hide()
+    else
+        C.Show()
+    end
 end
 
 --------------------------------------------------------------------------

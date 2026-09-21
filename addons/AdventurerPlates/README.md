@@ -74,6 +74,34 @@ but it covers professions only, not "Mentor" or "World PvP".
 | `/advplate` | command list (also `/aplate`) |
 | `/advplate show` | show or hide your Adventurer Plate |
 | `/advplate edit` | open the plate editor |
+| `/advplate ask <name>` | ask someone for their plate (or target them and omit the name) |
+| `/advplate privacy` | who may see your plate: `everyone`, `guild`, `friends`, `nobody` |
+
+### Sharing, and what it deliberately will not do
+
+Sharing is **pull-only**. You ask one person, they decide, and that is the
+whole protocol. Nothing is broadcast, nothing is sent unasked, and there is no
+hidden channel.
+
+**Privacy is enforced on the responder**, which is the only place it can be.
+A requester cannot assert who they are, so your client looks up their guild and
+friend status locally before sending anything. The default is
+**Guild & Friends**.
+
+Anyone on your ignore list gets **no reply at all**, not a refusal — a refusal
+would confirm you are online and running the addon, which is the one thing
+ignoring should prevent.
+
+A plate that arrives **only opens a window if you asked for it**. An
+unsolicited message is cached silently. Everything arriving over the wire is
+treated as untrusted: strings are stripped of colour codes, hyperlinks,
+textures and control characters, numbers are range-clamped, and the six-tag cap
+is re-enforced on receipt — so a sender cannot draw arbitrary badges or inject
+markup into your interface.
+
+Transport is [Chomp](https://github.com/wow-rp-addons/Chomp), vendored under
+[`libs/`](libs/README.md) along with the three libraries it requires. It owns
+chunking, throttling and reassembly.
 
 ### Development-only commands
 
