@@ -70,7 +70,7 @@ https://github.com/justadakaje/wow-addons/blob/master/docs/facts-build-69913.md
 **Blocks:** podcast show notes, blog embeds.
 
 - [x] Part 1 — **live** at `https://youtu.be/guSsG1I_XX0`, title and metadata verified
-- [ ] Part 2 — not yet uploaded
+- [x] Part 2 — **live** at `https://youtu.be/lAFS9JJeLPA`
 - [ ] Both set public, chapters applied, descriptions from the corrected metadata
 
 **Leave the blog link as a placeholder.** It does not exist yet and is
@@ -142,7 +142,7 @@ GitHub repo          https://github.com/justadakaje/wow-addons
 GitHub PR            https://github.com/justadakaje/wow-addons/pull/2
 
 VOD Part 1           https://youtu.be/guSsG1I_XX0        LIVE 2026-09-22
-VOD Part 2           TBD
+VOD Part 2           https://youtu.be/lAFS9JJeLPA        LIVE 2026-09-22
 
 Podcast (Apple)      TBD
 Podcast (Spotify)    TBD
