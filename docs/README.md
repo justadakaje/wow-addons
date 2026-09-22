@@ -15,6 +15,7 @@ while building the addons is findable without replaying a chat transcript.
 | `facts-build-69913.md` | **Start here.** Every measured fact about WoW: Forever build 69913, in one place. |
 | `posts/` | Published blog posts, as the Markdown they were written from. |
 | `media/` | Podcast and video production notes for the recorded sessions. |
+| `content-pack.md` | Release order for the five artifacts from one session, and what blocks what. |
 
 ## `facts-build-69913.md`
 
