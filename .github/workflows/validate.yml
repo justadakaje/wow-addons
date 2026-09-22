@@ -12,57 +12,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check each addon has a valid .toc
-        shell: bash
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # These steps deliberately call the same scripts a developer runs
+      # locally, rather than reimplementing the checks in bash.
+      #
+      # The previous inline version had drifted from scripts/check-toc.js: it
+      # resolved .toc file references without normalising path separators, so
+      # it agreed with the local checker only while every .toc listed bare
+      # filenames. The moment one referenced a subdirectory
+      # (`libs\Chomp\Chomp.xml`) the two disagreed -- green locally, red here.
+      #
+      # Backslashes are correct in a .toc. The checker has to handle them, and
+      # there should only be one checker.
+
+      - name: Validate .toc files
+        run: node scripts/check-toc.js
+
+      - name: Syntax-check Lua
         run: |
-          set -euo pipefail
-
-          if [ ! -d "addons" ]; then
-            echo "No addons/ directory yet — nothing to validate."
-            exit 0
-          fi
-
-          fail=0
-
-          for dir in addons/*/; do
-            name=$(basename "$dir")
-            tocs=("$dir"*.toc)
-
-            if [ ! -e "${tocs[0]}" ]; then
-              echo "::error::$name has no .toc file"
-              fail=1
-              continue
-            fi
-
-            for toc in "${tocs[@]}"; do
-              if ! grep -q "^## Interface:" "$toc"; then
-                echo "::error file=$toc::missing '## Interface:' line"
-                fail=1
-              fi
-              if ! grep -q "^## Title:" "$toc"; then
-                echo "::error file=$toc::missing '## Title:' line"
-                fail=1
-              fi
-
-              # Every non-comment, non-blank line in the .toc should reference
-              # a file that actually exists relative to the addon folder.
-              while IFS= read -r line; do
-                line="${line%$'\r'}"
-                [ -z "$line" ] && continue
-                [[ "$line" == \#* ]] && continue
-                if [ ! -f "$dir$line" ]; then
-                  echo "::error file=$toc::references missing file '$line'"
-                  fail=1
-                fi
-              done < "$toc"
-            done
-
-            echo "checked $name (${#tocs[@]} .toc file(s))"
-          done
-
-          if [ "$fail" -ne 0 ]; then
-            exit 1
-          fi
+          npm install --no-save --no-audit --no-fund luaparse
+          node scripts/check-lua.js
 
       - name: Run per-addon test suites (if present)
         shell: bash

@@ -11,8 +11,13 @@
 //
 // Exit 0 when every reference resolves, 1 when any does not, 2 on tool error.
 //
-// Also checks the rule the CI workflow enforces: each .toc must carry an
-// "## Interface:" line, since an addon without one will not load at all.
+// Also checks that each .toc carries "## Interface:" and "## Title:" lines,
+// since an addon without them will not load or will not name itself.
+//
+// This is the single implementation. .github/workflows/validate.yml calls this
+// script rather than reimplementing it in bash -- an earlier inline version
+// drifted from this one and passed locally while failing CI, because it did
+// not normalise the Windows path separators that .toc files legitimately use.
 
 "use strict";
 
@@ -44,6 +49,7 @@ function checkToc(tocPath) {
   const problems = [];
   let refs = 0;
   let hasInterface = false;
+  let hasTitle = false;
 
   for (const raw of lines) {
     const line = raw.trim();
@@ -51,6 +57,7 @@ function checkToc(tocPath) {
 
     if (line.startsWith("##")) {
       if (/^##\s*Interface\s*:/i.test(line)) hasInterface = true;
+      if (/^##\s*Title\s*:/i.test(line)) hasTitle = true;
       continue;
     }
     // '#' alone is a comment; '##' is metadata, handled above.
@@ -64,6 +71,7 @@ function checkToc(tocPath) {
   }
 
   if (!hasInterface) problems.push("(no '## Interface:' line)");
+  if (!hasTitle) problems.push("(no '## Title:' line)");
 
   return { rel, refs, problems };
 }
