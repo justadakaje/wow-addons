@@ -69,7 +69,7 @@ https://github.com/justadakaje/wow-addons/blob/master/docs/facts-build-69913.md
 **Blocked by:** Phase 0 (descriptions cite the repo).
 **Blocks:** podcast show notes, blog embeds.
 
-- [ ] Part 1 — currently uploaded as **private**, `https://youtu.be/guSsG1I_XX0`
+- [x] Part 1 — **live** at `https://youtu.be/guSsG1I_XX0`, title and metadata verified
 - [ ] Part 2 — not yet uploaded
 - [ ] Both set public, chapters applied, descriptions from the corrected metadata
 
@@ -141,7 +141,7 @@ Fill these in as each phase completes. Everything downstream reads from here.
 GitHub repo          https://github.com/justadakaje/wow-addons
 GitHub PR            https://github.com/justadakaje/wow-addons/pull/2
 
-VOD Part 1           https://youtu.be/guSsG1I_XX0        (private -> public)
+VOD Part 1           https://youtu.be/guSsG1I_XX0        LIVE 2026-09-22
 VOD Part 2           TBD
 
 Podcast (Apple)      TBD
