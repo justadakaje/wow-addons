@@ -236,6 +236,10 @@ for the evidence and the exact lines.
 - `scripts/package-addon.ps1` — builds a CurseForge-ready zip: stages the addon,
   drops dev-only files, rewrites the `.toc` to match, adds LICENSE, and zips
   with one correctly-named top-level folder. `Probe.lua` does not ship.
+- `docs/` — written output about the repo. **`docs/facts-build-69913.md` is the
+  fastest way to check a claim about this client**: every measured fact in one
+  place, plus an explicit list of plausible-sounding things that are NOT true.
+  Also holds the published blog posts and podcast production notes.
 - `scripts/link-addons.ps1` — symlinks `addons/*` into a client. Needs elevation
   or Developer Mode. Editing in the repo is then live in-game.
 - `.github/workflows/validate.yml` — checks each addon has a `.toc` with an
