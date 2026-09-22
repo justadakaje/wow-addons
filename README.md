@@ -26,13 +26,15 @@ wow-addons/
 
 1. Clone the repo (already done — this is `D:\Code\GitHub\wow-addons`).
 2. Run `scripts/link-addons.ps1 -WowPath "<path to your Interface\AddOns folder>"` to symlink every addon in `addons/` into your live WoW install. Symlinks mean you edit in the repo and test in-game with no copy step, and removing an addon from the game is just deleting the symlink — nothing destructive.
-3. For addons that use the WoW API, this repo assumes the `wow-api` MCP server is attached (package `wow-api-mcp-server`, source in `mcp/`) (Claude Desktop or Claude Code) so API calls are verified against real signatures rather than guessed. See `AGENTS.md`.
+3. For addons that use the WoW API, this repo assumes the `wow-api` MCP server is attached in Claude Desktop or Claude Code (the npm package is `wow-api-mcp-server`, source in `mcp/`) so API calls are verified against real signatures rather than guessed. See `AGENTS.md`.
 
 ## Addons
 
 | Addon | Client(s) | Status |
 | --- | --- | --- |
-| AddonSmokeTest | Classic Era (Interface 20506) | Proof-of-life, working |
+| AddonSmokeTest | Classic Era (20506), Forever (16001) | Proof-of-life, working |
+| ForeverProbe | Forever (16001) | Read-only API/event capture, working |
+| AdventurerPlates | Forever (16001) | v0.1.0-probe — capability probe; plate UI not built yet |
 
 ## Related repos
 
