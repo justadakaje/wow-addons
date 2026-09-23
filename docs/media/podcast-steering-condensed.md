@@ -1,18 +1,39 @@
 # Condensed steering prompts
 
-`02-STEERING-BRIEF.md` is 5,569 characters. NotebookLM's Audio Overview
-"Customize" box may not accept that much.
+**Measured 2026-09-22: NotebookLM's Audio Overview "Customize" field truncates
+at exactly 5,000 characters.** Not bytes — characters.
 
-Use the longest version that fits. They are ordered by what survives
-compression: audience, thesis, structure, then the accuracy rules that stop the
-episode refuting itself.
+## Use `02c-STEERING-PASTE.md` (4,920 chars)
 
-The **full brief** remains correct for anywhere with room for it — a Gemini Gem
-system instruction, or a customise box that accepts it.
+That is the full brief with the post-generation checklist removed. It ends
+cleanly on the honesty requirement and leaves 80 characters of headroom.
+
+Pasting the full `02-STEERING-BRIEF.md` (5,521 chars) also works: only the
+last 521 are lost, and those are the 10-point checklist — an instruction for
+the producer, not the generator. But it truncates mid-word, leaving a dangling
+"confirm against `01-FACT-" that the generator may try to act on. The paste
+version avoids that.
+
+**Nothing the generator needs is lost either way.** Audience, thesis, all six
+structure sections, target length, the accuracy rules, tone, out-of-scope and
+the honesty requirement all fit inside 5,000.
+
+## Bytes are not characters
+
+`wc -c` reports bytes. The brief is 5,569 bytes but 5,521 characters — em
+dashes and arrows cost 3 bytes each and 1 character each. A 48-character
+overstatement does not matter at 5,521, and matters a great deal at 4,920 with
+80 to spare. Measure characters when checking against a field limit.
+
+## The tiers below are for a shorter field elsewhere
+
+A Gem system instruction, a different tool, or any box under 5,000. They are
+ordered by what survives compression: audience, thesis, structure, then the
+accuracy rules.
 
 ---
 
-## TIER 1 — if the box is tiny (~400 chars)
+## TIER 1 — 414 chars
 
 Senior engineer audience; skip the basics. Thesis: an AI's confidence tracks
 how plausible a claim is, not how verified it is. Cold open on the
@@ -23,7 +44,7 @@ a third of the addon is unverified.
 
 ---
 
-## TIER 2 — if the box takes ~900 chars
+## TIER 2 — 873 chars
 
 Audience: senior engineers. Do not explain what an API, Lua, or version control
 is.
