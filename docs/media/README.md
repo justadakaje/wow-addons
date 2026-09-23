@@ -17,6 +17,7 @@ see **What is deliberately not here**, below.
 | `cold-open.md` | Recording timeline, timestamp anchors derived from saved addon data, candidate clip windows, ffmpeg commands. |
 | `commit-history.md` | Snapshot of the session's twelve commit messages, each explaining what was wrong and why it was believed. |
 | `highlight-reel-chapters-SOURCE-TIMESTAMPS.txt` | Raw Streamlabs Highlighter export. **Not usable as-is** — see below. |
+| `highlight-reel-chapters.txt` | **Use this one.** Converted to reel positions from the render log, with titles rewritten from frames. |
 
 ## Assembling the publish folder
 
