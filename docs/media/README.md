@@ -36,8 +36,17 @@ Nothing automates the copy, so it drifts. Rebuild it from this table:
 | `commit-history.md` | `sources/03-commit-history.md` | **Yes** |
 | `../posts/confidently-wrong.md` | `sources/04-post-confidently-wrong.md` | **Yes** |
 | `../posts/forever-api-surface.md` | `sources/05-post-forever-api-surface.md` | **Yes** |
+| `../../AGENTS.md` | `sources/06-working-rules.md` | **Yes** |
+| `../../HANDOFF.md` | `sources/07-handoff-state.md` | **Yes** |
+| `../../addons/AdventurerPlates/Probe.lua` | `sources/08-probe-source.md` | **Yes** |
+| `../../addons/AdventurerPlates/Core.lua` | `sources/09-migration-source.md` | **Yes** |
+| `../../addons/AdventurerPlates/Share.lua` | `sources/10-transport-source.md` | **Yes** |
 
-`sources/` therefore holds **four** files: `01`, `03`, `04`, `05`.
+The five `06`–`10` files are the repo originals wrapped with a one-line header
+saying what each is and which error it belongs to. The `.lua` ones are fenced
+inside Markdown because the generator will not ingest a bare `.lua`.
+
+`sources/` therefore holds **nine** files: `01`, `03`–`10`.
 
 ### The gap at 02 is deliberate, and it has bitten once
 
@@ -56,7 +65,21 @@ stopping the episode repeating claims like "launched on CurseForge" or
 "built with Cursor" — in an episode whose entire thesis is that confident
 assertion is not verification.
 
-**If `sources/` does not contain exactly four files, do not generate.**
+**If `sources/` does not contain exactly nine files, do not generate.**
+
+### Why nine and not four
+
+The first generation ran on the four-file corpus — 7,147 words — and produced a
+**15-minute** episode against a 30–40 minute target. Runtime scales with source
+volume, and 7k words cannot sustain a Deep Dive.
+
+The brief made it worse: it said *"Do not pad. If short on material, go deeper
+rather than adding scope."* That instruction was written to prevent waffle and
+it worked exactly as designed, on a corpus that could not fill the time anyway.
+
+The five additions are on-thesis only. `Card.lua`, `Editor.lua`, `Data.lua`,
+`content-pack.md` and the addon README were deliberately left out — they would
+have added bulk by pulling the episode straight into its own out-of-scope list.
 
 ## The chapter export is not usable as exported
 
