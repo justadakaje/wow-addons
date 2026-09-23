@@ -51,7 +51,7 @@ links to it.
 **Blocks:** everything.
 
 - [x] CI green on PR #2 (`validate` passes: 4 `.toc`, 20 Lua files)
-- [ ] Merge PR #2 → `master`
+- [x] Merge PR #2 → `master` (merged 2026-09-22 12:43 UTC as `0a3d8c8`)
 
 Merging matters for link durability: `.../blob/master/...` survives, a branch
 URL does not once the branch is deleted.
@@ -101,27 +101,51 @@ Episode numbering follows the channel convention `S26.E{MMDD}`.
 Publish **2235 first**, then **2234**, then edit 2235 to add the back-link.
 Two passes, because neither has a permalink until it is published.
 
-### Styling gap to close first
+### Styling — done
 
-Both drafts are currently plain prose. The house style — read from
-`The Illusion of Containment` (post 2194) — carries considerably more:
+Both drafts now carry the full house style read from `The Illusion of
+Containment` (post 2194): `Executive Summary:` lead, block-level headings and
+lists, code blocks, YouTube embeds, blockquote-wrapped inline images with
+captions and alt text, a button-list checklist, and `Sources Cited:`.
 
-| Element | In drafts | Needed |
+Remaining: the podcast callout and the Spotify embed, both blocked on Phase 2.
+
+### Insertion points
+
+**Do not put placeholder HTML comments in post content.** A bare `<!-- ... -->`
+is not a block delimiter, so WordPress wraps it in a `core/freeform` block —
+and one freeform block anywhere in a post disables `post-sections.*` for the
+whole post, forcing every later edit to be a full ~16K content rewrite.
+
+Both posts are currently 100% `core/*` blocks, so section-level inserts work.
+Keep it that way; the insertion points live here instead.
+
+| Post | What | Goes after |
 | --- | --- | --- |
-| `Executive Summary:` lead | ✗ | ✓ |
-| Podcast callout box (cyan left border) | ✗ | ✓ |
-| Spotify episode embed | ✗ | ✓ |
-| YouTube embed mid-body | ✗ | ✓ |
-| Inline images as section breaks (2–3) | ✗ | ✓ |
-| Button-list checklist | ✗ | ✓ (post 1) |
-| `Sources Cited:` list | ✗ | ✓ |
-| Featured image + alt text | ✓ | done |
-| Categories + tags | ✓ | done |
-| SEO description | ✓ | done |
+| 2234 | Podcast callout `<div>` | block 0 (`Executive Summary:` paragraph) |
+| 2234 | Spotify embed | the callout |
+| 2235 | Podcast callout `<div>` | block 0 (`Executive Summary:` paragraph) |
+| 2235 | Spotify embed | the callout |
 
-**Inline images still to produce.** Two per post. Post 2 is a reference
-article, so real screenshots from the session — the rendered card, the probe
-output in chat — will serve it better than generated art.
+Callout pattern, from post 2194: a `<div>` with a 4px solid `#00acc1` left
+border, `rgba(0,172,193,0.08)` background, a 🎧 heading, and Apple + Spotify
+links.
+
+Insert with `post-sections.insert` at the index, not a full rewrite. Verify the
+post still reports zero `core/freeform` sections afterwards.
+
+### Inline images — done
+
+| Post | Media | Placement |
+| --- | --- | --- |
+| 2234 | 2245 | after Error 2 (the destructive migration) |
+| 2234 | 2246 | after Error 3 (the rejected separator) |
+| 2235 | 2244 | after "structurally blind" (probe output in chat) |
+| 2235 | 2243 | after the model-widget section (rendered card) |
+
+Post 2 uses real session screenshots rather than generated art, cropped to one
+subject each — the full frames carried a webcam, burned-in subtitles and a
+Claude Code panel competing for attention.
 
 ## Phase 4 — Backfill
 
