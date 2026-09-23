@@ -13,7 +13,7 @@ Repo mirror: `docs/content-pack.md` in `justadakaje/wow-addons`
 | 📋 Project Info | Reference. Never moves. |
 | Backlog | Real work, not prioritised. |
 | Ready | Dependencies met. Can start today. |
-| In Progress | Hard limit, set by the List Limits Power-Up. Finish before starting. |
+| In Progress | Limit set by List Limits. Finish before starting. |
 | ⛔ Blocked | Every card names its blocker in line 1. |
 | 🔍 Review / Verify | Built, not yet checked. Never skipped. |
 | ✅ Done | Shipped, verified, URL recorded. |
