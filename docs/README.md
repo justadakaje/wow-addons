@@ -46,11 +46,21 @@ written record is version-controlled alongside the code it describes.
 
 ## `media/`
 
+- `podcast-fact-sheet.md` — every measured figure for the episode, plus a
+  blocklist of plausible falsehoods. The accuracy gate checks against this.
 - `podcast-steering-brief.md` — episode brief with hard accuracy rules and a
   post-generation checklist.
 - `cold-open.md` — recording timeline, timestamp anchors derived from saved
   addon data, candidate clip windows, and the ffmpeg commands to cut them.
+- `commit-history.md` — the session's commit messages, each explaining what was
+  wrong and why it was believed.
+- `highlight-reel-chapters-SOURCE-TIMESTAMPS.txt` — raw Streamlabs export.
+  Not usable as exported; the filename says why.
 
-Large binaries — recordings, extracted audio — deliberately stay out of the
-repo. `cold-open.md` documents how to regenerate the audio from the source
-recordings in one command.
+See `media/README.md` for how the out-of-repo staging folder is assembled from
+these files, and which of them are uploaded as generator sources. Getting that
+wrong has already cost one silent defect.
+
+Large binaries — recordings, extracted audio, thumbnail renders — deliberately
+stay out of the repo. `cold-open.md` documents how to regenerate the audio from
+the source recordings in one command.
