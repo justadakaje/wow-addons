@@ -16,6 +16,7 @@ while building the addons is findable without replaying a chat transcript.
 | `posts/` | Published blog posts, as the Markdown they were written from. |
 | `media/` | Podcast and video production notes for the recorded sessions. |
 | `content-pack.md` | Release order for the five artifacts from one session, and what blocks what. |
+| `trello-board-readme.md` | Conventions for the AIVibecoding Trello board. Served as its Read Me Power-Up. |
 
 ## `facts-build-69913.md`
 
