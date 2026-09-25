@@ -82,6 +82,34 @@ The five additions are on-thesis only. `Card.lua`, `Editor.lua`, `Data.lua`,
 `content-pack.md` and the addon README were deliberately left out — they would
 have added bulk by pulling the episode straight into its own out-of-scope list.
 
+## Checking a generated episode
+
+```bash
+node scripts/check-episode.js transcript.txt
+```
+
+Runs the accuracy gate mechanically: required figures present, blocklist
+phrases absent, rounding tells caught. Exit 0 clean, 1 on any failure.
+
+Getting a transcript, in order of preference:
+
+1. **NotebookLM's own transcript**, if the Audio Overview offers one
+2. **Word** — Home → Dictate → Transcribe, upload the exported audio. Cloud,
+   needs an M365 subscription, monthly upload cap.
+3. **Local Whisper** — not currently possible here. The installed Python is
+   3.8.5 **32-bit**, and ML wheels are 64-bit only. With a 64-bit Python the
+   RTX 2070 SUPER would run `faster-whisper large-v3` comfortably.
+
+### What it cannot check
+
+It verifies that the right strings are present and the wrong ones absent. It
+cannot tell you a figure was used in the right *context* — `housing-crash` only
+confirms `GetMaxHouseLevel` is named, not that it was described as documented
+**and** present **and** still crashing.
+
+A passing transcript still needs one listen for tone, structure and flow. The
+script means the facts are not wrong; it does not mean the episode is good.
+
 ## The chapter export is not usable as exported
 
 `highlight-reel-chapters-SOURCE-TIMESTAMPS.txt` carries **source** timestamps
