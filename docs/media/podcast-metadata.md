@@ -2,9 +2,10 @@
 
 Release date **2026-09-25**. Channel convention `S26.E{MMDD}` → **S26.E0925**.
 
-⚠️ **Chapters below are for the 36:56 cut.** If the 47:15 version ships instead,
-they need regenerating from that transcript — the section boundaries move.
-Everything else on this page applies to either.
+**Ship the 47:15 cut.** It passed the gate, and it is *more* accurate than the
+36:56 — it covers the crash model with all three properties (documented, present
+at runtime as one of `C_Housing`'s 63 functions, and still access-violating),
+which the shorter cut omitted entirely.
 
 ---
 
@@ -109,9 +110,24 @@ index — correctness, not speed.
 
 ---
 
-## Chapters — 36:56 cut
+## Chapters — 47:15 cut (ship this)
 
-Derived from the transcript, not estimated.
+Derived from the transcript's own timestamps, not estimated.
+
+```
+00:00  "You record it as established fact"
+02:44  The thesis: plausible is not verified
+04:01  The client: build 69913, and what it broke
+07:49  Error 1 — two sources of truth, both blind
+13:20  Error 2 — the migration that ate its own evidence
+25:22  Error 3 — ASCII 31, the textbook answer that failed
+30:04  The crash model: why pcall cannot save you
+34:07  Error 4 — the rescue plan that had it backwards
+39:08  What this means for AI-assisted engineering
+44:13  What was never verified
+```
+
+## Chapters — 36:56 cut (alternate)
 
 ```
 00:00  "Zero occurrences in this client's surface"

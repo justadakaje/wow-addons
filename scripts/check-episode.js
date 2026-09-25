@@ -214,12 +214,39 @@ const CHECKS = [
   },
 ];
 
-function contextFor(text, re, span = 70) {
-  const m = re.exec(text);
-  if (!m) return null;
-  const s = Math.max(0, m.index - span);
-  const e = Math.min(text.length, m.index + m[0].length + span);
+function contextAt(text, index, len, span = 70) {
+  const s = Math.max(0, index - span);
+  const e = Math.min(text.length, index + len + span);
   return ("…" + text.slice(s, e) + "…").replace(/\s+/g, " ");
+}
+
+// A forbidden phrase sitting inside a negation is the episode stating the rule
+// CORRECTLY -- "the tool was Claude Code, not Cursor, not Copilot" -- and must
+// not be reported as a violation. Without this, the checker punishes an episode
+// for being explicit about the very claims it was told to avoid, which is
+// exactly backwards.
+//
+// The window allows a few words between the negator and the term, so both
+// "not Cursor" and "not a role play add-on" are caught.
+const NEGATOR = /\b(not|never|isn'?t|wasn'?t|aren'?t|rather than|instead of|no)\b[\s\w'’-]{0,20}$/i;
+
+// Returns the first NON-negated occurrence if one exists; otherwise the first
+// negated one, flagged. Null when the pattern does not appear at all.
+function findHit(text, patterns) {
+  let negatedFallback = null;
+  for (const re of patterns) {
+    const g = new RegExp(re.source, re.flags.replace("g", "") + "g");
+    let m;
+    while ((m = g.exec(text)) !== null) {
+      const before = text.slice(Math.max(0, m.index - 60), m.index);
+      const negated = NEGATOR.test(before);
+      const hit = { index: m.index, len: m[0].length, negated };
+      if (!negated) return hit;
+      if (!negatedFallback) negatedFallback = hit;
+      if (m[0].length === 0) g.lastIndex++; // guard against zero-width loops
+    }
+  }
+  return negatedFallback;
 }
 
 function main() {
@@ -250,8 +277,11 @@ function main() {
   let noted = 0;
 
   for (const c of CHECKS) {
-    const hit = c.any.find((re) => re.test(text));
-    const ok = c.kind === "require" ? !!hit : !hit;
+    const hit = findHit(text, c.any);
+    // A forbidden term only counts against the episode when it is asserted,
+    // not when it is being denied.
+    const violating = hit && !hit.negated;
+    const ok = c.kind === "require" ? !!hit : !violating;
 
     // Not in the brief's required structure. Report presence, never fail.
     if (c.kind === "optional") {
@@ -266,7 +296,7 @@ function main() {
         noted++;
         console.log(`  NOTE ${c.id}`);
         console.log(`         ${c.correct}`);
-        console.log(`         found: ${contextFor(text, hit)}`);
+        console.log(`         found: ${contextAt(text, hit.index, hit.len)}`);
       }
       continue;
     }
@@ -277,7 +307,7 @@ function main() {
         console.log(`  WARN ${c.id}`);
         console.log(`         expected: ${c.correct}`);
         if (c.why) console.log(`         ${c.why}`);
-        console.log(`         found: ${contextFor(text, hit)}`);
+        console.log(`         found: ${contextAt(text, hit.index, hit.len)}`);
       } else {
         console.log(`  ok   ${c.id}`);
       }
@@ -285,7 +315,8 @@ function main() {
     }
 
     if (ok) {
-      console.log(`  ok   ${c.id}`);
+      const note = c.kind === 'forbid' && hit && hit.negated ? '   (present, but negated — the episode states the rule correctly)' : '';
+      console.log(`  ok   ${c.id}${note}`);
       continue;
     }
 
@@ -294,7 +325,7 @@ function main() {
     console.log(`         expected: ${c.correct}`);
     if (c.why) console.log(`         ${c.why}`);
     if (c.kind === "forbid" && hit) {
-      console.log(`         found: ${contextFor(text, hit)}`);
+      console.log(`         found: ${contextAt(text, hit.index, hit.len)}`);
     }
     if (c.kind === "require") {
       console.log(`         not found anywhere in the transcript`);
