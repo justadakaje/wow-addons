@@ -13,6 +13,7 @@ see **What is deliberately not here**, below.
 | `podcast-fact-sheet.md` | Every measured figure for the episode, plus a blocklist of plausible falsehoods. The accuracy gate checks against this. |
 | `podcast-steering-brief.md` | Episode brief. Structure, length, tone, hard accuracy rules, post-generation checklist. |
 | `podcast-steering-paste.md` | **Paste this one.** The brief minus its checklist, 4,920 chars, fits NotebookLM's measured 5,000-char limit. |
+| `podcast-steering-longer.md` | Experimental variant, 4,998 chars. Identical except it asks for 55–65 min and adds a two-host debate directive. |
 | `podcast-steering-condensed.md` | Shorter fallbacks for a field under 5,000, plus what each drops. |
 | `cold-open.md` | Recording timeline, timestamp anchors derived from saved addon data, candidate clip windows, ffmpeg commands. |
 | `commit-history.md` | Snapshot of the session's twelve commit messages, each explaining what was wrong and why it was believed. |
@@ -32,6 +33,7 @@ Nothing automates the copy, so it drifts. Rebuild it from this table:
 | `podcast-fact-sheet.md` | `01-FACT-SHEET.md` **and** `sources/01-FACT-SHEET.md` | **Yes** |
 | `podcast-steering-brief.md` | `02-STEERING-BRIEF.md` | **No** — it is the prompt |
 | `podcast-steering-paste.md` | `02c-STEERING-PASTE.md` | **No** — it is the prompt |
+| `podcast-steering-longer.md` | `02d-STEERING-LONGER.md` | **No** — experimental prompt |
 | `podcast-steering-condensed.md` | `02b-STEERING-CONDENSED.md` | **No** — fallback prompts |
 | `cold-open.md` | `03-COLD-OPEN.md` | No |
 | `commit-history.md` | `sources/03-commit-history.md` | **Yes** |
