@@ -11,6 +11,7 @@ see **What is deliberately not here**, below.
 | File | What it is |
 | --- | --- |
 | `podcast-fact-sheet.md` | Every measured figure for the episode, plus a blocklist of plausible falsehoods. The accuracy gate checks against this. |
+| `podcast-metadata.md` | Title options, show notes, chapters and tags for the released episode. |
 | `podcast-steering-brief.md` | Episode brief. Structure, length, tone, hard accuracy rules, post-generation checklist. |
 | `podcast-steering-paste.md` | **Paste this one.** The brief minus its checklist, 4,920 chars, fits NotebookLM's measured 5,000-char limit. |
 | `podcast-steering-longer.md` | Experimental variant, 4,998 chars. Identical except it asks for 55–65 min and adds a two-host debate directive. |
