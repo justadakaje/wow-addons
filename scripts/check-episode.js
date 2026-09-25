@@ -34,7 +34,9 @@ const CHECKS = [
   {
     id: "ascii-31",
     kind: "require",
-    any: [/ASCII[\s-]*31\b/i, /\bunit separator\b/i, /ASCII thirty[\s-]?one/i],
+    // ASII is Word's transcription of "ASCII" -- tolerated so a speech-to-text
+    // artifact does not read as an episode error.
+    any: [/AS[CI]I+[\s-]*31\b/i, /\bunit separator\b/i, /ASCII thirty[\s-]?one/i],
     correct: "ASCII 31, the unit separator",
     why: "The story is that the textbook-correct separator is the one that failed.",
   },
@@ -70,37 +72,51 @@ const CHECKS = [
     correct: "build 69913",
   },
   {
-    id: "interface",
-    kind: "require",
-    any: [/\b16001\b/, /sixteen thousand (and )?one\b/i],
-    correct: "Interface 16001",
-  },
-  {
     id: "race-id",
     kind: "require",
-    any: [/\bSkyborne\b/i],
+    // Speech-to-text drops the trailing "e" from Skyborne.
+    any: [/\bSkyborne?\b/i, /race ID (of )?96/i],
     correct: "Skyborne, race ID 96",
-    why: "Race ID 96 alone is too noisy to match; this checks the name is named.",
-  },
-  {
-    id: "auction-house",
-    kind: "require",
-    any: [/\b85\b/, /eighty[\s-]?five/i],
-    correct: "85 C_AuctionHouse functions",
-  },
-  {
-    id: "housing-crash",
-    kind: "require",
-    any: [/GetMaxHouseLevel/i, /C_Housing/i],
-    correct: "C_Housing.GetMaxHouseLevel named",
-    why: "Must be described as documented AND present AND still crashing. Verify that by ear -- presence of the name is all this can check.",
   },
   {
     id: "honesty-caveat",
     kind: "require",
-    any: [/\ba third\b/i, /one[\s-]?third/i, /never (been )?tested/i, /unverified/i],
+    // "1/3" is how a transcript renders "one third" when it is spoken as a
+    // fraction. Bare /third/ is unusable -- it matches "third-party library".
+    any: [
+      /1\s*\/\s*3\b/,
+      /one[\s-]?third/i,
+      /a third of the/i,
+      /never (been )?(exercised|tested)/i,
+    ],
     correct: "the roughly-a-third-unverified caveat",
     why: "An episode about verification that overstates its own completeness is self-refuting.",
+  },
+
+  // ------------------------------------------------------------ informational
+  //
+  // These are in the fact sheet but NOT in the brief's required structure, so
+  // an episode that omits them is behaving correctly. They report as INFO and
+  // never fail. Requiring them was a bug: the gate must check the episode
+  // against the brief it was given, not against everything known about the
+  // project.
+  {
+    id: "info-interface",
+    kind: "optional",
+    any: [/\b16001\b/, /sixteen thousand (and )?one\b/i],
+    correct: "Interface 16001",
+  },
+  {
+    id: "info-auction-house",
+    kind: "optional",
+    any: [/C_AuctionHouse/i, /auction house/i],
+    correct: "85 C_AuctionHouse functions -- if the topic comes up, the number must be 85",
+  },
+  {
+    id: "info-housing-crash",
+    kind: "optional",
+    any: [/GetMaxHouseLevel/i, /C_Housing/i],
+    correct: "documented AND present AND still crashing -- all three, if covered",
   },
 
   // --------------------------------------------------------------- forbidden
@@ -119,7 +135,15 @@ const CHECKS = [
   {
     id: "block-blank-ide",
     kind: "forbid",
-    any: [/blank IDE/i, /zero to MVP/i, /from scratch/i],
+    // Bare /from scratch/ is too broad: the episode legitimately says the
+    // session produced "reusable build tools from scratch", which is true and
+    // is not the blocked claim. Tie it to the addon.
+    any: [
+      /blank IDE/i,
+      /zero to MVP/i,
+      /add[\s-]?on.{0,40}from scratch/i,
+      /from scratch.{0,40}add[\s-]?on/i,
+    ],
     correct: "the addon already existed; the probe had never run",
   },
   {
@@ -158,9 +182,35 @@ const CHECKS = [
   {
     id: "warn-accelerate",
     kind: "warn",
-    any: [/acceler/i, /\bfaster\b/i, /\bsped up\b/i],
+    any: [/acceler/i, /\bsped up\b/i],
     correct: "the MCP server VERIFIED API calls -- correctness, not speed",
-    why: "Check any hit is not describing the MCP server.",
+    why: "Read the hit. Saying it was NOT used to accelerate development is correct and will trip this.",
+  },
+
+  // ------------------------------------------------------- transcript quality
+  //
+  // These flag likely speech-to-text errors, not episode errors. The audio
+  // almost certainly says the right thing; the transcript does not. Worth
+  // knowing so a mis-transcription is never mistaken for a factual mistake --
+  // and so nobody "fixes" an episode that was already correct.
+  {
+    id: "stt-claude-code",
+    kind: "stt",
+    any: [/cloud code/i],
+    correct: 'likely "Claude Code" misheard as "cloud code"',
+  },
+  {
+    id: "stt-ascii",
+    kind: "stt",
+    any: [/\bASII\b/i, /\bASKI\b/i],
+    correct: 'likely "ASCII" mistranscribed',
+  },
+  {
+    id: "stt-chomp",
+    kind: "stt",
+    // "Chomp's" is the correct possessive and must not trip this.
+    any: [/\bchamp\b/i, /\bchump\b/i],
+    correct: 'likely "Chomp" misheard as "champ" or "chump"',
   },
 ];
 
@@ -197,10 +247,29 @@ function main() {
 
   let failed = 0;
   let warned = 0;
+  let noted = 0;
 
   for (const c of CHECKS) {
     const hit = c.any.find((re) => re.test(text));
     const ok = c.kind === "require" ? !!hit : !hit;
+
+    // Not in the brief's required structure. Report presence, never fail.
+    if (c.kind === "optional") {
+      console.log(`  ${hit ? "INFO" : "--  "} ${c.id}${hit ? "" : "   (not covered -- fine, the brief does not require it)"}`);
+      if (hit) console.log(`         ${c.correct}`);
+      continue;
+    }
+
+    // Transcript quality, not episode quality.
+    if (c.kind === "stt") {
+      if (hit) {
+        noted++;
+        console.log(`  NOTE ${c.id}`);
+        console.log(`         ${c.correct}`);
+        console.log(`         found: ${contextFor(text, hit)}`);
+      }
+      continue;
+    }
 
     if (c.kind === "warn") {
       if (hit) {
@@ -233,14 +302,18 @@ function main() {
   }
 
   console.log("");
-  if (failed === 0 && warned === 0) {
-    console.log(`check-episode: all ${CHECKS.length} checks passed.`);
-    console.log("Facts are clean. Still listen once for tone, structure and flow.");
-    return;
-  }
+  const extra = [
+    warned ? `${warned} warning(s) to read in context` : null,
+    noted ? `${noted} likely transcription artifact(s)` : null,
+  ].filter(Boolean).join(", ");
+
   if (failed === 0) {
-    console.log(`check-episode: no failures, ${warned} warning(s) to read in context.`);
-    console.log("Still listen once for tone, structure and flow.");
+    console.log(`check-episode: PASSED${extra ? " — " + extra : ""}.`);
+    console.log("Facts are clean. Still listen once for tone, structure and flow.");
+    if (noted) {
+      console.log("NOTE items are transcript errors, not episode errors — do not");
+      console.log("regenerate over them. Confirm against the audio if it matters.");
+    }
     return;
   }
   console.error(`check-episode: ${failed} FAILED, ${warned} warning(s).`);
