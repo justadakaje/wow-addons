@@ -16,6 +16,7 @@ while building the addons is findable without replaying a chat transcript.
 | `posts/` | Published blog posts, as the Markdown they were written from. |
 | `media/` | Podcast and video production notes for the recorded sessions. |
 | `content-pack.md` | Release order for the five artifacts from one session, and what blocks what. |
+| `content-ops.md` | How session content gets generated and gated. Two checkers, one blocklist. |
 | `trello-board-readme.md` | Conventions for the AIVibecoding Trello board. Served as its Read Me Power-Up. |
 
 ## `facts-build-69913.md`
@@ -44,6 +45,17 @@ and wins on anything about *current project state*. This file wins on
 
 Published at [musingsofmy.today](https://musingsofmy.today). Kept here so the
 written record is version-controlled alongside the code it describes.
+
+## `content-ops.md`
+
+The mechanism that keeps generated content from drifting: `facts-build-69913.md`
+as the source of truth, `scripts/session-digest.js` to extract the same shape for
+any commit range, and two gates that share one blocklist —
+`scripts/check-content-pack.js` for markdown, `scripts/check-episode.js` for
+audio.
+
+It exists because a content pack drafted from a chat transcript contained 21
+factual errors. `media/generated-draft-review.md` lists them.
 
 ## `media/`
 

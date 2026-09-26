@@ -1,0 +1,23 @@
+# Handles a generated pack is allowed to @-mention.
+#
+# This is an allowlist, not a contact list. Tagging the wrong account is the one
+# publishing error that cannot be quietly edited after the fact, so a handle the
+# generator has not been told about is a hard failure, not a warning.
+#
+# Format: one entry per line under a platform key, "handle  # note".
+
+x:
+  - Shobektv          # origin of the Adventurer Plates concept; asked for the FFXIV feature in Forever
+
+linkedin:
+  - kennethhenseler   # author
+
+youtube:
+  - KennethHenseler   # streaming channel; on-screen label "Adventurer Plates Addon Dev"
+
+threads:
+  - shobek            # same person as x/Shobektv; handle confirmed by the author 2026-09-26
+
+# People named in the record who are NOT handles, and must not be @-mentioned
+# without being added above:
+#   Ava — second tester named in HANDOFF.md "Next steps"; no public handle recorded
