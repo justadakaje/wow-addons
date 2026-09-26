@@ -1,0 +1,22 @@
+0:00 Session restart — hunting BugSack's frame level
+0:37 Strata, frame level, and anchors
+1:35 Why unsnapping breaks the anchor
+2:13 Local frame level vs global strata
+2:56 Reloading to test three unseen fixes
+3:29 First layering test
+4:56 Both windows open — the collision
+5:47 Retesting after the collision fix
+6:36 Confirming the fix
+6:51 SetToplevel — letting the click decide
+8:38 Portrait or landscape?
+9:01 The Final Fantasy XIV inspiration
+9:26 Making landscape the default
+10:44 The card, rendered
+11:14 Inspecting other players' cards
+11:48 Final layering verification
+13:01 Landscape becomes canonical
+16:00 The saved files invert the assumption
+18:42 Planning the rename, then CurseForge
+23:27 Chomp is four libraries, not one
+28:53 What's still untested
+29:17 Closing remarks

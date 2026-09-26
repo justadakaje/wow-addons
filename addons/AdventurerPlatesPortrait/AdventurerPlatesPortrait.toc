@@ -1,0 +1,15 @@
+## Interface: 16001
+## Title: Adventurer Plates (Portrait, shelved)
+## Notes: Shelved portrait layout, kept for comparison. The landscape card in AdventurerPlates is the supported version.
+## Author: justadakaje
+## Version: 0.1.0
+## IconTexture: Interface\ICONS\INV_Misc_Note_01
+## SavedVariables: AdventurerPlatesPortraitDB
+## X-Target-Client: WoW: Forever (camelot)
+## X-Tested-Build: 1.60.1.69913
+
+Core.lua
+Data.lua
+Plate.lua
+Editor.lua
+Probe.lua

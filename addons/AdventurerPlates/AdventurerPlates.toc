@@ -1,0 +1,25 @@
+## Interface: 16001
+## Title: Adventurer Plates
+## Notes: An Adventurer Plate for your character -- portrait, playstyle, active hours and motto. Inspired by FFXIV's Adventurer Plate.
+## Author: justadakaje
+## Version: 0.3.0
+## IconTexture: Interface\ICONS\INV_Misc_Note_01
+## SavedVariables: AdventurerPlatesDB
+## X-Target-Client: WoW: Forever (camelot)
+## X-Tested-Build: 1.60.1.69913
+## X-License: MIT
+
+# Vendored third-party libraries. See libs/README.md for versions, licenses,
+# and why all four are needed. Load order matters: LibStub first, then the
+# libraries that register through it, then Chomp, then us.
+libs\LibStub\LibStub.lua
+libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
+libs\ChatThrottleLib\ChatThrottleLib.lua
+libs\Chomp\Chomp.xml
+
+Core.lua
+Data.lua
+Card.lua
+Editor.lua
+Share.lua
+Probe.lua

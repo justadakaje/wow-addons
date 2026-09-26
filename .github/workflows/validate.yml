@@ -1,39 +1,51 @@
-name: Validate
+name: Validate addon structure
 
 on:
   push:
-    branches: ["**"]
+    branches: [master]
   pull_request:
+    branches: [master]
 
 jobs:
-  lua-syntax:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Lua
-        run: sudo apt-get update && sudo apt-get install -y lua5.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
-      - name: Check Lua syntax
-        run: |
-          set -e
-          status=0
-          while IFS= read -r -d '' file; do
-            if ! luac5.1 -p "$file"; then
-              echo "::error file=$file::Lua syntax check failed"
-              status=1
-            fi
-          done < <(find addons -type f -name '*.lua' -print0)
-          exit $status
+      # These steps deliberately call the same scripts a developer runs
+      # locally, rather than reimplementing the checks in bash.
+      #
+      # The previous inline version had drifted from scripts/check-toc.js: it
+      # resolved .toc file references without normalising path separators, so
+      # it agreed with the local checker only while every .toc listed bare
+      # filenames. The moment one referenced a subdirectory
+      # (`libs\Chomp\Chomp.xml`) the two disagreed -- green locally, red here.
+      #
+      # Backslashes are correct in a .toc. The checker has to handle them, and
+      # there should only be one checker.
 
-      - name: Check .toc files declare a known Interface version
+      - name: Validate .toc files
+        run: node scripts/check-toc.js
+
+      - name: Syntax-check Lua
         run: |
-          set -e
-          status=0
-          while IFS= read -r -d '' toc; do
-            if ! grep -qE '^## Interface: ' "$toc"; then
-              echo "::error file=$toc::Missing ## Interface: line"
-              status=1
+          npm install --no-save --no-audit --no-fund luaparse
+          node scripts/check-lua.js
+
+      - name: Run per-addon test suites (if present)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -d "addons" ]; then
+            exit 0
+          fi
+          for dir in addons/*/; do
+            if [ -f "$dir/package.json" ]; then
+              echo "running tests for $(basename "$dir")"
+              (cd "$dir" && npm ci && npm test)
             fi
-          done < <(find addons -type f -name '*.toc' -print0)
-          exit $status
+          done
