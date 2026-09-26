@@ -1,6 +1,6 @@
 # wow-addons
 
-Personal World of Warcraft addon development — QoL/interface improvements, plus an in-progress Auction House gold-opportunity tool.
+Personal World of Warcraft addon development — QoL/interface improvements, plus an in-progress Auction House gold-opportunity tool. Also the code behind the "WoW AddOns Development via Claude" YouTube series.
 
 ## Layout
 
@@ -35,6 +35,7 @@ wow-addons/
 | AddonSmokeTest | Classic Era (20506), Forever (16001) | Proof-of-life, working |
 | ForeverProbe | Forever (16001) | Read-only API/event capture, working |
 | AdventurerPlates | Forever (16001) | v0.1.0-probe — capability probe; plate UI not built yet |
+| GoldFinder | Classic Era/SoD (20506) | v0.1.0 — tab skeleton via `Auctionator.Tabs.Register`, unconfirmed on this client's Legacy AH; see HANDOFF.md |
 
 ## Related repos
 

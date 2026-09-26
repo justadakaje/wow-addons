@@ -464,8 +464,22 @@ also authors Auctionator. Verified during Classic Era planning — **the
   after repeated iterations, suspected AH-refresh-cooldown related.
 - **Collectionator** (MIT) — adds its own tab to the AH. `RequiredDeps:
   Auctionator`. `## Interface: 120000, 110207, 50502`. Closest same-author
-  example of "add a tab to Auctionator"; its tab-registration source still has
-  not been read.
+  example of "add a tab to Auctionator". **Read** (2026-09-26):
+  `Source/Summary/Tab/Register.lua` calls a public
+  `Auctionator.Tabs.Register({ name, textLabel, tabTemplate, tabHeader,
+  tabFrameName, tabOrder })` — a higher-level, addon-facing API. Third-party
+  addons register a tab template + frame name and Auctionator handles
+  insertion, rather than needing to touch `Source_LegacyAH` internals
+  directly. Tab frame template pattern: virtual `Frame` anchored to
+  `$parent.CategoriesList` (`TOP`/`LEFT`/`BOTTOMRIGHT`), `mixin` for
+  behavior, `OnLoad`/`OnShow` scripts — see `Source/Summary/Tab/Main.xml`.
+  **Not yet confirmed against Classic Era's Legacy AH** — Collectionator
+  itself only targets 120000/110207/50502 (Retail/Cata/Wrath), not Classic
+  Era. `addons/GoldFinder/` implements this pattern with a guard that falls
+  back to a warning (and, eventually, direct `Source_LegacyAH` reading) if
+  `Auctionator.Tabs.Register` isn't present on this client's build.
+  Auctionator's own repo was too large to clone in the session that did this
+  research — confirm in-game against the installed copy, not by re-cloning.
 - **Journalator** (installed, v169) — **not a live market feed**, a personal
   transaction ledger. Real public API, read from the installed
   `Journalator\Source\API.lua`:
