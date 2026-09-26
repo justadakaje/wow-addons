@@ -102,6 +102,33 @@ verified-removed list leads with:
 
 Without that, this server would produce exactly the bug it exists to prevent.
 
+### Bare-global presence has four states, not two
+
+The warning above only covers names ForeverProbe was told to check. Its
+`WATCHLIST` is hand-curated, so most bare names have no presence record at
+all — and for a while this server folded that into "not removed", which made
+`lookup_api("LoadAddOn")` read as confirmation for a global that is `nil`.
+
+`lookup_api` now reports which of four it is — in markdown always, and as
+`globalStatus` in JSON when the name has documented matches. (A name with no
+matches returns text even in JSON mode; that predates this and still holds.
+The text states the status.)
+
+| `globalStatus` | Meaning | `globalRemoved` |
+| --- | --- | --- |
+| `removed` | verified to resolve to `nil` | `true` |
+| `present` | verified to resolve | `false` |
+| `unverified` | no presence record — **not** evidence it exists | `null` |
+| `qualified` | name carries a namespace; the bare-global question was not asked | `false` |
+
+`globalRemoved` keeps its old `true` for callers that test `=== true`; read
+`globalStatus` for everything else.
+
+Only the watchlist counts as evidence. A documented match without a namespace
+does not: many are methods on API objects, such as `AbbreviatedNumberFormatterAPI`'s
+`Copy`, not globals. The fix for an `unverified` name you care about is to add
+it to `ForeverProbe.lua`'s `WATCHLIST` and recapture, not to infer.
+
 ## Known gaps
 
 - **118 of 778 referenced types have no definition** — 85% resolve. The
@@ -116,6 +143,12 @@ Without that, this server would produce exactly the bug it exists to prevent.
 - **There is no deprecation metadata anywhere in Blizzard's data.** On this
   client removal is the norm, so `list_deprecated` reports verified *absence*
   from the live client — which is the honest signal — not a deprecation list.
+- **`list_deprecated` covers only ForeverProbe's watchlist**, not every legacy
+  global, and says so in its output. `LoadAddOn` was the case that exposed
+  this: ForeverProbe's own comments said the global did not exist, but it was
+  missing from the watchlist, so neither tool could report it as removed. A
+  name missing from the watchlist is fixed by adding it to `WATCHLIST` and
+  recapturing — see `HANDOFF.md`, Open questions 2.
 - **627 `C_*` functions exist but are undocumented** (see
   `reference/undocumented.md`). `lookup_api` says so when a name misses, because
   "not documented" and "not present" are different claims.
