@@ -94,6 +94,9 @@ export interface FunctionHit {
   fn: ApiFunction;
 }
 
+/** Bare-global presence as the capture records it. See ApiIndex.globalStatus. */
+export type GlobalStatus = "removed" | "present" | "unverified" | "qualified";
+
 export interface EventHit {
   system: string;
   ev: ApiEvent;
@@ -253,18 +256,40 @@ export class ApiIndex {
   }
 
   /**
-   * True when a bare global of this name was verified ABSENT from the client.
-   * `GetItemInfo` is the case that matters: the global is gone but
-   * `C_Item.GetItemInfo` exists, so a bare lookup finds matches and looks
-   * fine while the obvious call is still an immediate error.
+   * What this capture records about a bare global of this name.
+   *
+   *   removed     verified to resolve to nil -- calling it bare is an immediate error
+   *   present     verified to resolve
+   *   unverified  no presence record -- which is NOT evidence that it exists
+   *   qualified   the name carries a namespace; the bare-global question was not asked
+   *
+   * `GetItemInfo` is why this exists: the global is gone but `C_Item.GetItemInfo`
+   * is documented, so a bare lookup finds matches and looks fine while the
+   * obvious call is still an immediate error.
+   *
+   * `unverified` is why it has four states rather than a boolean. The watchlist
+   * is ForeverProbe's hand-curated WATCHLIST, not an exhaustive walk, so a name
+   * absent from it was never checked. Folding that into "not removed" made
+   * lookup_api("LoadAddOn") read as confirmation for a global that is nil.
+   *
+   * Only the watchlist counts as evidence. A documented match with no namespace
+   * is not: many are methods on API objects (AbbreviatedNumberFormatterAPI's
+   * `Copy`), not globals.
    */
-  globalRemoved(name: string): boolean {
+  globalStatus(name: string): GlobalStatus {
     const bare = name.trim().toLowerCase();
-    if (bare.includes(".")) return false;
+    if (bare.includes(".") || bare.includes(":")) return "qualified";
     for (const [key, present] of Object.entries(this.watchlist)) {
-      if (!key.includes(".") && key.toLowerCase() === bare) return present === false;
+      if (key.includes(".") || key.toLowerCase() !== bare) continue;
+      if (present === true) return "present";
+      if (present === false) return "removed";
     }
-    return false;
+    return "unverified";
+  }
+
+  /** How many names the capture's presence watchlist covers. */
+  get watchlistSize(): number {
+    return Object.keys(this.watchlist).length;
   }
 
   /** Near-misses for a name that did not resolve, so errors can suggest a fix. */

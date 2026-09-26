@@ -48,6 +48,29 @@ await check("deprecated lists removals", "list_deprecated", {},
 await check("json format", "lookup_api", { name: "GetItemInfo", response_format: "json" },
   (o) => JSON.parse(o).globalRemoved === true);
 
+// Bare-global presence has four states, and only the watchlist is evidence.
+// Names are chosen to survive a recapture: GetMaxHouseLevel is housing-era and
+// has no legacy global to put on a watchlist, so it stays unverified; LoadAddOn
+// is checked as an invariant, because adding it to ForeverProbe's WATCHLIST
+// moves it from unverified to removed and both must pass.
+await check("unverified global is not confirmed", "lookup_api", { name: "GetMaxHouseLevel" },
+  (o) => o.includes("Unverified") && !o.includes("does not exist on this client"));
+await check("unverified json is null, not false", "lookup_api",
+  { name: "GetMaxHouseLevel", response_format: "json" },
+  (o) => { const j = JSON.parse(o); return j.globalRemoved === null && j.globalStatus === "unverified"; });
+await check("LoadAddOn is never silently confirmed", "lookup_api",
+  { name: "LoadAddOn", response_format: "json" },
+  (o) => { const j = JSON.parse(o); return j.globalRemoved !== false && j.globalStatus !== "present"; });
+await check("verified-present global says so", "lookup_api", { name: "IsSpellKnown" },
+  (o) => o.includes("verified present") && !o.includes("Unverified"));
+await check("removed global with no twin is definite", "lookup_api", { name: "QueryAuctionItems" },
+  (o) => o.includes("resolves to nil") && !o.includes("may still exist"));
+await check("qualified name asks no global question", "lookup_api",
+  { name: "C_AuctionHouse.PostCommodity", response_format: "json" },
+  (o) => { const j = JSON.parse(o); return j.globalStatus === "qualified" && j.globalRemoved === false; });
+await check("deprecated states its coverage", "list_deprecated", {},
+  (o) => o.includes("never probed"));
+
 await client.close();
 console.log(failed ? `\n${failed} FAILED` : "\nall checks passed");
 process.exit(failed ? 1 : 0);
