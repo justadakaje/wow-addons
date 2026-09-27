@@ -97,7 +97,15 @@ local function BuildPanel()
     body:SetPoint("TOPRIGHT", panel, "TOPRIGHT")
     body:SetJustifyH("LEFT")
 
-    panel:SetScript("OnShow", function() body:SetText(Report()) end)
+    panel:SetScript("OnShow", function() ns.RefreshPanel() end)
+end
+
+-- Scan status first; tab-row diagnostics underneath. Safe to call any time:
+-- does nothing until the panel exists and is on screen.
+function ns.RefreshPanel()
+    if not (panel and panel:IsShown()) then return end
+    local scan = ns.ScanSummary and ns.ScanSummary() or "Scan recording is not loaded."
+    body:SetText(scan .. "\n\n|cff999999Tab row|r\n" .. Report())
 end
 
 local function CreateTabOnce()
