@@ -608,7 +608,7 @@ Addon Dev"). Practical consequences:
 - **Forever beta is confirmed NDA-free** — verified by the user in a separate
   session. Showing client internals, the API dump and build numbers is fine.
 - **Do not surface the WTF account ID on camera.** SavedVariables live at
-  `WTF/Account/1283889#1/...` and that path shows up in tool output. Prefer
+  `WTF/Account/<id>/...` and that path shows up in tool output. Prefer
   relative paths or elide the account segment when printing.
 - Terminal output is being read aloud and shown at 1080p. Favour short, legible
   blocks over wide tables; assume text gets downscaled to phone screens.
