@@ -119,8 +119,10 @@ try {
     "  -> $zipPath  ($sizeKb KB)"
     if ($dropped.Count -gt 0) {
         "  excluded (development only): $($dropped -join ', ')"
-    } else {
+    } elseif ($IncludeDevFiles) {
         "  excluded: nothing (-IncludeDevFiles was set)"
+    } else {
+        "  excluded: nothing (no development-only files in this addon)"
     }
     ""
     "Contents:"
