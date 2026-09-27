@@ -1,0 +1,17 @@
+## Interface: 16001
+## Title: GoldFinder
+## Notes: Adds a GoldFind tab to the auction house. Shares the tab row with other auction house addons instead of fighting them for it.
+## Author: justadakaje
+## Version: 0.0.1
+## IconTexture: Interface\ICONS\INV_Misc_Coin_01
+## X-Target-Client: WoW: Forever (camelot)
+## X-Tested-Build: 1.60.1.70009
+## X-License: MIT
+
+# Vendored third-party libraries. See libs/README.md for versions and
+# licenses. LibStub first, then LibAHTab, which registers through it.
+libs\LibStub\LibStub.lua
+libs\LibAHTab\LibAHTab.xml
+
+Core.lua
+Tab.lua
