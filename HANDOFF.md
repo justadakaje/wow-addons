@@ -191,7 +191,7 @@ its place: Base64 of raw CBOR would be ~515 B, i.e. three chunks.
    types.
 5. **Richer Playstyle & Focus display.** The badges are a deliberate
    placeholder.
-6. **Auctionator fork** — see the AH section below; it is unblocked now.
+6. **GoldFinder** — a standalone addon on `C_AuctionHouse`. See Goal below.
 
 ## Goal
 
@@ -203,9 +203,20 @@ value, and craftables sellable above crafting cost.
 **No longer blocked, as of 2026-09-20.** An auctioneer was finally opened and
 the auction house works: modern `C_AuctionHouse` with all 85 functions present,
 browse queries returning results, and zero legacy AH events. Auctionator
-degrades silently rather than erroring. The remaining work is a fork adding
-`camelot` to five `AllowLoadGameType` gates — see the Auctionator finding below
-for the evidence and the exact lines.
+degrades silently rather than erroring.
+
+**Decided 2026-09-27: GoldFinder is a standalone addon, not an Auctionator
+fork.** Auctionator's `LICENSE` is "All Rights Reserved" (plusmouse,
+borjamacare), there is no public source repo, and its bundled `AGENTS.md`
+states the authors do not permit it to be used as a basis or reference. Forking
+it would be redistributing someone else's code without permission. Do not
+open Auctionator's source files to learn from them; build from `wow-api` and
+our own in-client measurements only. Auctionator is relevant solely as
+*another addon GoldFinder must coexist with* on the AH frame.
+
+GoldFinder's shape: its own tab on the Blizzard auction house frame, the whole
+AH frame draggable, and collision-aware toward other AH addons that also add
+tabs.
 
 ## What is built
 
@@ -438,10 +449,10 @@ Source_Mainline    [AllowLoadGameType mainline]
 
 **Five gates, not four** — the earlier note missed `Source_Mainline`.
 
-**The hypothesis to test next:** add `camelot` to those five `AllowLoadGameType`
-lists in a fork and see what happens. It is falsifiable, not a fix — ModernAH
-may still call Retail APIs this client lacks. But `C_AuctionHouse` being fully
-present is the dependency that mattered most, and it is there.
+The gate list above is recorded as an observation about why Auctionator's AH
+layer is inactive here — **not** as a plan. Modifying Auctionator is ruled out
+(see Goal: its license is All Rights Reserved). `C_AuctionHouse` being fully
+present is the dependency that mattered, and GoldFinder builds on it directly.
 
 ## Verified findings — reusable components
 
@@ -539,8 +550,9 @@ No Lua interpreter is installed on this machine, and there is no C compiler.
 
 ## Open questions
 
-1. **Does Auctionator actually break at an auctioneer on Forever?** Inferred, not
-   observed. Decides upstream-vs-fork for the whole goal.
+1. **~~Does Auctionator actually break at an auctioneer on Forever?~~ Resolved
+   2026-09-20:** it degrades silently. Moot for GoldFinder, which is standalone
+   (decided 2026-09-27, see Goal).
 2. **~~What should the WoW MCP server be, now?~~ Resolved 2026-09-20.** It was
    built on the client's own capture and is attached as `wow-api`; the
    scraped-public-data shape was correctly rejected. What is left is a defect,
@@ -585,10 +597,10 @@ The items below are the parked gold/AH track and the standing infra debt.
    a `check.js`); it is not in the repo and will be lost.
 4. Extract the housing/AH signatures from the dump into a readable reference —
    the first genuinely shareable artifact here, and the MCP's seed.
-5. Depending on 1: fork Auctionator to add `camelot` gates, or re-evaluate
-   LibAHTab now that the client reports mainline and has the modern AH API.
-6. Read Auctionator's own `AGENTS.md` in the live install before writing any
-   integration code.
+5. Build GoldFinder as a standalone addon on `C_AuctionHouse`: its own AH tab,
+   a draggable AH frame, and coexistence with other AH addons' tabs. Check the
+   license of any tab library (e.g. LibAHTab) before vendoring it.
+6. Do not read or reuse Auctionator's source — All Rights Reserved.
 
 ## Working preferences
 
