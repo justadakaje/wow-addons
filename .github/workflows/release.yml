@@ -1,0 +1,94 @@
+# Publish one addon to CurseForge when its release tag is pushed.
+#
+#   git tag goldfinder-v0.1.0-beta        && git push origin goldfinder-v0.1.0-beta
+#   git tag adventurerplates-v0.3.2-beta  && git push origin adventurerplates-v0.3.2-beta
+#
+# Tags use "-", never "/": the packager puts the tag in the zip file name.
+# A tag containing "beta" (or "alpha") uploads as that release type.
+#
+# BigWigsMods/packager expects one addon per repository and refuses a
+# directory without its own .git. This repo holds several addons, so the
+# addon's folder is split out with `git subtree split` into a real
+# single-addon repository (its own history included) and packaged there.
+#
+# Needs, per addon: `## X-Curse-Project-ID:` in its .toc.
+# Needs, once: repository secret CF_API_TOKEN (a CurseForge API token).
+
+name: Release to CurseForge
+
+on:
+  push:
+    tags:
+      - "goldfinder-v*"
+      - "adventurerplates-v*"
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # subtree split needs the full history
+
+      - name: Resolve the addon, and refuse a tag that does not match its .toc
+        id: addon
+        shell: bash
+        run: |
+          tag="$GITHUB_REF_NAME"
+          case "$tag" in
+            goldfinder-v*)       folder=GoldFinder ;;
+            adventurerplates-v*) folder=AdventurerPlates ;;
+            *) echo "::error::Tag '$tag' does not name a known addon."; exit 1 ;;
+          esac
+          toc="addons/$folder/$folder.toc"
+          version="${tag#*-v}"      # 0.1.0-beta
+          base="${version%%-*}"     # 0.1.0
+          tocver=$(grep -m1 '^## Version:' "$toc" | sed 's/^## Version:[[:space:]]*//' | tr -d '\r')
+          if [ "$tocver" != "$base" ]; then
+            echo "::error file=$toc::Tag says $base but $toc says Version: $tocver. Bump the .toc or fix the tag."
+            exit 1
+          fi
+          if ! grep -q '^## X-Curse-Project-ID:' "$toc"; then
+            echo "::error file=$toc::No '## X-Curse-Project-ID:' line, so there is nowhere to upload to."
+            exit 1
+          fi
+          echo "folder=$folder" >> "$GITHUB_OUTPUT"
+          echo "Releasing $folder $version from $tag"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Pre-flight checks (same as local)
+        run: |
+          npm ci
+          node scripts/check-lua.js
+          node scripts/check-toc.js
+
+      - name: Split the addon into its own repository
+        shell: bash
+        env:
+          FOLDER: ${{ steps.addon.outputs.folder }}
+        run: |
+          git config --global user.name  "release workflow"
+          git config --global user.email "actions@users.noreply.github.com"
+          git subtree split --prefix="addons/$FOLDER" -b "release-split"
+          # A clone, not a worktree: the packager tests for a .git DIRECTORY.
+          git clone --quiet --branch release-split --single-branch . "$RUNNER_TEMP/$FOLDER"
+          cd "$RUNNER_TEMP/$FOLDER"
+          cp "$GITHUB_WORKSPACE/LICENSE" LICENSE
+          git add LICENSE
+          git commit --quiet -m "Include the repository LICENSE in the package"
+          git tag "$GITHUB_REF_NAME"
+          echo "Split repository at $(git log --oneline -1), tagged $GITHUB_REF_NAME"
+
+      - name: Package and upload to CurseForge
+        uses: BigWigsMods/packager@v2
+        with:
+          args: -t ${{ runner.temp }}/${{ steps.addon.outputs.folder }}
+          pandoc: false
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_TOKEN }}

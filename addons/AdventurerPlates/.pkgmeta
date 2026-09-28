@@ -1,0 +1,15 @@
+# BigWigsMods/packager config for Adventurer Plates.
+# The release workflow packages this folder as its own repository (see
+# .github/workflows/release.yml), so every path here is relative to
+# addons/AdventurerPlates/.
+package-as: AdventurerPlates
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+# Probe.lua is development-only (it calls undocumented globals under
+# /advplate risky). Its .toc line is wrapped in #@do-not-package@ so the
+# packaged .toc does not reference a file that is not shipped.
+ignore:
+  - Probe.lua
