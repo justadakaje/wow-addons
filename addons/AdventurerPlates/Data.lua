@@ -106,6 +106,23 @@ function D.Name()
     return id
 end
 
+-- The same 70009 surname rule as D.Name, for any unit token: returns the
+-- "First Surname" form that Chomp requires for whispers on this realm and
+-- that plates carry over the wire, or nil if the unit does not exist.
+-- A second value equal to OUR realm is a realm; anything else is taken as a
+-- surname. Cross-realm units are unmeasured on Forever.
+function D.FullNameOf(unit)
+    local ok, name, second = pcall(UnitFullName, unit)
+    if not ok or not name then return nil end
+    if second == "" then second = nil end
+    local okRealm, realm = pcall(GetNormalizedRealmName)
+    if not okRealm or realm == "" then realm = nil end
+    if second and second ~= realm and not name:find(" ", 1, true) then
+        return name .. " " .. second
+    end
+    return name
+end
+
 -- A stable key for the stored plate. Realm is included when we have it so two
 -- same-named characters on different realms do not collide; when we do not, the
 -- bare name is still better than refusing to save.

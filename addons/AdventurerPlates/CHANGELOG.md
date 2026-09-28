@@ -4,6 +4,33 @@ All notable changes to Adventurer Plates. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2026-09-27
+
+Fixes from the **first two-player sharing test** (Aeldorath Zephrai and Erica
+Cartwoman, build 70009). Sharing had never run with a second player before.
+
+### Fixed
+
+- **Asking by target, or by first name, failed** with
+  `Chomp.NameMergedRealm: expected a full name`. On a realm with surnames,
+  Chomp requires the surname in a whisper target, and on 70009
+  `UnitName("target")` returns the first name only. `/advplate ask` with a
+  target now uses the full name; a typed name without a surname gets a
+  sentence saying so, instead of Chomp's error.
+- **A card could arrive and never open.** A request typed as
+  `erica cartwoman` was remembered under exactly that text, the reply came
+  from `Erica Cartwoman`, and the mismatch made it look unsolicited -- which
+  is deliberately never shown. The request then timed out with "no answer".
+  Requests and replies now match regardless of case and realm suffix.
+- **Someone else's card showed your own character model.** When the other
+  player was not in view, `isRemote and VisibleUnitFor(...) or "player"`
+  fell through to `"player"`. This predates 70009; it was never seen because
+  sharing had never had a second player. A card for someone out of view now
+  takes the class-crest fallback, as designed.
+- **A player in view was not recognised** for their portrait: first name
+  (`UnitName`) was compared with the plate's full name. Both sides now use
+  the full name.
+
 ## [0.3.1] - 2026-09-27
 
 Client update: build 70009 changed how your own name is returned, which made
