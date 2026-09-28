@@ -88,9 +88,26 @@ server.registerTool(
   },
   async ({ name, response_format }) => {
     const hits = index.lookupFunction(name);
+    const status = index.globalStatus(name);
     if (!hits.length) {
       const near = index.suggest(name);
       const hint = near.length ? ` Did you mean: ${near.join(", ")}?` : "";
+      // The watchlist outranks the documentation here. "May still exist but be
+      // undocumented" is the right hedge for an unknown name and the wrong one
+      // for a name the client was checked for.
+      if (status === "removed") {
+        return text(
+          `The global "${name}" does not exist on ${CLIENT}. ForeverProbe verified it ` +
+            `resolves to nil, so calling it is an immediate error.${hint}`,
+        );
+      }
+      if (status === "present") {
+        return text(
+          `"${name}" is verified present on ${CLIENT}, but Blizzard's documentation has no ` +
+            `function signature under that name. It may be an undocumented function, or a ` +
+            `table or namespace — try get_namespace. Do not assume a signature for it.${hint}`,
+        );
+      }
       return text(
         `No function named "${name}" exists on ${CLIENT}.${hint}\n\n` +
           `Absence here is meaningful: this index is the client's own documentation. ` +
@@ -101,7 +118,11 @@ server.registerTool(
     if (response_format === "json") {
       return json({
         query: name,
-        globalRemoved: index.globalRemoved(name),
+        // true = verified nil; false = verified present, or a qualified name;
+        // null = no presence record. Kept for callers that test `=== true`.
+        // globalStatus carries the distinction a boolean cannot.
+        globalRemoved: status === "removed" ? true : status === "unverified" ? null : false,
+        globalStatus: status,
         matches: hits.map((h) => ({
           system: h.system,
           namespace: h.namespace,
@@ -116,15 +137,24 @@ server.registerTool(
       .map((h) => `## ${h.namespace ? `${h.namespace}.${h.fn.Name}` : h.fn.Name}\n\nSystem: \`${h.system}\`\n\n${functionBlock(h.namespace, h.fn)}`)
       .join("\n\n");
 
-    // Without this, asking for "GetItemInfo" returns namespaced matches and
-    // reads as confirmation, when calling the bare global is an immediate error.
-    const warning = index.globalRemoved(name)
-      ? `> **The global \`${name}\` does not exist on this client.** It resolves to \`nil\`; ` +
+    // Without a note, a bare lookup that finds documented matches reads as
+    // confirmation that the bare global exists. That is only true when the
+    // capture says so: "GetItemInfo" finds four matches and the global is nil,
+    // and "LoadAddOn" finds one while the capture has no record of the global.
+    const notes: Record<typeof status, string> = {
+      removed:
+        `> **The global \`${name}\` does not exist on this client.** It resolves to \`nil\`; ` +
         `calling it is an immediate error. The matches below are namespaced functions that ` +
-        `merely share the name — use one of those instead.\n\n`
-      : "";
+        `merely share the name — use one of those instead.\n\n`,
+      unverified:
+        `> **Unverified: this capture has no presence record for a bare global \`${name}\`.** ` +
+        `The matches below are documented, which is not evidence the bare global resolves. ` +
+        `Check \`type(${name})\` in-game before calling it bare, or use a namespaced form.\n\n`,
+      present: `> The bare global \`${name}\` is verified present on this client.\n\n`,
+      qualified: "",
+    };
 
-    return md(warning + (hits.length > 1 ? `Found ${hits.length} matches.\n\n${body}` : body));
+    return md(notes[status] + (hits.length > 1 ? `Found ${hits.length} matches.\n\n${body}` : body));
   },
 );
 
@@ -445,7 +475,9 @@ server.registerTool(
       "Report legacy global functions that no longer exist on WoW: Forever, verified " +
       "against the live client, with their modern replacements where known. On this " +
       "client removal rather than deprecation is the norm: most legacy globals were " +
-      "deleted outright in favour of C_* namespaces.",
+      "deleted outright in favour of C_* namespaces. Covers only the names ForeverProbe " +
+      "was told to check: a name on neither list was never probed, which is not evidence " +
+      "it exists. For one specific name, lookup_api reports which case it is.",
     inputSchema: { response_format: Format },
     annotations: READ_ONLY,
   },
@@ -471,15 +503,31 @@ server.registerTool(
       .map(([name]) => name)
       .sort();
 
+    // Coverage is stated in the output, not just the description: a list with no
+    // stated bounds reads as exhaustive, and this one is ForeverProbe's
+    // hand-curated WATCHLIST. Counted rather than named -- a hardcoded example
+    // of a missing name goes stale the moment the watchlist gains it.
+    const coverage =
+      `Covers only the ${index.watchlistSize} names ForeverProbe's watchlist checks, not ` +
+      `every legacy global. A name on neither list was never probed — that is not evidence ` +
+      `it exists.`;
+
     if (response_format === "json") {
-      return json({ removed: gone, present, note: "Verified against the live client, not inferred." });
+      return json({
+        removed: gone,
+        present,
+        probed: index.watchlistSize,
+        note: `Verified against the live client, not inferred. ${coverage}`,
+      });
     }
     return md(
       `# Removed on ${CLIENT}\n\n` +
         `These resolve to \`nil\`. Using them is an immediate error.\n\n\`\`\`\n${gone.join("\n")}\n\`\`\`\n\n` +
         `## Still present\n\n\`\`\`\n${present.join("\n")}\n\`\`\`\n\n` +
         `Note \`IsSpellKnown\` survives as a global while \`GetSpellInfo\` does not — ` +
-        `the split is not systematic, so verify each name rather than assuming a pattern.`,
+        `the split is not systematic, so verify each name rather than assuming a pattern.\n\n` +
+        `**Coverage.** ${coverage} For one specific name, \`lookup_api\` says which it is: ` +
+        `removed, present, or unverified.`,
     );
   },
 );

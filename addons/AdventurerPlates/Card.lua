@@ -392,8 +392,9 @@ local function VisibleUnitFor(name)
     if not name then return nil end
     for _, token in ipairs({ "target", "mouseover", "focus",
                              "party1", "party2", "party3", "party4" }) do
-        local ok, unitName = pcall(UnitName, token)
-        if ok and unitName and unitName == name then return token end
+        -- Full names on both sides: on 70009 UnitName returns only the first
+        -- name, which never equals a plate's "First Surname".
+        if D.FullNameOf(token) == name then return token end
     end
     return nil
 end
@@ -514,7 +515,16 @@ function C.Refresh(remote)
 
     -- portrait: your own is always renderable; someone else's only if the
     -- client currently has them loaded.
-    local unit = view.isRemote and VisibleUnitFor(view.name) or "player"
+    -- NOT `isRemote and VisibleUnitFor(...) or "player"`: when the other
+    -- player is not visible that idiom falls through to "player" and draws
+    -- the VIEWER's model on someone else's card (seen in the first
+    -- two-player test, 2026-09-27). A nil unit takes the class-crest fallback.
+    local unit
+    if view.isRemote then
+        unit = VisibleUnitFor(view.name)
+    else
+        unit = "player"
+    end
     RefreshPortrait(f.portrait, view.raceLabel, view.className, unit,
         view.isRemote and view.name or nil)
 
