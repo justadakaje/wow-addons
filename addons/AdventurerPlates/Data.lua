@@ -69,18 +69,41 @@ D.MAX_TAGS  = 6
 -- Names on this client contain a space -- Forever has a surname system, and
 -- the test character is "Aeldorath Zephrai". Nothing here may split on
 -- whitespace.
+--
+-- Build 70009 changed what UnitFullName("player") returns. Measured in-client
+-- 2026-09-27 (C_PlayerInfo.ShouldDisplaySurname() == true):
+--
+--   69913  UnitFullName  -> "Aeldorath Zephrai", "ClassicBetaPvE2"
+--   70009  UnitFullName  -> "Aeldorath", "Zephrai"      <- surname, not realm
+--          GetNormalizedRealmName() -> "ClassicBetaPvE2"
+--
+-- So the realm now comes from GetNormalizedRealmName(), and a second value
+-- that is not the realm is the surname, joined back with a space. That makes
+-- the plate key "Aeldorath Zephrai-ClassicBetaPvE2" on both builds, so plates
+-- saved on 69913 load again without moving any data. A 69913-shaped return
+-- (second value == realm) passes through unchanged.
 function D.Name()
-    local ok, name, realm = pcall(UnitFullName, "player")
+    local ok, name, second = pcall(UnitFullName, "player")
     if not ok or not name then
         return nil, "The client did not return a character name."
     end
+    if second == "" then second = nil end
 
-    if not realm or realm == "" then
-        local okRealm, normalised = pcall(GetNormalizedRealmName)
-        realm = (okRealm and normalised) or nil
+    local okRealm, realm = pcall(GetNormalizedRealmName)
+    if not okRealm or realm == "" then realm = nil end
+
+    if not realm then
+        -- No independent realm to compare against: keep the pre-70009
+        -- reading, where the second value was the realm.
+        return { name = name, realm = second }
     end
 
-    return { name = name, realm = realm }
+    local id = { name = name, realm = realm }
+    if second and second ~= realm and not name:find(" ", 1, true) then
+        id.name = name .. " " .. second
+        id.split = { first = name, surname = second }  -- for D.Load's cleanup
+    end
+    return id
 end
 
 -- A stable key for the stored plate. Realm is included when we have it so two
@@ -284,6 +307,19 @@ function D.Load()
 
     local key, why = D.PlateKey()
     if not key then return nil, why end
+
+    -- v0.3.0 on build 70009 keyed the plate "First-Surname" (see D.Name) and,
+    -- finding nothing there, stored a blank default under that key. Remove
+    -- exactly that artefact -- and only if it was never saved (no `updated`),
+    -- so nothing the player edited is ever deleted.
+    local id = D.Name()
+    if id and id.split then
+        local stray = id.split.first .. "-" .. id.split.surname
+        local p = ns.db.plates[stray]
+        if stray ~= key and type(p) == "table" and p.updated == nil then
+            ns.db.plates[stray] = nil
+        end
+    end
 
     local stored = ns.db.plates[key]
     local plate = D.Sanitise(stored)
