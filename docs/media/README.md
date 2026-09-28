@@ -12,6 +12,9 @@ see **What is deliberately not here**, below.
 | --- | --- |
 | `podcast-fact-sheet.md` | Every measured figure for the episode, plus a blocklist of plausible falsehoods. The accuracy gate checks against this. |
 | `podcast-metadata.md` | Title options, show notes, chapters and tags for the released episode. |
+| `social-copy.md` | LinkedIn, Threads, X reply and the CurseForge listing draft. The artifacts not covered elsewhere. |
+| `generated-draft-review.md` | The 21 errors in a transcript-sourced content draft, and what caught each. |
+| `contacts.yml` | Allowlist of handles content may @-mention. Both gates check against it. |
 | `podcast-steering-brief.md` | Episode brief. Structure, length, tone, hard accuracy rules, post-generation checklist. |
 | `podcast-steering-paste.md` | **Paste this one.** The brief minus its checklist, 4,920 chars, fits NotebookLM's measured 5,000-char limit. |
 | `podcast-steering-longer.md` | Experimental variant, 4,998 chars. Identical except it asks for 55–65 min and adds a two-host debate directive. |
