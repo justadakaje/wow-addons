@@ -64,7 +64,7 @@ jobs:
 
       - name: Pre-flight checks (same as local)
         run: |
-          npm ci
+          npm install --no-save --no-audit --no-fund luaparse   # package-lock.json is gitignored; same as validate.yml
           node scripts/check-lua.js
           node scripts/check-toc.js
 
