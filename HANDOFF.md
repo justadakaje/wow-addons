@@ -3,13 +3,24 @@
 Working context for picking this repo up cold. Read `AGENTS.md` too — it holds
 the rules; this holds the findings, the dead ends, and the open questions.
 
-Last updated 2026-09-21 (AdventurerPlates v0.1 through v0.3 session), against
-WoW: Forever beta build 69913.
+Last updated 2026-09-27 (GoldFinder v0.1.0, AdventurerPlates 0.3.1–0.3.2, first
+two-player sharing test), against WoW: Forever beta **build 70009**.
 
-**If you are a new session picking this up:** the active work is
-`addons/AdventurerPlates/`, not the gold/AH goal below. Read
-`addons/AdventurerPlates/README.md` first, then the "Current work" section
-here. The gold goal is real but parked and blocked — see Goal.
+**If you are a new session picking this up:** there are two active addons.
+Read [`docs/facts-build-70009.md`](docs/facts-build-70009.md) first — the
+client patched from 69913 to 70009 and **changed how names are returned**,
+which broke things that the API diff did not show. Then:
+
+- `addons/AdventurerPlates/` — sharing is now **tested with a second player**.
+  0.3.3 feature requests are queued; see "State as of 2026-09-27".
+- `addons/GoldFinder/` — **v0.1.0**, finds underpriced crafting materials on
+  the AH; a click opens the deal in Blizzard's Buy tab. See its README and Goal.
+
+> ⚠️ **The `wow-api` index is still build 69913**; the client is 70009. The
+> probe diff found only 3 removed and 42 added names and nothing on the AH, so
+> signatures are mostly still right — but a changed **return value** (like
+> `UnitFullName`) is invisible to both the index and the diff. Measure in-client
+> anything that touches names.
 
 > ✅ **`get_namespace` is trustworthy again — confirmed live 2026-09-20.**
 > Commit `740a476` ("Merge documented systems that share a namespace") fixed
@@ -67,7 +78,36 @@ here. The gold goal is real but parked and blocked — see Goal.
 
 **This is the active work. Read `addons/AdventurerPlates/README.md` first.**
 
-### State as of 2026-09-21: v0.3 built, sharing untested
+### State as of 2026-09-27: 0.3.2, sharing tested with a second player
+
+Live test with Ava (Erica Cartwoman) on build 70009. Full results and every
+measurement: [`docs/facts-build-70009.md`](docs/facts-build-70009.md).
+
+- **0.3.1** — build 70009 put the surname in `UnitFullName`'s realm slot, so
+  the saved card loaded blank. Fixed without moving data. `d8b3829` (master),
+  `c367ee3` (goldfinder).
+- **0.3.2** — four name bugs found in the first two-player round, fixed live:
+  ask by target/first name (Chomp needs the surname), received card never
+  opening (case-sensitive request key), remote card drawing the **viewer's**
+  model (`a and b or c` fall-through, predates 70009), visible player not
+  recognised. `a61b0e1` (master), `95be2e0` (goldfinder). Zip
+  `dist/AdventurerPlates-0.3.2.zip`, the build Ava ran.
+- **All sharing tests pass**: target, lowercase full name, out-of-sight
+  fallback, correct model both ways, `~` round trip, privacy "nobody", ignore
+  (requester gets only "no answer").
+
+**Queued for 0.3.3** (requests from Ken and Ava during the test): settings as UI
+buttons, not chat commands · tooltips on playstyle badges · right-click "View
+Adventurer Plate" (`MENU_UNIT_PARTY` measured) · auto-fill the surname for a
+first-name ask · "not sharing" in red · anti-spam (cache-first, quieter chat,
+responder rate limit) · ignore check independent of name form · build the
+class crest, or reword the docs that claim it (see below).
+
+**Correction:** the "class-crest composition" portrait fallback in the
+decisions list was **never built**. The fallback is a sentence. `Card.lua` and
+the 0.3.2 CHANGELOG repeat the claim; fix in 0.3.3.
+
+### State as of 2026-09-21 (history): v0.3 built, sharing untested
 
 Two addons, both loading clean on build 69913:
 
@@ -97,10 +137,8 @@ Branch `adventurer-plates`, pushed, PR #2 open against `master`.
 
 **Written and NEVER exercised — treat as unverified:**
 
-- **All of sharing.** No plate has been sent or received. Most of it cannot be
-  tested alone: `ask` needs a second character running the addon. The solo
-  checks that do pass are that the prefix registers and `ask <yourself>`
-  refuses.
+- ~~**All of sharing.**~~ **Tested 2026-09-27 with a second player** — see
+  "State as of 2026-09-27".
 - **Guild display.** The test character has no guild, so every run has taken
   the "Not in a guild." branch. `D.Guild()` calls the undocumented
   `GetGuildInfo`, which Tier B observed returning
@@ -108,11 +146,12 @@ Branch `adventurer-plates`, pushed, PR #2 open against `master`.
 - **Title display.** 111 titles exist, 0 are known on the test character, so
   only the empty branch has rendered. Forever beta caps at level 20, so a title
   may not be obtainable at all before the cap.
-- **The portrait fallback sentence.** The model has loaded on every single run,
-  so the `success == false` path has never appeared on screen.
+- ~~**The portrait fallback sentence.**~~ **Seen 2026-09-27** for an ungrouped
+  player out of sight (the no-unit path). The `success == false` path is still
+  unseen. There is no class crest — see the correction above.
 
-That is roughly a third of the card's fields in a correct-looking but
-unexercised state. It is the single biggest risk to publishing.
+As of 2026-09-21 that was roughly a third of the card's fields. With sharing
+and the fallback now exercised, **guild and title display** are what remain.
 
 ### The correction that matters most
 
@@ -178,8 +217,13 @@ its place: Base64 of raw CBOR would be ~515 B, i.e. three chunks.
 
 ### Next steps, in order
 
-1. **Test sharing with a second character.** Needs Ava or a second account.
-   This is the only way to exercise any of v0.3.
+0. **Git housekeeping before anything is pushed.** Local `master` is ahead of
+   `origin/master` by 2 (`3ba3cde` account-ID elision, `a61b0e1`/`d8b3829`
+   AdventurerPlates 0.3.1–0.3.2) **and behind it by 4** — someone pushed after
+   the last pull. Merge `origin/master` first. The account-ID elision is only
+   public once `master` is pushed; the ID remains in history either way.
+1. ~~**Test sharing with a second character.**~~ **Done 2026-09-27.**
+1a. **AdventurerPlates 0.3.3** — the queued requests above.
 2. **Find a guild and a title.** Clears the largest unverified surface. Level
    20 is the beta cap, so a title may be unobtainable — if so, record that
    rather than leaving the gap open.
@@ -191,21 +235,51 @@ its place: Base64 of raw CBOR would be ~515 B, i.e. three chunks.
    types.
 5. **Richer Playstyle & Focus display.** The badges are a deliberate
    placeholder.
-6. **Auctionator fork** — see the AH section below; it is unblocked now.
+6. **GoldFinder** — v0.1.0 built and working; see Goal below for what is open.
 
 ## Goal
 
 Surface gold-making opportunities in-game: raw materials listed below market
 value, and craftables sellable above crafting cost.
 
-**Parked, not cancelled** — the AdventurerPlates work above is what is active.
+**Built 2026-09-27: GoldFinder v0.1.0** (`addons/GoldFinder/`, branch
+`goldfinder`, local — not pushed). The underpriced-materials half works end to
+end on build 70009: Full Scan → recorded → deal table → click → Blizzard's Buy
+tab → purchase goes through. The crafting-cost half is not started.
+
+What building it taught, in order (details in `docs/facts-build-70009.md`):
+
+- Auctionator's Full Scan is **browse results**, not `ReplicateItems`. GoldFinder
+  never queries the AH; it records what arrives.
+- The client **re-delivers** its cached browse list on unrelated clicks.
+  GoldFinder fingerprints result sets and drops repeats (v0.0.4).
+- A one-point-per-10-minutes window measured from the *latest* sighting slides
+  forever; it is anchored at the first sighting now (v0.0.5).
+- Commodity prices from browse results are **per unit** (measured).
+
+Open for GoldFinder: "typical" is a median of as few as 3 scans, which is noisy
+on a thin beta market; non-commodity price units; the replicate index base; a
+Buy button inside the tab (deliberately deferred until "typical" is
+trustworthy).
 
 **No longer blocked, as of 2026-09-20.** An auctioneer was finally opened and
 the auction house works: modern `C_AuctionHouse` with all 85 functions present,
 browse queries returning results, and zero legacy AH events. Auctionator
-degrades silently rather than erroring. The remaining work is a fork adding
-`camelot` to five `AllowLoadGameType` gates — see the Auctionator finding below
-for the evidence and the exact lines.
+degrades silently rather than erroring.
+
+**Decided 2026-09-27: GoldFinder is a standalone addon, not an Auctionator
+fork.** Auctionator's `LICENSE` is "All Rights Reserved" (plusmouse,
+borjamacare), there is no public source repo, and its bundled `AGENTS.md`
+states the authors do not permit it to be used as a basis or reference. Forking
+it would be redistributing someone else's code without permission. Do not
+open Auctionator's source files to learn from them; build from `wow-api` and
+our own in-client measurements only. Auctionator is relevant solely as
+*another addon GoldFinder must coexist with* on the AH frame.
+
+GoldFinder's shape: its own tab on the Blizzard auction house frame, added
+through LibAHTab (MIT) so it shares one tab row with other AH addons instead of
+colliding. A draggable AH frame was considered and **dropped** by decision on
+2026-09-27; the frame is `UIPanelWindows`-managed, `IsMovable()` false.
 
 ## What is built
 
@@ -221,6 +295,11 @@ for the evidence and the exact lines.
 - `addons/AdventurerPlates/` — **the active addon.** Landscape card, editor,
   persistence, and v0.3 sharing over vendored Chomp. Probe still present but
   not shipped in release packages. See "Current work" above and its README.
+- `addons/GoldFinder/` — **v0.1.0.** A "GoldFinder" tab on the auction house
+  (LibAHTab, vendored MIT) that records material prices from scans you already
+  run, flags anything 30%+ below its median, and opens a deal in Blizzard's Buy
+  tab on click. SavedVariables `GoldFinderDB` (schema 3, with migrations).
+  Its README lists what is and is not tested. Branch `goldfinder`, local.
 - `addons/AdventurerPlatesPortrait/` — the **shelved** portrait layout
   (440x604). Kept for comparison, not deprecated. Own SavedVariables
   (`AdventurerPlatesPortraitDB`) and own slash (`/advportrait`); starts empty,
@@ -438,10 +517,10 @@ Source_Mainline    [AllowLoadGameType mainline]
 
 **Five gates, not four** — the earlier note missed `Source_Mainline`.
 
-**The hypothesis to test next:** add `camelot` to those five `AllowLoadGameType`
-lists in a fork and see what happens. It is falsifiable, not a fix — ModernAH
-may still call Retail APIs this client lacks. But `C_AuctionHouse` being fully
-present is the dependency that mattered most, and it is there.
+The gate list above is recorded as an observation about why Auctionator's AH
+layer is inactive here — **not** as a plan. Modifying Auctionator is ruled out
+(see Goal: its license is All Rights Reserved). `C_AuctionHouse` being fully
+present is the dependency that mattered, and GoldFinder builds on it directly.
 
 ## Verified findings — reusable components
 
@@ -539,8 +618,9 @@ No Lua interpreter is installed on this machine, and there is no C compiler.
 
 ## Open questions
 
-1. **Does Auctionator actually break at an auctioneer on Forever?** Inferred, not
-   observed. Decides upstream-vs-fork for the whole goal.
+1. **~~Does Auctionator actually break at an auctioneer on Forever?~~ Resolved
+   2026-09-20:** it degrades silently. Moot for GoldFinder, which is standalone
+   (decided 2026-09-27, see Goal).
 2. **~~What should the WoW MCP server be, now?~~ Resolved 2026-09-20.** It was
    built on the client's own capture and is attached as `wow-api`; the
    scraped-public-data shape was correctly rejected. What is left is a defect,
@@ -585,10 +665,10 @@ The items below are the parked gold/AH track and the standing infra debt.
    a `check.js`); it is not in the repo and will be lost.
 4. Extract the housing/AH signatures from the dump into a readable reference —
    the first genuinely shareable artifact here, and the MCP's seed.
-5. Depending on 1: fork Auctionator to add `camelot` gates, or re-evaluate
-   LibAHTab now that the client reports mainline and has the modern AH API.
-6. Read Auctionator's own `AGENTS.md` in the live install before writing any
-   integration code.
+5. Build GoldFinder as a standalone addon on `C_AuctionHouse`: its own AH tab,
+   a draggable AH frame, and coexistence with other AH addons' tabs. Check the
+   license of any tab library (e.g. LibAHTab) before vendoring it.
+6. Do not read or reuse Auctionator's source — All Rights Reserved.
 
 ## Working preferences
 

@@ -1,5 +1,11 @@
 # Fact Sheet — Adventurer Plates session, 2026-09-20/21
 
+> **The client is now build 70009.** This sheet is the record of the 69913
+> session and the published episode, and is deliberately left as it was.
+> What changed, and what was measured since, is in
+> [`facts-build-70009.md`](facts-build-70009.md) — including that sharing is
+> now tested and that `UnitFullName` returns names differently.
+
 **Single source of truth for every number.** Use this twice: as an input to the
 episode generator, and as a checklist against the generated audio before it
 ships.

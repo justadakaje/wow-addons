@@ -1,0 +1,9 @@
+# BigWigsMods/packager config for GoldFinder.
+# The release workflow packages this folder as its own repository (see
+# .github/workflows/release.yml), so every path here is relative to
+# addons/GoldFinder/.
+package-as: GoldFinder
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown

@@ -22,4 +22,6 @@ Data.lua
 Card.lua
 Editor.lua
 Share.lua
+#@do-not-package@
 Probe.lua
+#@end-do-not-package@

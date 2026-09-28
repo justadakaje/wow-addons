@@ -1,0 +1,44 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>GoldFinder logo</title>
+<style>html,body{margin:0;width:400px;height:400px;overflow:hidden;background:#1a130a}</style></head>
+<body>
+<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg" cx="45%" cy="40%" r="75%">
+      <stop offset="0" stop-color="#3a2a14"/><stop offset="1" stop-color="#140e07"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="40%" cy="35%" r="70%">
+      <stop offset="0" stop-color="#ffe89a"/><stop offset=".55" stop-color="#e9b440"/><stop offset="1" stop-color="#a8721f"/>
+    </radialGradient>
+    <radialGradient id="glass" cx="40%" cy="35%" r="70%">
+      <stop offset="0" stop-color="#eaf6ff" stop-opacity=".35"/><stop offset="1" stop-color="#9fd0f0" stop-opacity=".10"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#bg)"/>
+
+  <!-- a small stack of coins behind -->
+  <g opacity=".9">
+    <ellipse cx="262" cy="292" rx="70" ry="20" fill="#8a5e1c"/>
+    <rect x="192" y="262" width="140" height="30" fill="#b98629"/>
+    <ellipse cx="262" cy="262" rx="70" ry="20" fill="url(#coin)"/>
+    <ellipse cx="262" cy="244" rx="70" ry="20" fill="#8a5e1c"/>
+    <rect x="192" y="226" width="140" height="18" fill="#b98629"/>
+    <ellipse cx="262" cy="226" rx="70" ry="20" fill="url(#coin)"/>
+  </g>
+
+  <!-- the main coin -->
+  <circle cx="150" cy="150" r="96" fill="url(#coin)" stroke="#8a5e1c" stroke-width="6"/>
+  <circle cx="150" cy="150" r="74" fill="none" stroke="#b9862f" stroke-width="4" stroke-dasharray="2 9"/>
+  <!-- a price tag arrow pointing down: "below its usual price" -->
+  <path d="M150 102 L150 180" stroke="#6b4512" stroke-width="16" stroke-linecap="round"/>
+  <path d="M118 158 L150 196 L182 158" fill="none" stroke="#6b4512" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- magnifying glass over the coin -->
+  <g transform="translate(34 92) scale(0.86)">
+    <line x1="292" y1="214" x2="352" y2="290" stroke="#2b1d0c" stroke-width="26" stroke-linecap="round"/>
+    <line x1="292" y1="214" x2="352" y2="290" stroke="#7a5424" stroke-width="16" stroke-linecap="round"/>
+    <circle cx="246" cy="152" r="70" fill="url(#glass)" stroke="#f1d58a" stroke-width="12"/>
+    <path d="M206 124 A48 48 0 0 1 250 104" fill="none" stroke="#ffffff" stroke-opacity=".7" stroke-width="8" stroke-linecap="round"/>
+  </g>
+</svg>
+</body></html>

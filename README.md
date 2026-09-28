@@ -34,7 +34,8 @@ wow-addons/
 | --- | --- | --- |
 | AddonSmokeTest | Classic Era (20506), Forever (16001) | Proof-of-life, working |
 | ForeverProbe | Forever (16001) | Read-only API/event capture, working |
-| AdventurerPlates | Forever (16001) | v0.1.0-probe — capability probe; plate UI not built yet |
+| AdventurerPlates | Forever (16001) | v0.3.0 — card, editor and sharing built; sharing untested with a second player |
+| GoldFinder | Forever (16001) | v0.1.0 — finds underpriced materials; click a deal to buy it in the Buy tab |
 
 ## Related repos
 
