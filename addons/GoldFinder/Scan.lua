@@ -37,7 +37,7 @@ local CAPTURES_KEPT      = 100
 local SAME_POINT_SECONDS = 600  -- two sightings this close are one data point
 local ANNOUNCE_ROWS      = 200  -- only scan-sized captures get a chat line
 
-ns.diag = { replicate = 0, browseUpdated = 0, browseAdded = 0, skip = nil }
+ns.diag = { replicate = 0, browseUpdated = 0, browseAdded = 0, duplicates = 0, skip = nil }
 local diag = ns.diag
 
 local classOf = {}  -- itemID -> classID, or false when unknown
@@ -72,6 +72,9 @@ local function AddRow(c, key, itemID, price, qty, name)
     if not c.seen[key] then
         c.seen[key] = true
         c.distinct = c.distinct + 1
+        -- Fingerprint inputs, over every distinct row (see Finish).
+        c.fpPrice = (c.fpPrice or 0) + (price or 0)
+        c.fpQty = (c.fpQty or 0) + (qty or 0)
     end
     if itemID and not c.seenItems[itemID] then
         c.seenItems[itemID] = true
@@ -96,6 +99,22 @@ local function Finish(c, totalRows)
         return
     end
     local now = GetServerTime()
+
+    -- The client re-delivers its cached browse list without a new query:
+    -- observed on build 70009, where each click in Auctionator's Selling tab
+    -- fired AUCTION_HOUSE_BROWSE_RESULTS_UPDATED and GetBrowseResults()
+    -- returned the previous Full Scan (248 materials, every click). Recording
+    -- that again would stamp old prices as current. A result set identical
+    -- to the last one recorded carries no new information, so it is counted
+    -- and dropped. Saved, so a /reload cannot replay it either.
+    local fingerprint = ("%d:%d:%.0f:%.0f"):format(
+        totalRows, c.distinctItems, c.fpPrice or 0, c.fpQty or 0)
+    if fingerprint == db.lastFingerprint then
+        diag.duplicates = diag.duplicates + 1
+        if ns.RefreshPanel then ns.RefreshPanel() end
+        return
+    end
+    db.lastFingerprint = fingerprint
 
     local perItem = {}
     for _, r in pairs(c.rows) do
@@ -228,8 +247,12 @@ local function DiagSentence()
     if diag.replicate + diag.browseUpdated + diag.browseAdded == 0 then
         return "Since login, no auction house results have reached GoldFind. Open the auction house and run a scan or a search."
     end
-    return ("Since login GoldFind has seen %d full snapshot(s), %d browse update(s) and %d page(s) of browse results."):format(
+    local s = ("Since login GoldFind has seen %d full snapshot(s), %d browse update(s) and %d page(s) of browse results."):format(
         diag.replicate, diag.browseUpdated, diag.browseAdded)
+    if diag.duplicates > 0 then
+        s = s .. (" %d repeat(s) of already-recorded results were ignored."):format(diag.duplicates)
+    end
+    return s
 end
 
 -- Short footer text plus tooltip detail. Each detail is either a
