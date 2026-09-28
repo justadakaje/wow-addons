@@ -2,7 +2,7 @@
 ## Title: GoldFinder
 ## Notes: Adds a GoldFinder tab to the auction house. Shares the tab row with other auction house addons instead of fighting them for it.
 ## Author: justadakaje
-## Version: 0.0.5
+## Version: 0.0.6
 ## IconTexture: Interface\ICONS\INV_Misc_Coin_01
 ## SavedVariables: GoldFinderDB
 ## X-Target-Client: WoW: Forever (camelot)

@@ -108,13 +108,33 @@ local COLUMNS = {
 
 local ui = { rows = {} }
 local requested = {}  -- itemIDs whose names we have asked the client to load
+local OpenInBuy, ShowRowTip  -- defined below; rows call them on click/hover
 
-local function MakeRow(anchor, font)
+-- clickable rows highlight on hover and open their deal in the Buy view.
+local function MakeRow(anchor, font, clickable)
     local row = CreateFrame("Frame", nil, panel)
     row:SetHeight(ROW_HEIGHT)
     row:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, 0)
     row:SetPoint("RIGHT", panel, "RIGHT")
     row.cells = {}
+    if clickable then
+        row.hl = row:CreateTexture(nil, "BACKGROUND")
+        row.hl:SetAllPoints(row)
+        row.hl:SetColorTexture(1, 0.82, 0, 0.12)
+        row.hl:Hide()
+        row:EnableMouse(true)
+        row:SetScript("OnEnter", function(self)
+            self.hl:Show()
+            ShowRowTip(self)
+        end)
+        row:SetScript("OnLeave", function(self)
+            self.hl:Hide()
+            GameTooltip:Hide()
+        end)
+        row:SetScript("OnMouseUp", function(self, button)
+            if button == "LeftButton" and self.deal then OpenInBuy(self.deal) end
+        end)
+    end
     for _, col in ipairs(COLUMNS) do
         local fs = row:CreateFontString(nil, "OVERLAY", font)
         fs:SetPoint("LEFT", row, "LEFT", col.x, 0)
@@ -179,7 +199,7 @@ local function BuildPanel()
 
     local anchor = ui.header
     for i = 1, MAX_ROWS do
-        ui.rows[i] = MakeRow(anchor, "GameFontHighlight")
+        ui.rows[i] = MakeRow(anchor, "GameFontHighlight", true)
         anchor = ui.rows[i]
     end
 
@@ -228,6 +248,53 @@ local function ItemName(d)
     return ("|cff999999Item %d (loading)|r"):format(d.itemID)
 end
 
+local function KeyFor(d)
+    if d.itemKey then return d.itemKey, true end
+    -- Recorded before v0.0.6 saved exact keys: level/suffix 0 is a guess
+    -- that fits most materials. The next Full Scan stores the real key.
+    return C_AuctionHouse.MakeItemKey(d.itemID), false
+end
+
+-- Opens the deal in Blizzard's own Buy view, where the real listings and
+-- Blizzard's purchase confirmation live. GoldFinder finds; Blizzard buys.
+--
+-- SelectBrowseResult is Blizzard Lua, invisible to the API index; its
+-- presence was type()-checked in-client. What it does with the argument is
+-- NOT verified -- it is handed a table shaped like the documented
+-- BrowseResultInfo, the same thing a click in Blizzard's own list passes.
+OpenInBuy = function(d)
+    local key, exact = KeyFor(d)
+    local name = ItemName(d)
+    if not C_AuctionHouse.GetItemKeyInfo(key) then
+        C_Item.RequestLoadItemDataByID(d.itemID)
+        ns.Warn("%s is still loading from the server. Click it again in a moment.", name)
+        return
+    end
+    local ok, err = pcall(AuctionHouseFrame.SelectBrowseResult, AuctionHouseFrame, {
+        itemKey = key, minPrice = math.floor(d.now), totalQuantity = d.qty,
+        containsOwnerItem = false,
+    })
+    if not ok then
+        ns.Bad("Could not open %s in the Buy view: %s", name, tostring(err))
+    elseif not exact then
+        ns.Print("Opened %s by item ID. If no listings show, run a Full Scan and try again.", name)
+    end
+end
+
+ShowRowTip = function(row)
+    local d = row.deal
+    if not d then return end
+    local tip = GameTooltip
+    tip:SetOwner(row, "ANCHOR_RIGHT")
+    tip:AddLine(ItemName(d), 1, 1, 1)
+    tip:AddDoubleLine("Lowest now", Money(d.now), 1, 0.82, 0, 1, 1, 1)
+    tip:AddDoubleLine("Typical", Money(d.typical), 1, 0.82, 0, 1, 1, 1)
+    tip:AddLine(" ")
+    tip:AddLine("Click to see its listings in the Buy view.", 0.4, 1, 0.4, true)
+    tip:AddLine("Check the price there before buying: per unit versus per stack is not yet measured.", 0.8, 0.8, 0.8, true)
+    tip:Show()
+end
+
 -- Safe to call any time: does nothing until the panel exists and is shown.
 function ns.RefreshPanel()
     if not (panel and panel:IsShown()) then return end
@@ -261,8 +328,10 @@ function ns.RefreshPanel()
             row.cells.typical:SetText(Money(d.typical))
             row.cells.below:SetText(("|cff40ff40%d%%|r"):format(math.floor(d.below * 100 + 0.5)))
             row.cells.qty:SetText(tostring(d.qty))
+            row.deal = d
             row:Show()
         else
+            row.deal = nil
             row:Hide()
         end
     end

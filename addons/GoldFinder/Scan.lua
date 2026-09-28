@@ -62,7 +62,7 @@ end
 
 -- key: unique per row within this capture (item key for browse, listing
 -- index for snapshots). A browse row seen twice replaces itself.
-local function AddRow(c, key, itemID, price, qty, name)
+local function AddRow(c, key, itemID, price, qty, name, itemKey)
     -- Count distinct rows and distinct items before any filtering. Browse
     -- rows are per item *key* (item + level + suffix), so one item can have
     -- several rows. Measured on 70009: ~4571 distinct rows per Full Scan
@@ -89,7 +89,7 @@ local function AddRow(c, key, itemID, price, qty, name)
         c.nRows = c.nRows + 1
         c.materials = c.materials + 1
     end
-    c.rows[key] = { itemID = itemID, price = price, qty = qty or 0, name = name }
+    c.rows[key] = { itemID = itemID, price = price, qty = qty or 0, name = name, itemKey = itemKey }
 end
 
 local function Finish(c, totalRows)
@@ -120,10 +120,10 @@ local function Finish(c, totalRows)
     for _, r in pairs(c.rows) do
         local a = perItem[r.itemID]
         if not a then
-            a = { min = r.price, qty = 0 }
+            a = { min = r.price, qty = 0, itemKey = r.itemKey }
             perItem[r.itemID] = a
         end
-        if r.price < a.min then a.min = r.price end
+        if r.price < a.min then a.min, a.itemKey = r.price, r.itemKey end
         a.qty = a.qty + r.qty
         if r.name then a.name = r.name end
     end
@@ -137,6 +137,15 @@ local function Finish(c, totalRows)
             db.items[itemID] = rec
         end
         if a.name then rec.name = a.name end
+        -- The exact key (item + level + suffix) of the cheapest variant, so a
+        -- click can open precisely those listings. Plain fields only: this
+        -- table is saved, and the save path takes nothing it cannot write.
+        local k = a.itemKey
+        if type(k) == "table" and k.itemID then
+            rec.itemKey = { itemID = k.itemID, itemLevel = k.itemLevel or 0,
+                            itemSuffix = k.itemSuffix or 0,
+                            battlePetSpeciesID = k.battlePetSpeciesID or 0 }
+        end
         local h = rec.history
         local last = h[#h]
         -- One point per sighting window. The window is anchored at the
@@ -181,7 +190,7 @@ local function AddBrowseResults(results)
         local k = r.itemKey
         local itemID = k and k.itemID
         local key = k and (tostring(k.itemID) .. ":" .. tostring(k.itemLevel) .. ":" .. tostring(k.itemSuffix))
-        AddRow(browse, key or ("?" .. browseRows), itemID, r.minPrice, r.totalQuantity, nil)
+        AddRow(browse, key or ("?" .. browseRows), itemID, r.minPrice, r.totalQuantity, nil, k)
     end
     lastBrowse = GetServerTime()
 end

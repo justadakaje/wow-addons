@@ -55,6 +55,7 @@ function ns.FindDeals()
                 if typical > 0 and current.min <= ns.DEAL_RATIO * typical then
                     deals[#deals + 1] = {
                         itemID  = itemID,
+                        itemKey = rec.itemKey,  -- nil for items not seen since v0.0.6
                         name    = rec.name,
                         now     = current.min,
                         typical = typical,
