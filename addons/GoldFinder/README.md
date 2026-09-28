@@ -51,6 +51,9 @@ Tested on WoW: Forever 1.60.1, **build 70009**.
   materials across 249 items
 - The panel: centred "Building price history" empty state, a footer clear of
   the money display, and a details tooltip on hover
+- **The deal table, on real data**: after four scans on separate occasions it
+  listed 21 underpriced materials, deepest discount first, with names, prices
+  and quantities
 
 **Measured along the way:**
 
@@ -62,11 +65,11 @@ Tested on WoW: Forever 1.60.1, **build 70009**.
 
 **Written and NOT yet seen working:**
 
-- **The deal table.** It needs 4 scans' worth of history before it can show
-  anything, and that history does not exist yet.
-- **Whether browse prices are per unit or per stack** on this client. Comparing
-  an item with its own history works either way; the price *shown* could be a
-  stack price until this is measured.
+- **Whether the prices in the table are right.** Some first results look
+  implausible -- Wool Cloth at 30c against a typical 2s 90c (90% below) with
+  6368 listed -- which suggests browse prices mix per-unit and per-stack
+  values on this client. **Check a deal in the Buy tab before buying it**
+  until this is measured.
 - **The full-snapshot path** (`REPLICATE_ITEM_LIST_UPDATE`). No scanner used by
   the author triggers it. Until the snapshot's index numbering is measured, it
   reads every listing but one, to avoid an out-of-range call.
