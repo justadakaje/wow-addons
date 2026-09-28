@@ -82,9 +82,18 @@ end
 -- Name comparison has to survive realm suffixes and Forever's surnames, which
 -- contain a space. Chomp.NameMergedRealm normalises to Name-Realm; fall back to
 -- a plain compare if Chomp is missing rather than guessing at the format.
+-- Requests are remembered under this key so the reply can find them. The
+-- first two-player test typed "erica cartwoman" and the reply came from
+-- "Erica Cartwoman": an exact-match key missed it, the reply was treated as
+-- unsolicited (so never shown), and the timeout then said "no answer".
+-- Case and any "-Realm" suffix are ignored.
+local function RequestKey(name)
+    return (name:gsub("%-[^%-]*$", "")):lower()
+end
+
 local function SameName(a, b)
     if not a or not b then return false end
-    if a == b then return true end
+    if a == b or RequestKey(a) == RequestKey(b) then return true end
     local chomp = _G.AddOn_Chomp
     if chomp and chomp.NameMergedRealm then
         local okA, fullA = pcall(chomp.NameMergedRealm, a)
@@ -378,8 +387,8 @@ local function HandleRequest(sender, theirVersion)
 end
 
 local function HandleResponse(sender, theirVersion, blob)
-    local req = pending[sender]
-    pending[sender] = nil
+    local req = pending[RequestKey(sender)]
+    pending[RequestKey(sender)] = nil
 
     if tonumber(theirVersion) ~= PROTOCOL then
         ns.Warn(REFUSAL_TEXT.proto:format(sender))
@@ -403,7 +412,7 @@ local function HandleResponse(sender, theirVersion, blob)
 end
 
 local function HandleRefusal(sender, theirVersion, reason)
-    pending[sender] = nil
+    pending[RequestKey(sender)] = nil
     local text = REFUSAL_TEXT[reason] or "%s declined to share their plate."
     ns.Print(text:format(sender))
 end
@@ -443,12 +452,23 @@ function S.Request(target)
     local ok, why = S.Available()
     if not ok then return false, why end
 
+    -- On a realm with surnames, Chomp refuses a whisper target without one
+    -- ("Chomp.NameMergedRealm: expected a full name" -- first two-player
+    -- test). Say that in words before Chomp says it in a stack trace.
+    local chomp = Chomp()
+    if type(chomp.RegionalUniqueNamesEnabled) == "function" then
+        local okR, regional = pcall(chomp.RegionalUniqueNamesEnabled)
+        if okR and regional and not target:find(" ", 1, true) then
+            return false, ("On this realm a name needs its surname too, for example: /advplate ask %s Surname. Or target them and type /advplate ask."):format(target)
+        end
+    end
+
     local okTime, now = pcall(GetServerTime)
-    pending[target] = (okTime and now) or 0
+    pending[RequestKey(target)] = (okTime and now) or 0
 
     local sent, sendWhy = Send(target, table.concat({ "REQ", PROTOCOL, "" }, SEP))
     if not sent then
-        pending[target] = nil
+        pending[RequestKey(target)] = nil
         return false, sendWhy
     end
 
@@ -457,8 +477,8 @@ function S.Request(target)
     -- Self-cancelling timer, not an OnUpdate. If nothing comes back we say so
     -- rather than leaving the user watching an empty screen.
     C_Timer.After(REQUEST_TIMEOUT, function()
-        if pending[target] then
-            pending[target] = nil
+        if pending[RequestKey(target)] then
+            pending[RequestKey(target)] = nil
             ns.Warn("no answer from %s. They may be offline, or not running Adventurer Plates.",
                 target)
         end
@@ -502,8 +522,9 @@ end
 ns.RegisterCommand("ask", function(arg)
     local target = arg
     if not target or target == "" then
-        local ok, name = pcall(UnitName, "target")
-        if ok and name then target = name end
+        -- Full name with surname: on 70009 UnitName("target") returns the
+        -- first name only, which Chomp refuses as a whisper target.
+        target = D.FullNameOf("target")
     end
     local ok, why = S.Request(target)
     if not ok then ns.Warn(tostring(why)) end
