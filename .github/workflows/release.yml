@@ -77,7 +77,9 @@ jobs:
           git config --global user.email "actions@users.noreply.github.com"
           git subtree split --prefix="addons/$FOLDER" -b "release-split"
           # A clone, not a worktree: the packager tests for a .git DIRECTORY.
-          git clone --quiet --branch release-split --single-branch . "$RUNNER_TEMP/$FOLDER"
+          # --no-tags: a local clone copies every tag, including the release tag
+          # itself, which would then already exist on the wrong commit.
+          git clone --quiet --no-tags --branch release-split --single-branch . "$RUNNER_TEMP/$FOLDER"
           cd "$RUNNER_TEMP/$FOLDER"
           cp "$GITHUB_WORKSPACE/LICENSE" LICENSE
           git add LICENSE
