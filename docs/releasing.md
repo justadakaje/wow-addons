@@ -61,7 +61,20 @@ and produced exactly the same file list as `scripts/package-addon.ps1`
 `Probe.lua` and without its `.toc` line. `git subtree split` on the real
 repository produced GoldFinder's 10 commits with the addon at the root.
 
-**Not yet verified:** an actual upload. The first tag push is that test.
+**First real release, 2026-09-28:** `goldfinder-v0.1.0-beta`, run
+[36381144592](https://github.com/justadakaje/wow-addons/actions/runs/36381144592),
+uploaded `GoldFinder-goldfinder-v0.1.0-beta-forever.zip` to CurseForge project
+1715781 as **1.60.1, beta** ("Success!"). It took three runs; both failures
+were in the workflow and stopped before anything was uploaded:
+
+1. `npm ci` needs `package-lock.json`, which this repo gitignores — install
+   `luaparse` with `npm install --no-save`, as `validate.yml` does.
+2. A local `git clone` copies every tag, so the release tag already existed
+   in the split repository — clone with `--no-tags`.
+
+Known cosmetic issue: the file name repeats the addon name
+(`GoldFinder-goldfinder-…`) because the packager uses the whole tag. The
+packager's `-n` template can fix it in a later release.
 
 `scripts/package-addon.ps1` still builds a local zip for hand-testing (the
 build sent to a second player, for example).
