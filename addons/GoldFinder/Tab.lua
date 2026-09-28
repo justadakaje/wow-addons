@@ -9,13 +9,18 @@
 --   * Addons that bypass LibAHTab and append to AuctionHouseFrame.Tabs
 --     directly: cannot be prevented, only detected. LibAHTab anchors its row
 --     to whatever Tabs[#Tabs] was when the row was built; if that is no longer
---     the last tab, a raw tab now sits under the row. We report that as a
---     sentence rather than let it overlap silently.
+--     the last tab, a raw tab now sits under the row. We report that rather
+--     than let it overlap silently.
 --
 -- AuctionHouseFrame, its Tabs table and PanelTemplates_* are Blizzard Lua,
 -- invisible to the API index. Each was confirmed present by an in-client
 -- type() check before this file was written; the tab was first seen working
 -- on build 70009, alongside Auctionator's four LibAHTab tabs.
+--
+-- Layout follows Blizzard's own AH: an empty state is a centred gold title
+-- with one plain sentence; results get a gold count and a table. Diagnostics
+-- live in a single grey footer line, bottom right (clear of the money
+-- display, bottom left), with the detail in a tooltip.
 
 local ADDON, ns = ...
 
@@ -30,7 +35,10 @@ local BLIZZARD_TABS = 3
 local LibAHTab = LibStub("LibAHTab-1-0")
 
 local created, deferred, warnedOverlap = false, false, false
-local panel, body
+local panel
+
+---------------------------------------------------------------------------
+-- Tab row diagnostics
 
 -- LibAHTab keeps its row in lib.internalState. That is internal, not API:
 -- every read here is nil-guarded and a missing field becomes "unknown".
@@ -51,62 +59,237 @@ local function RowIsOverlapped()
     return anchoredTo ~= tabs[#tabs]
 end
 
-local function Report()
-    local lines = {}
+-- Returns tooltip lines (same shape as ns.ScanStatus().lines) and whether
+-- anything needs the player's attention.
+local function TabRowStatus()
+    local L, warn = {}, false
     local tabs = AuctionHouseFrame and AuctionHouseFrame.Tabs
 
     if type(tabs) ~= "table" then
-        lines[#lines + 1] = "The auction house's own tab list could not be read, so overlap with other addons cannot be checked."
+        L[#L + 1] = "The auction house tab list could not be read, so overlap cannot be checked."
     elseif #tabs == BLIZZARD_TABS then
-        lines[#lines + 1] = ("The auction house has its %d standard tabs. No addon has added one outside the shared tab library."):format(#tabs)
+        L[#L + 1] = { "Blizzard tabs", tostring(#tabs) }
     elseif #tabs > BLIZZARD_TABS then
-        lines[#lines + 1] = ("%d tab(s) were added to the auction house directly by another addon, outside the shared tab library."):format(#tabs - BLIZZARD_TABS)
+        L[#L + 1] = { "Blizzard tabs", tostring(#tabs) }
+        L[#L + 1] = ("%d tab(s) were added directly by another addon, outside the shared tab library."):format(#tabs - BLIZZARD_TABS)
     else
-        lines[#lines + 1] = ("The auction house reports %d tabs where %d were measured on this build. Something has changed; treat the rest of this report with suspicion."):format(#tabs, BLIZZARD_TABS)
+        L[#L + 1] = { warn = ("The auction house reports %d tabs where %d were measured. Something has changed."):format(#tabs, BLIZZARD_TABS) }
+        warn = true
     end
 
     local st = SharedRow()
     if st and type(st.Tabs) == "table" then
-        local others = #st.Tabs - 1
-        if others == 0 then
-            lines[#lines + 1] = "GoldFind is the only addon tab in the shared row."
-        else
-            lines[#lines + 1] = ("GoldFind shares its tab row with %d other addon tab(s), laid out side by side."):format(others)
-        end
+        L[#L + 1] = { "Other addon tabs", tostring(#st.Tabs - 1) }
     else
-        lines[#lines + 1] = "The number of other addon tabs in the shared row could not be read."
+        L[#L + 1] = "The number of other addon tabs could not be read."
     end
 
     local overlapped = RowIsOverlapped()
     if overlapped == true then
-        lines[#lines + 1] = "|cffff9900A tab added after the shared row was built is drawn underneath it. Tabs may overlap.|r"
+        L[#L + 1] = { warn = "A tab added outside the shared tab library is drawn under this row. Tabs may overlap." }
+        warn = true
     elseif overlapped == nil then
-        lines[#lines + 1] = "Whether any tabs overlap could not be determined."
+        L[#L + 1] = "Whether any tabs overlap could not be determined."
     end
+    return L, warn
+end
 
-    return table.concat(lines, "\n\n")
+---------------------------------------------------------------------------
+-- Panel
+
+local MAX_ROWS, ROW_HEIGHT = 12, 20
+local COLUMNS = {
+    { key = "name",    x = 0,   w = 300, j = "LEFT",  title = "Material" },
+    { key = "now",     x = 310, w = 140, j = "RIGHT", title = "Lowest now" },
+    { key = "typical", x = 460, w = 140, j = "RIGHT", title = "Typical" },
+    { key = "below",   x = 610, w = 70,  j = "RIGHT", title = "Below" },
+    { key = "qty",     x = 690, w = 60,  j = "RIGHT", title = "Listed" },
+}
+
+local ui = { rows = {} }
+local requested = {}  -- itemIDs whose names we have asked the client to load
+
+local function MakeRow(anchor, font)
+    local row = CreateFrame("Frame", nil, panel)
+    row:SetHeight(ROW_HEIGHT)
+    row:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, 0)
+    row:SetPoint("RIGHT", panel, "RIGHT")
+    row.cells = {}
+    for _, col in ipairs(COLUMNS) do
+        local fs = row:CreateFontString(nil, "OVERLAY", font)
+        fs:SetPoint("LEFT", row, "LEFT", col.x, 0)
+        fs:SetWidth(col.w)
+        fs:SetJustifyH(col.j)
+        fs:SetWordWrap(false)
+        row.cells[col.key] = fs
+    end
+    return row
+end
+
+local function AddDetailLines(tip, lines)
+    for _, line in ipairs(lines) do
+        if type(line) == "string" then
+            tip:AddLine(line, 0.8, 0.8, 0.8, true)
+        elseif line.warn then
+            tip:AddLine(line.warn, 1, 0.6, 0, true)
+        else
+            tip:AddDoubleLine(line[1], line[2], 1, 0.82, 0, 1, 1, 1)
+        end
+    end
+end
+
+local function ShowDetails(owner)
+    local deals, status = ns.FindDeals()
+    local tip = GameTooltip
+    tip:SetOwner(owner, "ANCHOR_TOPRIGHT")
+    tip:AddLine("GoldFind", 1, 0.82, 0)
+    tip:AddLine(" ")
+    tip:AddLine("Price history", 1, 1, 1)
+    AddDetailLines(tip, ns.DealDetails(status))
+    tip:AddLine(" ")
+    tip:AddLine("Last scan", 1, 1, 1)
+    AddDetailLines(tip, ns.ScanStatus().lines)
+    tip:AddLine(" ")
+    tip:AddLine("Tab row", 1, 1, 1)
+    AddDetailLines(tip, (TabRowStatus()))
+    tip:Show()
 end
 
 local function BuildPanel()
     panel = CreateFrame("Frame", nil, AuctionHouseFrame)
-    panel:SetPoint("TOPLEFT", AuctionHouseFrame, "TOPLEFT", 16, -72)
-    panel:SetPoint("BOTTOMRIGHT", AuctionHouseFrame, "BOTTOMRIGHT", -16, 16)
+    panel:SetPoint("TOPLEFT", AuctionHouseFrame, "TOPLEFT", 20, -76)
+    panel:SetPoint("BOTTOMRIGHT", AuctionHouseFrame, "BOTTOMRIGHT", -20, 14)
 
-    body = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    body:SetPoint("TOPLEFT", panel, "TOPLEFT")
-    body:SetPoint("TOPRIGHT", panel, "TOPRIGHT")
-    body:SetJustifyH("LEFT")
+    -- Results view: gold count, one sentence, then the table.
+    ui.title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    ui.title:SetPoint("TOPLEFT", panel, "TOPLEFT")
+    ui.title:SetJustifyH("LEFT")
+
+    ui.sub = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    ui.sub:SetPoint("TOPLEFT", ui.title, "BOTTOMLEFT", 0, -6)
+    ui.sub:SetPoint("RIGHT", panel, "RIGHT")
+    ui.sub:SetJustifyH("LEFT")
+
+    local spacer = CreateFrame("Frame", nil, panel)
+    spacer:SetSize(1, 14)
+    spacer:SetPoint("TOPLEFT", ui.sub, "BOTTOMLEFT")
+
+    ui.header = MakeRow(spacer, "GameFontNormalSmall")
+    for _, col in ipairs(COLUMNS) do ui.header.cells[col.key]:SetText(col.title) end
+
+    local anchor = ui.header
+    for i = 1, MAX_ROWS do
+        ui.rows[i] = MakeRow(anchor, "GameFontHighlight")
+        anchor = ui.rows[i]
+    end
+
+    -- Empty view: centred, like Blizzard's "No results found".
+    ui.emptyTitle = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    ui.emptyTitle:SetPoint("CENTER", panel, "CENTER", 0, 24)
+
+    ui.emptySub = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    ui.emptySub:SetPoint("TOP", ui.emptyTitle, "BOTTOM", 0, -10)
+    ui.emptySub:SetWidth(520)
+    ui.emptySub:SetJustifyH("CENTER")
+
+    -- Footer: one grey line, bottom right; hover for detail.
+    ui.footer = CreateFrame("Frame", nil, panel)
+    ui.footer:SetSize(360, 16)
+    ui.footer:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT")
+    ui.footer:EnableMouse(true)
+    ui.footer:SetScript("OnEnter", ShowDetails)
+    ui.footer:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+    ui.footerText = ui.footer:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    ui.footerText:SetPoint("RIGHT", ui.footer, "RIGHT")
+    ui.footerText:SetJustifyH("RIGHT")
 
     panel:SetScript("OnShow", function() ns.RefreshPanel() end)
 end
 
--- Scan status first; tab-row diagnostics underneath. Safe to call any time:
--- does nothing until the panel exists and is on screen.
+local function Money(copper)
+    return C_CurrencyInfo.GetCoinTextureString(math.floor(copper), 12)
+end
+
+-- Browse results carry no item names. Ask the client once per item; the
+-- ITEM_DATA_LOAD_RESULT handler below refreshes when a name arrives.
+local function ItemName(d)
+    if d.name then return d.name end
+    local name = C_Item.GetItemNameByID(d.itemID)
+    if name then
+        local rec = ns.db and ns.db.items[d.itemID]
+        if rec then rec.name = name end
+        return name
+    end
+    if not requested[d.itemID] then
+        requested[d.itemID] = true
+        C_Item.RequestLoadItemDataByID(d.itemID)
+    end
+    return ("|cff999999Item %d (loading)|r"):format(d.itemID)
+end
+
+-- Safe to call any time: does nothing until the panel exists and is shown.
 function ns.RefreshPanel()
     if not (panel and panel:IsShown()) then return end
-    local scan = ns.ScanSummary and ns.ScanSummary() or "Scan recording is not loaded."
-    body:SetText(scan .. "\n\n|cff999999Tab row|r\n" .. Report())
+
+    local deals, status = ns.FindDeals()
+    local title, sub = ns.DealStatus(deals, status)
+    local hasDeals = #deals > 0
+
+    ui.title:SetShown(hasDeals)
+    ui.sub:SetShown(hasDeals)
+    ui.header:SetShown(hasDeals)
+    ui.emptyTitle:SetShown(not hasDeals)
+    ui.emptySub:SetShown(not hasDeals)
+
+    if hasDeals then
+        ui.title:SetText(title)
+        if #deals > MAX_ROWS then
+            sub = sub .. (" Showing the %d deepest discounts."):format(MAX_ROWS)
+        end
+        ui.sub:SetText(sub)
+    else
+        ui.emptyTitle:SetText(title)
+        ui.emptySub:SetText(sub)
+    end
+
+    for i = 1, MAX_ROWS do
+        local row, d = ui.rows[i], deals[i]
+        if d then
+            row.cells.name:SetText(ItemName(d))
+            row.cells.now:SetText(Money(d.now))
+            row.cells.typical:SetText(Money(d.typical))
+            row.cells.below:SetText(("|cff40ff40%d%%|r"):format(math.floor(d.below * 100 + 0.5)))
+            row.cells.qty:SetText(tostring(d.qty))
+            row:Show()
+        else
+            row:Hide()
+        end
+    end
+
+    local scan = ns.ScanStatus()
+    local _, tabWarn = TabRowStatus()
+    if scan.warn or tabWarn then
+        ui.footerText:SetText("|cffff9900" .. scan.footer .. ", needs attention|r")
+    else
+        ui.footerText:SetText(scan.footer)
+    end
 end
+
+-- Item names arriving from the server: refresh once, shortly after the burst.
+local nameEvents, nameRefreshArmed = CreateFrame("Frame"), false
+nameEvents:RegisterEvent("ITEM_DATA_LOAD_RESULT")
+nameEvents:SetScript("OnEvent", function(_, _, itemID)
+    if not requested[itemID] or nameRefreshArmed then return end
+    nameRefreshArmed = true
+    C_Timer.After(0.2, function()
+        nameRefreshArmed = false
+        ns.RefreshPanel()
+    end)
+end)
+
+---------------------------------------------------------------------------
+-- Creating the tab
 
 local function CreateTabOnce()
     if created then return end
@@ -142,7 +325,7 @@ local function CheckOverlap()
     if warnedOverlap or not created then return end
     if RowIsOverlapped() == true then
         warnedOverlap = true
-        ns.Warn("Another addon added an auction house tab without the shared tab library. It may overlap the GoldFind tab. Open GoldFind for details.")
+        ns.Warn("Another addon added an auction house tab without the shared tab library. It may overlap the GoldFind tab. Hover the GoldFind footer for details.")
     end
 end
 

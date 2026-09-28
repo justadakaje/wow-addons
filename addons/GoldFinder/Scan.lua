@@ -55,12 +55,28 @@ end
 
 local function NewCapture(source)
     return { source = source, rows = {}, nRows = 0, materials = 0,
+             seen = {}, distinct = 0,          -- every row key, material or not
+             seenItems = {}, distinctItems = 0, -- every itemID, material or not
              noInfo = 0, unknownClass = 0, noPrice = 0, noItem = 0, skipped = 0 }
 end
 
 -- key: unique per row within this capture (item key for browse, listing
 -- index for snapshots). A browse row seen twice replaces itself.
 local function AddRow(c, key, itemID, price, qty, name)
+    -- Count distinct rows and distinct items before any filtering. Browse
+    -- rows are per item *key* (item + level + suffix), so one item can have
+    -- several rows. Measured on 70009: ~4571 distinct rows per Full Scan
+    -- where Auctionator reports ~2088 "items" -- NOT repeats, as first
+    -- assumed (de-duplicating rows moved the count by 5). Both counts are
+    -- shown so the relationship can be read rather than guessed.
+    if not c.seen[key] then
+        c.seen[key] = true
+        c.distinct = c.distinct + 1
+    end
+    if itemID and not c.seenItems[itemID] then
+        c.seenItems[itemID] = true
+        c.distinctItems = c.distinctItems + 1
+    end
     if not itemID then c.noItem = c.noItem + 1; return end
     if not price or price == 0 then c.noPrice = c.noPrice + 1; return end
     local class = ClassID(itemID)
@@ -113,6 +129,7 @@ local function Finish(c, totalRows)
     end
 
     local summary = { t = now, source = c.source, rows = totalRows,
+                      distinctItems = c.distinctItems,
                       materials = c.materials, items = items,
                       noInfo = c.noInfo, unknownClass = c.unknownClass,
                       noPrice = c.noPrice, noItem = c.noItem, skipped = c.skipped }
@@ -121,8 +138,7 @@ local function Finish(c, totalRows)
     diag.skip = nil
 
     if totalRows >= ANNOUNCE_ROWS then
-        ns.Good("Recorded %d material prices across %d items (%s).", c.materials, items,
-            c.source == "browse" and "from browse results" or "from a full snapshot")
+        ns.Good("Recorded prices for %d materials.", items)
     end
     if ns.RefreshPanel then ns.RefreshPanel() end
 end
@@ -151,9 +167,9 @@ local function Settle()
         return
     end
     settleArmed = false
-    local c, rows = browse, browseRows
+    local c = browse
     browse, browseRows = nil, 0
-    if c then Finish(c, rows) end
+    if c then Finish(c, c.distinct) end
 end
 
 local function ArmSettle()
@@ -216,36 +232,50 @@ local function DiagSentence()
         diag.replicate, diag.browseUpdated, diag.browseAdded)
 end
 
-function ns.ScanSummary()
+-- Short footer text plus tooltip detail. Each detail is either a
+-- { label, value } pair or a plain sentence string; warn marks anything
+-- the player should act on.
+function ns.ScanStatus()
     local db = ns.db
-    local lines = {}
+    local st = { lines = {}, warn = false }
+    local L = st.lines
+
     if not db or #db.scans == 0 then
-        lines[#lines + 1] = "No auction prices have been recorded yet. Run a full scan (Auctionator's works) or search the Buy tab; GoldFind records what comes back."
+        st.footer = "No scans recorded yet"
+        L[#L + 1] = "Run a Full Scan (Auctionator's works) or search the Buy tab. GoldFind records what comes back."
     else
         local s = db.scans[#db.scans]
-        lines[#lines + 1] = ("Last recorded %s, %s: %d result rows, of which %d are materials across %d items."):format(
-            date("%Y-%m-%d %H:%M", s.t),
-            s.source == "browse" and "from browse results" or "from a full snapshot",
-            s.rows, s.materials, s.items)
-        lines[#lines + 1] = ("%d capture(s) recorded so far."):format(#db.scans)
+        st.footer = ("%d scan%s recorded, last %s"):format(#db.scans, #db.scans == 1 and "" or "s", date("%H:%M", s.t))
+        L[#L + 1] = { "Last scan", date("%Y-%m-%d %H:%M", s.t) }
+        L[#L + 1] = { "Source", s.source == "browse" and "Browse results" or "Full snapshot" }
+        if s.distinctItems then
+            L[#L + 1] = { "Results", ("%d, covering %d items"):format(s.rows, s.distinctItems) }
+        else
+            L[#L + 1] = { "Results", tostring(s.rows) }
+        end
+        L[#L + 1] = { "Materials", tostring(s.items) }
         if s.noInfo > 0 then
-            lines[#lines + 1] = ("%d listing(s) had not finished loading their details. They are counted by item ID and may show without a name."):format(s.noInfo)
+            L[#L + 1] = ("%d listing(s) had not finished loading and may show without a name."):format(s.noInfo)
         end
         if s.unknownClass > 0 then
-            lines[#lines + 1] = ("%d row(s) could not be classified and were left out."):format(s.unknownClass)
+            L[#L + 1] = ("%d result(s) could not be classified and were left out."):format(s.unknownClass)
         end
         if s.noPrice > 0 then
-            lines[#lines + 1] = ("%d row(s) had no buyout price and were left out."):format(s.noPrice)
+            L[#L + 1] = ("%d result(s) had no buyout price and were left out."):format(s.noPrice)
         end
         if s.source == "browse" then
-            lines[#lines + 1] = "Browse prices are each item's lowest listing. Whether that is per unit or per stack has not been measured on this client yet."
+            L[#L + 1] = "Prices are each item's lowest listing. Per unit or per stack is not yet measured on this client."
         elseif s.skipped > 0 then
-            lines[#lines + 1] = ("%d listing per snapshot is not read yet, until this client's index numbering has been measured."):format(s.skipped)
+            L[#L + 1] = ("%d listing per snapshot is not read, until the index numbering is measured."):format(s.skipped)
         end
     end
-    lines[#lines + 1] = DiagSentence()
-    if diag.skip then lines[#lines + 1] = "|cffff9900" .. diag.skip .. "|r" end
-    return table.concat(lines, "\n")
+
+    L[#L + 1] = DiagSentence()
+    if diag.skip then
+        st.warn = true
+        L[#L + 1] = { warn = diag.skip }
+    end
+    return st
 end
 
 ---------------------------------------------------------------------------
