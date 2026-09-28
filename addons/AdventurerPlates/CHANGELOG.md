@@ -4,6 +4,48 @@ All notable changes to Adventurer Plates. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-09-27
+
+Client update: build 70009 changed how your own name is returned, which made
+your saved card disappear.
+
+### Fixed
+
+- **Your card appeared blank on build 70009.** The client now returns the
+  surname where the realm used to be. Measured in-client:
+
+  | build | `UnitFullName("player")` |
+  | --- | --- |
+  | 69913 | `"Aeldorath Zephrai"`, `"ClassicBetaPvE2"` |
+  | 70009 | `"Aeldorath"`, `"Zephrai"` |
+
+  The addon keyed your card as `Aeldorath-Zephrai`, found nothing, and showed
+  a blank one. It now takes the realm from `GetNormalizedRealmName()` and joins
+  the surname back on, so the key is `Aeldorath Zephrai-ClassicBetaPvE2` again
+  and a card saved on 69913 loads with **no data moved**.
+- The blank card stored under the wrong key is removed, **only if it was
+  never saved**. Nothing you edited is ever deleted.
+- Shared cards also carried the surname as the realm. They now send the real
+  realm.
+
+### Changed
+
+- **Re-targeted to WoW: Forever build 70009**, which replaced 69913 on
+  2026-09-27. `## Interface:` stays **16001**: ForeverProbe measured it
+  unchanged on 70009.
+
+### Checked
+
+- In-game on 70009: the saved card loads with its tags, hours and motto;
+  `/advplate privacy` works; BugSack empty.
+
+- A ForeverProbe diff of 69913 against 70009 found 3 functions removed and 42
+  added. None of the removed three (`C_GameRules.SelectClassicExperiencePreset`,
+  `C_GameRules.SelectModernExperiencePreset`, `MasterLooterPlayerFrame_OnClick`)
+  is used by this addon or its vendored libraries.
+- The diff compares names only. A function whose *arguments* changed would not
+  show up in it.
+
 ## [0.3.0] - 2026-09-20
 
 Sharing. You can now ask another player for their Adventurer Plate and see it.
