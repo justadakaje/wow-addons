@@ -1,8 +1,8 @@
 -- GoldFinder -- Scan
--- Records auction house prices for crafting materials. GoldFind never queries
+-- Records auction house prices for crafting materials. GoldFinder never queries
 -- the auction house itself. It listens for results that are already arriving
 -- -- from Auctionator's scans, from Blizzard's Buy tab, from anything -- and
--- records what it sees. One query feeds every addon; GoldFind never spends
+-- records what it sees. One query feeds every addon; GoldFinder never spends
 -- the AH throttle.
 --
 -- Two sources, both measured-or-documented, neither assumed to be the one in
@@ -138,11 +138,17 @@ local function Finish(c, totalRows)
         end
         if a.name then rec.name = a.name end
         local h = rec.history
-        local point = { t = now, min = a.min, qty = a.qty, src = c.source }
-        if #h > 0 and now - h[#h].t < SAME_POINT_SECONDS then
-            h[#h] = point      -- same sighting window: keep the newest
+        local last = h[#h]
+        -- One point per sighting window. The window is anchored at the
+        -- point's FIRST sighting (t) and never moves: before v0.0.5 it was
+        -- measured from the latest sighting and slid forward on every
+        -- merge, so scans a few minutes apart never produced a new point
+        -- (measured: 21:50..22:04, seven scans, one point). Within the
+        -- window the newest prices win; `seen` records when.
+        if last and now - last.t < SAME_POINT_SECONDS then
+            last.min, last.qty, last.src, last.seen = a.min, a.qty, c.source, now
         else
-            h[#h + 1] = point
+            h[#h + 1] = { t = now, seen = now, min = a.min, qty = a.qty, src = c.source }
         end
         while #h > HISTORY_PER_ITEM do table.remove(h, 1) end
     end
@@ -245,9 +251,9 @@ end
 
 local function DiagSentence()
     if diag.replicate + diag.browseUpdated + diag.browseAdded == 0 then
-        return "Since login, no auction house results have reached GoldFind. Open the auction house and run a scan or a search."
+        return "Since login, no auction house results have reached GoldFinder. Open the auction house and run a scan or a search."
     end
-    local s = ("Since login GoldFind has seen %d full snapshot(s), %d browse update(s) and %d page(s) of browse results."):format(
+    local s = ("Since login GoldFinder has seen %d full snapshot(s), %d browse update(s) and %d page(s) of browse results."):format(
         diag.replicate, diag.browseUpdated, diag.browseAdded)
     if diag.duplicates > 0 then
         s = s .. (" %d repeat(s) of already-recorded results were ignored."):format(diag.duplicates)
@@ -265,7 +271,7 @@ function ns.ScanStatus()
 
     if not db or #db.scans == 0 then
         st.footer = "No scans recorded yet"
-        L[#L + 1] = "Run a Full Scan (Auctionator's works) or search the Buy tab. GoldFind records what comes back."
+        L[#L + 1] = "Run a Full Scan (Auctionator's works) or search the Buy tab. GoldFinder records what comes back."
     else
         local s = db.scans[#db.scans]
         st.footer = ("%d scan%s recorded, last %s"):format(#db.scans, #db.scans == 1 and "" or "s", date("%H:%M", s.t))

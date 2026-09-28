@@ -35,7 +35,7 @@ wow-addons/
 | AddonSmokeTest | Classic Era (20506), Forever (16001) | Proof-of-life, working |
 | ForeverProbe | Forever (16001) | Read-only API/event capture, working |
 | AdventurerPlates | Forever (16001) | v0.3.0 — card, editor and sharing built; sharing untested with a second player |
-| GoldFinder | Forever (16001) | v0.0.3 — AH tab, price recording and panel working; deal table not yet seen with real data |
+| GoldFinder | Forever (16001) | v0.0.5 — AH tab, price recording and panel working; deal table not yet seen with real data |
 
 ## Related repos
 

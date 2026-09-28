@@ -39,7 +39,7 @@ function ns.FindDeals()
         if n > 0 then
             status.items = status.items + 1
             local current = h[n]
-            if now - current.t > FRESH_SECONDS then
+            if now - (current.seen or current.t) > FRESH_SECONDS then
                 status.stale = status.stale + 1
             elseif n - 1 < ns.MIN_PRIOR then
                 status.needMore = status.needMore + 1
@@ -77,7 +77,7 @@ function ns.DealStatus(deals, status)
     local pct = math.floor((1 - ns.DEAL_RATIO) * 100 + 0.5)
     if status.items == 0 then
         return "No prices recorded yet",
-            "Run a Full Scan at the auction house. GoldFind records the results automatically."
+            "Run a Full Scan at the auction house. GoldFinder records the results automatically."
     end
     if #deals > 0 then
         return ("%d underpriced %s"):format(#deals, Plural(#deals, "material", "materials")),

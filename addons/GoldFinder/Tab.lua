@@ -1,5 +1,5 @@
 -- GoldFinder -- Tab
--- One "GoldFind" tab on the auction house, added through LibAHTab so it
+-- One "GoldFinder" tab on the auction house, added through LibAHTab so it
 -- shares a single tab row with every other addon that uses the library.
 --
 -- Collision model:
@@ -25,7 +25,7 @@
 local ADDON, ns = ...
 
 local TAB_ID     = "GoldFinder"
-local TAB_TEXT   = "GoldFind"
+local TAB_TEXT   = "GoldFinder"
 local TAB_HEADER = "GoldFinder"
 
 -- Blizzard's own tab count (Buy, Sell, Auctions), measured
@@ -142,7 +142,7 @@ local function ShowDetails(owner)
     local deals, status = ns.FindDeals()
     local tip = GameTooltip
     tip:SetOwner(owner, "ANCHOR_TOPRIGHT")
-    tip:AddLine("GoldFind", 1, 0.82, 0)
+    tip:AddLine("GoldFinder", 1, 0.82, 0)
     tip:AddLine(" ")
     tip:AddLine("Price history", 1, 1, 1)
     AddDetailLines(tip, ns.DealDetails(status))
@@ -301,7 +301,7 @@ local function CreateTabOnce()
             deferred = true
             C_Timer.After(0, CreateTabOnce)
         else
-            ns.Bad("The auction house window had not loaded when GoldFind tried to add its tab. It will try again next time you open the auction house.")
+            ns.Bad("The auction house window had not loaded when GoldFinder tried to add its tab. It will try again next time you open the auction house.")
             deferred = false
         end
         return
@@ -310,14 +310,14 @@ local function CreateTabOnce()
     created = true
 
     if LibAHTab:DoesIDExist(TAB_ID) then
-        ns.Bad("Another addon has already registered a tab with GoldFinder's ID. GoldFind will not add a second one.")
+        ns.Bad("Another addon has already registered a tab with GoldFinder's ID. GoldFinder will not add a second one.")
         return
     end
 
     BuildPanel()
     local ok, err = pcall(LibAHTab.CreateTab, LibAHTab, TAB_ID, panel, TAB_TEXT, TAB_HEADER)
     if not ok then
-        ns.Bad("The GoldFind tab could not be added: %s", tostring(err))
+        ns.Bad("The GoldFinder tab could not be added: %s", tostring(err))
     end
 end
 
@@ -325,7 +325,7 @@ local function CheckOverlap()
     if warnedOverlap or not created then return end
     if RowIsOverlapped() == true then
         warnedOverlap = true
-        ns.Warn("Another addon added an auction house tab without the shared tab library. It may overlap the GoldFind tab. Hover the GoldFind footer for details.")
+        ns.Warn("Another addon added an auction house tab without the shared tab library. It may overlap the GoldFinder tab. Hover the GoldFinder footer for details.")
     end
 end
 

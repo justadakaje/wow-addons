@@ -19,7 +19,7 @@ It is the collision strategy. Adding an auction house tab with the standard
 `PanelTemplates_SetNumTabs` path taints the player's bags (per its README), and
 two addons doing it independently draw tabs on top of each other. LibAHTab is
 a LibStub singleton: every addon that embeds it shares one tab row, so
-GoldFind's tab lines up beside theirs instead of colliding.
+GoldFinder's tab lines up beside theirs instead of colliding.
 
 LibAHTab is a separate MIT-licensed project. It is **not** Auctionator, whose
 license is All Rights Reserved and whose source this repo does not read or use.

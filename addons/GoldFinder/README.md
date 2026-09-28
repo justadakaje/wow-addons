@@ -1,7 +1,7 @@
 # GoldFinder
 
 Finds crafting materials listed well below their normal price on the WoW:
-Forever auction house. It adds one **GoldFind** tab to the auction house
+Forever auction house. It adds one **GoldFinder** tab to the auction house
 window, beside Blizzard's tabs and any other addon's.
 
 GoldFinder never searches the auction house itself. It records the results
@@ -45,7 +45,7 @@ Tested on WoW: Forever 1.60.1, **build 70009**.
 
 **Run and confirmed working:**
 
-- The GoldFind tab renders fifth, after Auctionator's four; selection switches
+- The GoldFinder tab renders fifth, after Auctionator's four; selection switches
   cleanly; reopening the auction house does not duplicate it
 - Prices are recorded from Auctionator's Full Scan: one scan recorded 249
   materials across 249 items

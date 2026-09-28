@@ -23,7 +23,7 @@ function ns.Bad(msg, ...)   emit("|cffff4040", msg, ...) end
 
 -- SavedVariables format version. Bump when the persisted shape changes and
 -- migrate; never discard a stored table.
-ns.DB_SCHEMA = 2
+ns.DB_SCHEMA = 3
 
 -- Each migration takes the db from schema n-1 to n. Plain table work only.
 local MIGRATIONS = {
@@ -50,7 +50,26 @@ local MIGRATIONS = {
                 rec.history = kept
             end
         end
-        return removed
+        return removed, "repeated price point(s) recorded from re-delivered results"
+    end,
+
+    -- 2 -> 3: the same re-deliveries also appended scan summaries (seen as
+    -- runs of identical 4465-row "scans" a minute apart), so the footer's
+    -- scan count overstated. Collapse consecutive summaries with the same
+    -- source, row, material and item counts to the earliest.
+    [3] = function(db)
+        local kept, removed = {}, 0
+        for _, s in ipairs(db.scans) do
+            local last = kept[#kept]
+            if last and last.source == s.source and last.rows == s.rows
+               and last.materials == s.materials and last.items == s.items then
+                removed = removed + 1
+            else
+                kept[#kept + 1] = s
+            end
+        end
+        db.scans = kept
+        return removed, "repeated scan record(s)"
     end,
 }
 
@@ -69,10 +88,10 @@ boot:SetScript("OnEvent", function(self, _, name)
 
     while db.schema < ns.DB_SCHEMA do
         local to = db.schema + 1
-        local removed = MIGRATIONS[to](db)
+        local removed, what = MIGRATIONS[to](db)
         db.schema = to
         if removed and removed > 0 then
-            ns.Print("Cleaned saved data (schema %d to %d): removed %d repeated price point(s) recorded from re-delivered results.", to - 1, to, removed)
+            ns.Print("Cleaned saved data (schema %d to %d): removed %d %s.", to - 1, to, removed, what)
         end
     end
     ns.db = db
