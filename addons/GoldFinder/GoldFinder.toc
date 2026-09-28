@@ -8,6 +8,7 @@
 ## X-Target-Client: WoW: Forever (camelot)
 ## X-Tested-Build: 1.60.1.70009
 ## X-License: MIT
+## X-Curse-Project-ID: 1715781
 
 # Vendored third-party libraries. See libs/README.md for versions and
 # licenses. LibStub first, then LibAHTab, which registers through it.
