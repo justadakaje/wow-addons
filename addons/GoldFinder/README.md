@@ -54,6 +54,11 @@ Tested on WoW: Forever 1.60.1, **build 70009**.
 - **The deal table, on real data**: after four scans on separate occasions it
   listed 21 underpriced materials, deepest discount first, with names, prices
   and quantities
+- **Deal to purchase**: clicking a deal opens it in Blizzard's Buy tab (tab
+  highlighted, Blizzard's title), and a purchase made there goes through --
+  one Raptor Egg bought, no action blocked
+- **Prices are per unit for commodities**: Raptor Egg's "lowest now" (2s)
+  matched the Buy view's Unit Price (2s 0c)
 
 **Measured along the way:**
 
@@ -65,11 +70,14 @@ Tested on WoW: Forever 1.60.1, **build 70009**.
 
 **Written and NOT yet seen working:**
 
-- **Whether the prices in the table are right.** Some first results look
-  implausible -- Wool Cloth at 30c against a typical 2s 90c (90% below) with
-  6368 listed -- which suggests browse prices mix per-unit and per-stack
-  values on this client. **Check a deal in the Buy tab before buying it**
-  until this is measured.
+- **How reliable "typical" is on a thin market.** Current prices are right
+  for commodities (see above), but typical is the median of as few as 3 earlier
+  scans, and some first results look implausible -- Wool Cloth at 30c against
+  a typical 2s 90c. The likelier cause is a small, volatile beta economy
+  rather than mixed units, but that is not yet shown. **Check a deal in the
+  Buy view before buying it**; a click takes you there.
+- **Non-commodity materials**: whether their browse price is per unit or per
+  stack is not measured.
 - **The full-snapshot path** (`REPLICATE_ITEM_LIST_UPDATE`). No scanner used by
   the author triggers it. Until the snapshot's index numbering is measured, it
   reads every listing but one, to avoid an out-of-range call.

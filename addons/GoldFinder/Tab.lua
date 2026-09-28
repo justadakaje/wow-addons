@@ -270,6 +270,15 @@ OpenInBuy = function(d)
         ns.Warn("%s is still loading from the server. Click it again in a moment.", name)
         return
     end
+    -- Select Blizzard's Buy tab first, as a player would, so Blizzard sets
+    -- the title and tab highlight itself (v0.0.6 opened the view under the
+    -- GoldFinder title with no tab lit). Tabs[1] is Buy: the order Buy,
+    -- Sell, Auctions was measured in-client. Back then returns to Buy.
+    local buyTab = type(AuctionHouseFrame.Tabs) == "table" and AuctionHouseFrame.Tabs[1]
+    if buyTab and type(buyTab.Click) == "function" then
+        pcall(buyTab.Click, buyTab)
+    end
+
     local ok, err = pcall(AuctionHouseFrame.SelectBrowseResult, AuctionHouseFrame, {
         itemKey = key, minPrice = math.floor(d.now), totalQuantity = d.qty,
         containsOwnerItem = false,
