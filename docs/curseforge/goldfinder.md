@@ -37,6 +37,11 @@ Active feature requests and enhancements are tracked on GitHub:
 - **Category Filters & Watchlist:** Filtering by trade good subclass (Herbs, Ore, Cloth, etc.) and starred items ([#12](https://github.com/justadakaje/wow-addons/issues/12))
 - **Deal Alert Notifications:** Audio chime and chat summary when scans find deals ([#13](https://github.com/justadakaje/wow-addons/issues/13))
 - **Direct Commodity Quick-Buy:** Shift-Click instant purchase for fast-moving commodity deals ([#14](https://github.com/justadakaje/wow-addons/issues/14))
+- **Price Trend Indicator:** Distinguish between genuine dips and crashing markets ([#15](https://github.com/justadakaje/wow-addons/issues/15))
+- **Tooltip Price Integration:** Show GoldFinder typical and lowest seen prices on item tooltips in bags/vendors ([#16](https://github.com/justadakaje/wow-addons/issues/16))
+- **Undercut Detection:** Check active player auctions against current lowest prices ([#17](https://github.com/justadakaje/wow-addons/issues/17))
+- **Crafting Conversion Profitability:** Reagent cost vs. crafted item sell value (smelting, milling, etc.) ([#18](https://github.com/justadakaje/wow-addons/issues/18))
+- **Data Hygiene & CSV Export:** Prune old records and export pricing data to spreadsheets ([#19](https://github.com/justadakaje/wow-addons/issues/19))
 
 ## Credits and licence
 
