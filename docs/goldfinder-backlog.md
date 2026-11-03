@@ -44,6 +44,56 @@ Issue tracking is hosted on GitHub: [justadakaje/wow-addons Issues](https://gith
   - Phase 2: Full profession craftable margins.
   - Profit = `(Crafted Typical * 0.95) - Reagent Costs`.
 
+### 5. [#22] Shopping lists & material target fulfillment tracker
+- **Status:** Backlog / Goblin QoL
+- **GitHub Issue:** [#22](https://github.com/justadakaje/wow-addons/issues/22)
+- **Goal:** Set quantity acquisition targets for specific crafting reagents (e.g. 200x Thorium Ore) and track progress toward fulfillment.
+- **Details:**
+  - Track target vs. acquired quantities in bags/bank.
+  - Filter deal list to show only items matching your active shopping list.
+  - Calculate total gold required to fulfill remaining quota based on current deals.
+
+### 6. [#23] LibDataBroker (LDB) feed & minimap button
+- **Status:** Backlog / Convenience
+- **GitHub Issue:** [#23](https://github.com/justadakaje/wow-addons/issues/23)
+- **Goal:** Provide at-a-glance deal counters in top-bar addons (Titan Panel, ChocolateBar) and a minimap icon.
+- **Details:**
+  - LDB data object showing `GoldFinder: X Deals`.
+  - Tooltip preview of top flips and scan freshness.
+  - Optional minimap coin icon with toggle `/gf minimap [on|off]`.
+
+### 7. [#24] Real-time name search input box inside the tab
+- **Status:** Backlog / UI Usability
+- **GitHub Issue:** [#24](https://github.com/justadakaje/wow-addons/issues/24)
+- **Goal:** Add an in-tab search box to instantly filter the deals table by material name.
+- **Details:**
+  - Standard `SearchBoxTemplate` positioned in the header area.
+  - Instant substring filtering on material names with a clear ('x') button.
+
+### 8. [#25] Visual tier highlights for high-value flips (Bargain vs Mega Snipe)
+- **Status:** Backlog / Visual
+- **GitHub Issue:** [#25](https://github.com/justadakaje/wow-addons/issues/25)
+- **Goal:** Distinguish minor flips from massive anomalies with color-coded tier accents and chat alerts.
+- **Details:**
+  - Tier thresholds: Mega Snipe (Epic/Purple, >50% off or >50g profit), Great Deal (Rare/Blue), Good Flip (Uncommon/Green).
+  - Highlighted row badges and chat alerts for Mega Snipes.
+
+### 9. [#26] Customizable sound effect selection and audio alert throttle
+- **Status:** Backlog / Audio QoL
+- **GitHub Issue:** [#26](https://github.com/justadakaje/wow-addons/issues/26)
+- **Goal:** Let players choose their preferred chime sound and prevent spam chimes with an audio cooldown throttle.
+- **Details:**
+  - Choose between Auction, Coin Drop, Whisper, and Raid Alert chimes (`/gf sound <name>`).
+  - Configure audio throttle window (default: max 1 chime per 30 seconds).
+
+### 10. [#27] Cross-character & faction market data sharing options
+- **Status:** Backlog / Infrastructure
+- **GitHub Issue:** [#27](https://github.com/justadakaje/wow-addons/issues/27)
+- **Goal:** Share recorded price databases between alts and manage Neutral vs. Faction AH partitions.
+- **Details:**
+  - Ensure bank alts and gathering/leveling characters on the same realm share typical pricing data.
+  - Configurable Neutral AH partition toggle (`/gf factionshare on/off`).
+
 ---
 
 ## Shipped in v0.2.0 (Forever Launch Build)
