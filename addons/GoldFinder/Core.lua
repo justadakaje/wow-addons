@@ -97,6 +97,134 @@ function ns.SetChatAlert(val)
     end
 end
 
+function ns.IsTooltipEnabled()
+    local s = ns.db and ns.db.settings
+    if s and s.tooltip ~= nil then return s.tooltip end
+    return true
+end
+
+function ns.SetTooltipEnabled(val)
+    if ns.db then
+        ns.db.settings = ns.db.settings or {}
+        ns.db.settings.tooltip = val
+    end
+end
+
+---------------------------------------------------------------------------
+-- Database maintenance & export
+
+function ns.PruneHistory(maxDays)
+    maxDays = tonumber(maxDays) or 30
+    local maxAge = maxDays * 86400
+    local db = ns.db
+    if not db then return 0 end
+    local now = GetServerTime()
+    local removedItems = 0
+
+    if type(db.items) == "table" then
+        for itemID, rec in pairs(db.items) do
+            local h = rec.history
+            local last = h and h[#h]
+            if not last or (now - (last.seen or last.t) > maxAge) then
+                db.items[itemID] = nil
+                removedItems = removedItems + 1
+            end
+        end
+    end
+
+    local keptScans = {}
+    if type(db.scans) == "table" then
+        for _, s in ipairs(db.scans) do
+            if now - (s.t or 0) <= maxAge then
+                keptScans[#keptScans + 1] = s
+            end
+        end
+        db.scans = keptScans
+    end
+
+    if ns.RefreshPanel then ns.RefreshPanel() end
+    return removedItems
+end
+
+function ns.ResetItem(itemID)
+    local db = ns.db
+    if not db or not db.items then return false end
+    if db.items[itemID] then
+        db.items[itemID] = nil
+        if ns.RefreshPanel then ns.RefreshPanel() end
+        return true
+    end
+    return false
+end
+
+local exportFrame = nil
+function ns.ShowExportDialog()
+    if not exportFrame then
+        exportFrame = CreateFrame("Frame", "GoldFinderExportDialog", UIParent, "BackdropTemplate")
+        exportFrame:SetSize(640, 420)
+        exportFrame:SetPoint("CENTER")
+        exportFrame:SetFrameStrata("DIALOG")
+        exportFrame:EnableMouse(true)
+        exportFrame:SetMovable(true)
+        exportFrame:RegisterForDrag("LeftButton")
+        exportFrame:SetScript("OnDragStart", exportFrame.StartMoving)
+        exportFrame:SetScript("OnDragStop", exportFrame.StopMovingOrSizing)
+
+        exportFrame:SetBackdrop({
+            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+            tile = true, tileSize = 32, edgeSize = 32,
+            insets = { left = 8, right = 8, top = 8, bottom = 8 }
+        })
+
+        local title = exportFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
+        title:SetPoint("TOP", 0, -18)
+        title:SetText("GoldFinder Deals Export")
+
+        local hint = exportFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+        hint:SetPoint("TOP", title, "BOTTOM", 0, -4)
+        hint:SetText("Press Ctrl+C to copy CSV data, then paste into Google Sheets or Excel.")
+
+        local scroll = CreateFrame("ScrollFrame", "GoldFinderExportScroll", exportFrame, "UIPanelScrollFrameTemplate")
+        scroll:SetPoint("TOPLEFT", 20, -56)
+        scroll:SetPoint("BOTTOMRIGHT", -36, 48)
+
+        local eb = CreateFrame("EditBox", nil, scroll)
+        eb:SetMultiLine(true)
+        eb:SetFontObject("GameFontHighlightSmall")
+        eb:SetWidth(570)
+        eb:SetAutoFocus(false)
+        eb:SetScript("OnEscapePressed", function() exportFrame:Hide() end)
+        scroll:SetScrollChild(eb)
+        exportFrame.editBox = eb
+
+        local closeBtn = CreateFrame("Button", nil, exportFrame, "UIPanelButtonTemplate")
+        closeBtn:SetSize(90, 24)
+        closeBtn:SetPoint("BOTTOM", 0, 16)
+        closeBtn:SetText("Close")
+        closeBtn:SetScript("OnClick", function() exportFrame:Hide() end)
+
+        tinsert(UISpecialFrames, "GoldFinderExportDialog")
+    end
+
+    local deals = (ns.FindDeals and ns.FindDeals()) or {}
+    local lines = { "ItemID,Material,LowestNowCopper,TypicalCopper,DiscountPct,EstUnitProfitCopper,EstTotalProfitCopper,Quantity" }
+    for _, d in ipairs(deals) do
+        local name = (d.name or (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(d.itemID)) or ("Item " .. d.itemID)):gsub(",", "")
+        local pct = math.floor(d.below * 100 + 0.5)
+        lines[#lines + 1] = ("%d,%s,%d,%d,%d,%d,%d,%d"):format(
+            d.itemID, name, d.now or 0, d.typical or 0, pct,
+            d.netUnitProfit or 0, d.totalNetProfit or 0, d.qty or 0
+        )
+    end
+
+    local text = table.concat(lines, "\n")
+    exportFrame.editBox:SetText(text)
+    exportFrame:Show()
+    exportFrame.editBox:SetFocus()
+    exportFrame.editBox:HighlightText()
+end
+
 -- SavedVariables format version. Bump when the persisted shape changes and
 -- migrate; never discard a stored table.
 ns.DB_SCHEMA = 3
@@ -177,6 +305,7 @@ boot:SetScript("OnEvent", function(self, _, name)
     if db.settings.soundAlert == nil then db.settings.soundAlert = true end
     if db.settings.chatAlert == nil then db.settings.chatAlert = true end
     if db.settings.sortBy == nil then db.settings.sortBy = "profit" end
+    if db.settings.tooltip == nil then db.settings.tooltip = true end
 
     ns.db = db
 end)
@@ -235,6 +364,29 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         else val = not ns.IsChatAlertEnabled() end
         ns.SetChatAlert(val)
         ns.Good("Deal chat summary notification %s.", val and "enabled" or "disabled")
+    elseif cmd == "tooltip" then
+        arg = arg and arg:lower() or ""
+        local val
+        if arg == "on" or arg == "1" or arg == "true" then val = true
+        elseif arg == "off" or arg == "0" or arg == "false" then val = false
+        else val = not ns.IsTooltipEnabled() end
+        ns.SetTooltipEnabled(val)
+        ns.Good("Item tooltip price integration %s.", val and "enabled" or "disabled")
+    elseif cmd == "export" then
+        ns.ShowExportDialog()
+    elseif cmd == "prune" then
+        local days = tonumber(arg) or 30
+        local count = ns.PruneHistory(days)
+        ns.Good("Pruned %d item(s) not seen in the last %d days.", count, days)
+    elseif cmd == "resetitem" then
+        local itemID = tonumber(arg) or tonumber(arg and arg:match("item:(%d+)"))
+        if itemID and ns.ResetItem(itemID) then
+            ns.Good("Reset price history for item %d.", itemID)
+        elseif itemID then
+            ns.Warn("No price history found for item %d.", itemID)
+        else
+            ns.Warn("Usage: /gf resetitem <itemID or item link>")
+        end
     elseif cmd == "preset" then
         arg = arg and arg:lower() or ""
         if arg == "snipe" then
@@ -265,12 +417,17 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         ns.Print("  - Sort order: %s", ns.GetSortBy() == "profit" and "Estimated Net Profit" or "Discount %")
         ns.Print("  - Audio chime: %s", ns.IsSoundAlertEnabled() and "on" or "off")
         ns.Print("  - Chat notification: %s", ns.IsChatAlertEnabled() and "on" or "off")
+        ns.Print("  - Item tooltip pricing: %s", ns.IsTooltipEnabled() and "on" or "off")
         ns.Print("Commands:")
         ns.Print("  /gf ratio <5-95>     - set discount percentage threshold")
         ns.Print("  /gf minscans <1-20>  - set minimum prior scans required")
         ns.Print("  /gf sort             - toggle sort: profit vs discount")
         ns.Print("  /gf sound [on|off]   - toggle audio chime on deal find")
         ns.Print("  /gf chat [on|off]    - toggle chat summary on deal find")
+        ns.Print("  /gf tooltip [on|off] - toggle item tooltip market pricing")
+        ns.Print("  /gf export           - open CSV data export window")
+        ns.Print("  /gf prune [days]     - prune items not seen in [days] (default 30)")
+        ns.Print("  /gf resetitem <link> - clear price history for a specific item")
         ns.Print("  /gf preset <snipe|standard|volume> - apply preset trading profile")
     end
 end

@@ -22,6 +22,50 @@ local function Median(values)
     return (t[n / 2] + t[n / 2 + 1]) / 2
 end
 
+-- Evaluates whether an item's prices have been trending up, steady, or down
+-- over its historical scans (detects falling knives).
+local function CalculateTrend(history)
+    if not history or #history < 4 then return nil end
+    local count = #history - 1  -- exclude candidate deal
+    local mid = math.floor(count / 2)
+    if mid < 1 then return nil end
+
+    local older, newer = {}, {}
+    for i = 1, mid do older[i] = history[i].min end
+    for i = mid + 1, count do newer[#newer + 1] = history[i].min end
+
+    local olderMed = Median(older)
+    local newerMed = Median(newer)
+    if olderMed <= 0 then return nil end
+
+    local pctChange = (newerMed - olderMed) / olderMed
+    if pctChange <= -0.10 then
+        return {
+            direction = "falling",
+            pct = math.floor(math.abs(pctChange) * 100 + 0.5),
+            label = ("Falling (-%d%%)"):format(math.floor(math.abs(pctChange) * 100 + 0.5)),
+            warning = "Caution: typical price has dropped over recent scans (falling market).",
+            r = 1, g = 0.35, b = 0.35,
+        }
+    elseif pctChange >= 0.10 then
+        return {
+            direction = "rising",
+            pct = math.floor(pctChange * 100 + 0.5),
+            label = ("Rising (+%d%%)"):format(math.floor(pctChange * 100 + 0.5)),
+            warning = nil,
+            r = 0.35, g = 1, b = 0.35,
+        }
+    else
+        return {
+            direction = "steady",
+            pct = 0,
+            label = "Steady",
+            warning = nil,
+            r = 0.8, g = 0.8, b = 0.8,
+        }
+    end
+end
+
 -- Returns deals (sorted by active sort setting) and a status table that
 -- explains everything that was not a deal, so the panel can say why.
 function ns.FindDeals()
@@ -68,6 +112,8 @@ function ns.FindDeals()
                         qty            = current.qty or 0,
                         netUnitProfit  = netUnit,
                         totalNetProfit = totalNet,
+                        trend          = CalculateTrend(h),
+                        history        = h,
                     }
                 end
             end

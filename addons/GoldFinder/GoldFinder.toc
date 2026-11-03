@@ -18,4 +18,5 @@ libs\LibAHTab\LibAHTab.xml
 Core.lua
 Scan.lua
 Deals.lua
+Tooltip.lua
 Tab.lua
