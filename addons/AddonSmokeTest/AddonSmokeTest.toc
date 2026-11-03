@@ -3,5 +3,7 @@
 ## Notes: Minimal proof-of-life addon
 ## Author: justadakaje
 ## Version: 0.0.1
+## X-Target-Client: WoW: Forever (camelot)
+## X-Tested-Build: 1.60.1.70707
 
 AddonSmokeTest.lua

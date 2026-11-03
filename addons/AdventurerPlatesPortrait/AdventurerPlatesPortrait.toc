@@ -6,7 +6,7 @@
 ## IconTexture: Interface\ICONS\INV_Misc_Note_01
 ## SavedVariables: AdventurerPlatesPortraitDB
 ## X-Target-Client: WoW: Forever (camelot)
-## X-Tested-Build: 1.60.1.69913
+## X-Tested-Build: 1.60.1.70707
 
 Core.lua
 Data.lua

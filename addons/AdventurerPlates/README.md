@@ -1,5 +1,8 @@
 # Adventurer Plates
 
+> [!NOTE]
+> **Status:** Active development on Adventurer Plates has been discontinued in favor of feature-complete community alternatives. The codebase is preserved here as a reference implementation for Chomp pull-only comms and 3D character model rendering on WoW: Forever.
+
 A character "business card" for WoW: Forever — portrait, title, guild,
 playstyle tags, active hours and a motto — modelled on Final Fantasy XIV's
 **Adventurer Plate** (Patch 6.1).

@@ -6,7 +6,7 @@
 ## IconTexture: Interface\ICONS\INV_Misc_Note_01
 ## SavedVariables: AdventurerPlatesDB
 ## X-Target-Client: WoW: Forever (camelot)
-## X-Tested-Build: 1.60.1.70009
+## X-Tested-Build: 1.60.1.70707
 ## X-License: MIT
 
 # Vendored third-party libraries. See libs/README.md for versions, licenses,
