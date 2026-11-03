@@ -29,6 +29,15 @@ Not yet measured: whether prices for materials that are *not* commodities are pe
 - Works alongside Auctionator (tested): GoldFinder shares the auction house tab row through LibAHTab instead of drawing over other addons' tabs. It is also built to warn you if an addon adds a tab without that library, where tabs could overlap — not yet seen, since no such addon was installed.
 - GoldFinder is not based on Auctionator and contains none of its code.
 
+## Roadmap and Feature Backlog
+
+Active feature requests and enhancements are tracked on GitHub:
+- **Net Profit & Flip Value Display:** Calculating potential gold gains after deducting the 5% AH cut ([#10](https://github.com/justadakaje/wow-addons/issues/10))
+- **Configurable Deal Thresholds:** Custom discount % and history scan sensitivity ([#11](https://github.com/justadakaje/wow-addons/issues/11))
+- **Category Filters & Watchlist:** Filtering by trade good subclass (Herbs, Ore, Cloth, etc.) and starred items ([#12](https://github.com/justadakaje/wow-addons/issues/12))
+- **Deal Alert Notifications:** Audio chime and chat summary when scans find deals ([#13](https://github.com/justadakaje/wow-addons/issues/13))
+- **Direct Commodity Quick-Buy:** Shift-Click instant purchase for fast-moving commodity deals ([#14](https://github.com/justadakaje/wow-addons/issues/14))
+
 ## Credits and licence
 
 MIT licensed. The tab uses [LibAHTab](https://github.com/TheMouseNest/LibAHTab) (MIT) and LibStub, both included. The source and the issue tracker are on GitHub — see the project links.
