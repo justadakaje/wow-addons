@@ -260,14 +260,23 @@ function releaseState(repo, addons) {
 
   // "published" is never inferred. A pack may only claim a release when a tag
   // exists for that addon+version. A built zip is not a release.
+  //
+  // A matching tag may carry a "-beta" or "-alpha" suffix -- release.yml
+  // accepts it ("the -beta suffix aside" in docs/releasing.md) and strips it
+  // the same way before comparing against the .toc version. An exact-match
+  // check here would read a real, uploaded beta release as unpublished.
   const published = {};
   for (const [name, a] of Object.entries(addons)) {
     const slug = name.toLowerCase();
     const want = a.version ? `${slug}-v${a.version}` : null;
+    const matchingTag = want
+      ? tags.find((t) => t === want || t.startsWith(`${want}-`))
+      : null;
     published[name] = {
       version: a.version,
       expectedTag: want,
-      tagExists: want ? tags.includes(want) : false,
+      tagExists: Boolean(matchingTag),
+      matchedTag: matchingTag || null,
       zipBuilt: zips.some((z) => z.toLowerCase().includes(slug)),
     };
   }
