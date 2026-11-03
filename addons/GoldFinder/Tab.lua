@@ -328,12 +328,43 @@ ShowRowTip = function(row)
     tip:AddDoubleLine("Typical (median)", Money(d.typical), 1, 0.82, 0, 1, 1, 1)
     tip:AddDoubleLine("Discount", ("%d%% below typical"):format(math.floor(d.below * 100 + 0.5)), 1, 0.82, 0, 0.25, 1, 0.25)
     tip:AddDoubleLine("Listed quantity", tostring(d.qty), 1, 0.82, 0, 1, 1, 1)
+
+    if d.trend then
+        tip:AddLine(" ")
+        tip:AddDoubleLine("Price trend:", d.trend.label, 1, 0.82, 0, d.trend.r, d.trend.g, d.trend.b)
+        if d.trend.warning then
+            tip:AddLine(d.trend.warning, 1, 0.45, 0.2, true)
+        end
+    end
+
     tip:AddLine(" ")
     tip:AddLine("Profitability (after 5% AH cut):", 1, 0.82, 0)
     local unitNetStr = (d.netUnitProfit and d.netUnitProfit > 0 and "+" or "") .. Money(d.netUnitProfit or 0)
     tip:AddDoubleLine("Est. unit net profit", unitNetStr, 0.8, 0.8, 0.8, 1, 1, 1)
     local totalNetStr = (d.totalNetProfit and d.totalNetProfit > 0 and "+" or "") .. Money(d.totalNetProfit or 0)
     tip:AddDoubleLine("Est. total flip profit", totalNetStr, 0.8, 0.8, 0.8, 0.25, 1, 0.25)
+
+    if d.history and #d.history > 1 then
+        tip:AddLine(" ")
+        tip:AddLine("Recent lowest prices:", 1, 0.82, 0)
+        local h = d.history
+        local now = GetServerTime()
+        local maxRecent = math.min(3, #h - 1)
+        for i = #h - 1, #h - maxRecent, -1 do
+            local pt = h[i]
+            local age = now - (pt.seen or pt.t)
+            local ageStr
+            if age < 60 then
+                ageStr = "<1m ago"
+            elseif age < 3600 then
+                ageStr = ("%dm ago"):format(math.floor(age / 60))
+            else
+                ageStr = ("%.0fh ago"):format(age / 3600)
+            end
+            tip:AddDoubleLine("  " .. ageStr, Money(pt.min), 0.7, 0.7, 0.7, 1, 1, 1)
+        end
+    end
+
     tip:AddLine(" ")
     tip:AddLine("Click to see its listings in the Buy view.", 0.4, 1, 0.4, true)
     tip:AddLine("Check the price there before buying: per unit versus per stack is not yet measured.", 0.8, 0.8, 0.8, true)
