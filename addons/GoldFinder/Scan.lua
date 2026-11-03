@@ -174,6 +174,25 @@ local function Finish(c, totalRows)
     if totalRows >= ANNOUNCE_ROWS then
         ns.Good("Recorded prices for %d materials.", items)
     end
+
+    -- Trigger deal alerts if qualifying deals are detected
+    local deals = ns.FindDeals and ns.FindDeals()
+    if deals and #deals > 0 then
+        if ns.IsSoundAlertEnabled and ns.IsSoundAlertEnabled() then
+            local soundID = (SOUNDKIT and (SOUNDKIT.AUCTION_WINDOW_OPEN or SOUNDKIT.IG_MAINMENU_OPEN)) or 888
+            if type(PlaySound) == "function" then
+                pcall(PlaySound, soundID)
+            end
+        end
+        if ns.IsChatAlertEnabled and ns.IsChatAlertEnabled() then
+            local top = deals[1]
+            local topName = top.name or (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(top.itemID)) or ("Item " .. top.itemID)
+            local pct = math.floor(top.below * 100 + 0.5)
+            local profitStr = top.totalNetProfit and top.totalNetProfit > 0 and (", est. net +" .. ns.Money(top.totalNetProfit)) or ""
+            ns.Good("Found %d deal(s)! Top deal: %s (%d%% off%s)", #deals, topName, pct, profitStr)
+        end
+    end
+
     if ns.RefreshPanel then ns.RefreshPanel() end
 end
 

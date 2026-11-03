@@ -11,8 +11,6 @@
 
 local ADDON, ns = ...
 
-ns.DEAL_RATIO    = 0.70  -- 30% or more below typical
-ns.MIN_PRIOR     = 3     -- earlier data points required before judging
 local FRESH_SECONDS = 1800  -- a price older than this is not "right now"
 
 local function Median(values)
@@ -24,7 +22,7 @@ local function Median(values)
     return (t[n / 2] + t[n / 2 + 1]) / 2
 end
 
--- Returns deals (sorted, deepest discount first) and a status table that
+-- Returns deals (sorted by active sort setting) and a status table that
 -- explains everything that was not a deal, so the panel can say why.
 function ns.FindDeals()
     local status = { items = 0, judged = 0, needMore = 0, stale = 0, fewestMissing = nil }
@@ -32,6 +30,10 @@ function ns.FindDeals()
     local db = ns.db
     if not db then return deals, status end
     local now = GetServerTime()
+
+    local ratio = ns.GetDealRatio()
+    local minPrior = ns.GetMinPrior()
+    local sortBy = ns.GetSortBy()
 
     for itemID, rec in pairs(db.items) do
         local h = rec.history
@@ -41,9 +43,9 @@ function ns.FindDeals()
             local current = h[n]
             if now - (current.seen or current.t) > FRESH_SECONDS then
                 status.stale = status.stale + 1
-            elseif n - 1 < ns.MIN_PRIOR then
+            elseif n - 1 < minPrior then
                 status.needMore = status.needMore + 1
-                local missing = ns.MIN_PRIOR - (n - 1)
+                local missing = minPrior - (n - 1)
                 if not status.fewestMissing or missing < status.fewestMissing then
                     status.fewestMissing = missing
                 end
@@ -52,22 +54,41 @@ function ns.FindDeals()
                 local prior = {}
                 for i = 1, n - 1 do prior[i] = h[i].min end
                 local typical = Median(prior)
-                if typical > 0 and current.min <= ns.DEAL_RATIO * typical then
+                if typical > 0 and current.min <= ratio * typical then
+                    -- Net flip profit: after deducting Blizzard's 5% AH cut
+                    local netUnit = math.floor(typical * 0.95 - current.min)
+                    local totalNet = math.max(0, math.floor(netUnit * (current.qty or 1)))
                     deals[#deals + 1] = {
-                        itemID  = itemID,
-                        itemKey = rec.itemKey,  -- nil for items not seen since v0.0.6
-                        name    = rec.name,
-                        now     = current.min,
-                        typical = typical,
-                        below   = 1 - current.min / typical,
-                        qty     = current.qty,
+                        itemID         = itemID,
+                        itemKey        = rec.itemKey,  -- nil for items not seen since v0.0.6
+                        name           = rec.name,
+                        now            = current.min,
+                        typical        = typical,
+                        below          = 1 - current.min / typical,
+                        qty            = current.qty or 0,
+                        netUnitProfit  = netUnit,
+                        totalNetProfit = totalNet,
                     }
                 end
             end
         end
     end
 
-    table.sort(deals, function(a, b) return a.below > b.below end)
+    if sortBy == "profit" then
+        table.sort(deals, function(a, b)
+            if a.totalNetProfit ~= b.totalNetProfit then
+                return a.totalNetProfit > b.totalNetProfit
+            end
+            return a.below > b.below
+        end)
+    else
+        table.sort(deals, function(a, b)
+            if a.below ~= b.below then
+                return a.below > b.below
+            end
+            return a.totalNetProfit > b.totalNetProfit
+        end)
+    end
     return deals, status
 end
 
@@ -75,14 +96,18 @@ local function Plural(n, one, many) return n == 1 and one or many end
 
 -- A title and one sentence for the panel: what the player sees first.
 function ns.DealStatus(deals, status)
-    local pct = math.floor((1 - ns.DEAL_RATIO) * 100 + 0.5)
+    local ratio = ns.GetDealRatio()
+    local pct = math.floor((1 - ratio) * 100 + 0.5)
+    local sortBy = ns.GetSortBy()
+    local sortDesc = (sortBy == "profit") and "by estimated net profit" or "by discount"
+
     if status.items == 0 then
         return "No prices recorded yet",
             "Run a Full Scan at the auction house. GoldFinder records the results automatically."
     end
     if #deals > 0 then
-        return ("%d underpriced %s"):format(#deals, Plural(#deals, "material", "materials")),
-            ("Listed at least %d%% below their typical price."):format(pct)
+        return ("%d underpriced %s (%s)"):format(#deals, Plural(#deals, "material", "materials"), sortDesc),
+            ("Listed at least %d%% below typical price."):format(pct)
     end
     if status.judged > 0 then
         return "No underpriced materials right now",
@@ -100,7 +125,13 @@ end
 
 -- Detail rows for the tooltip, same shape as ns.ScanStatus().lines.
 function ns.DealDetails(status)
+    local ratio = ns.GetDealRatio()
+    local pct = math.floor((1 - ratio) * 100 + 0.5)
+    local sortBy = (ns.GetSortBy() == "profit") and "Est. Net Profit" or "Discount %"
     return {
+        { "Threshold", ("%d%% below typical"):format(pct) },
+        { "Min scans", tostring(ns.GetMinPrior()) },
+        { "Sorted by", sortBy },
         { "Tracked", tostring(status.items) },
         { "Judged", tostring(status.judged) },
         { "Need more history", tostring(status.needMore) },

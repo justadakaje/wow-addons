@@ -82,6 +82,22 @@ Tested on WoW: Forever 1.60.1, **build 70009**.
   the author triggers it. Until the snapshot's index numbering is measured, it
   reads every listing but one, to avoid an out-of-range call.
 
+## Planned Enhancements & Feature Backlog
+
+Active feature requests are tracked on GitHub:
+- **Net Profit & Flip Value Display:** Calculating potential gold gains after deducting the 5% AH cut ([#10](https://github.com/justadakaje/wow-addons/issues/10))
+- **Configurable Deal Thresholds:** Custom discount % and history scan sensitivity ([#11](https://github.com/justadakaje/wow-addons/issues/11))
+- **Category Filters & Watchlist:** Filtering by trade good subclass (Herbs, Ore, Cloth, etc.) and starred items ([#12](https://github.com/justadakaje/wow-addons/issues/12))
+- **Deal Alert Notifications:** Audio chime and chat summary when scans find deals ([#13](https://github.com/justadakaje/wow-addons/issues/13))
+- **Direct Commodity Quick-Buy:** Shift-Click instant purchase for fast-moving commodity deals ([#14](https://github.com/justadakaje/wow-addons/issues/14))
+- **Price Trend Indicator:** Distinguish between genuine dips and crashing markets ([#15](https://github.com/justadakaje/wow-addons/issues/15))
+- **Tooltip Price Integration:** Show GoldFinder typical and lowest seen prices on item tooltips in bags/vendors ([#16](https://github.com/justadakaje/wow-addons/issues/16))
+- **Undercut Detection:** Check active player auctions against current lowest prices ([#17](https://github.com/justadakaje/wow-addons/issues/17))
+- **Crafting Conversion Profitability:** Reagent cost vs. crafted item sell value (smelting, milling, etc.) ([#18](https://github.com/justadakaje/wow-addons/issues/18))
+- **Data Hygiene & CSV Export:** Prune old records and export pricing data to spreadsheets ([#19](https://github.com/justadakaje/wow-addons/issues/19))
+
+See [`docs/goldfinder-backlog.md`](../../docs/goldfinder-backlog.md) for full technical design details.
+
 ## Client support
 
 Forever only (`## Interface: 16001`). Other clients are untested.

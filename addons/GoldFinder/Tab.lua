@@ -99,11 +99,12 @@ end
 
 local MAX_ROWS, ROW_HEIGHT = 12, 20
 local COLUMNS = {
-    { key = "name",    x = 0,   w = 300, j = "LEFT",  title = "Material" },
-    { key = "now",     x = 310, w = 140, j = "RIGHT", title = "Lowest now" },
-    { key = "typical", x = 460, w = 140, j = "RIGHT", title = "Typical" },
-    { key = "below",   x = 610, w = 70,  j = "RIGHT", title = "Below" },
-    { key = "qty",     x = 690, w = 60,  j = "RIGHT", title = "Listed" },
+    { key = "name",    x = 0,   w = 230, j = "LEFT",  title = "Material" },
+    { key = "now",     x = 235, w = 110, j = "RIGHT", title = "Lowest now" },
+    { key = "typical", x = 350, w = 110, j = "RIGHT", title = "Typical" },
+    { key = "below",   x = 465, w = 60,  j = "RIGHT", title = "Below" },
+    { key = "qty",     x = 530, w = 50,  j = "RIGHT", title = "Listed" },
+    { key = "profit",  x = 585, w = 145, j = "RIGHT", title = "Est. Profit" },
 }
 
 local ui = { rows = {} }
@@ -197,6 +198,35 @@ local function BuildPanel()
     ui.header = MakeRow(spacer, "GameFontNormalSmall")
     for _, col in ipairs(COLUMNS) do ui.header.cells[col.key]:SetText(col.title) end
 
+    -- Interactive sort buttons on Below and Est. Profit column headers
+    local sortBelow = CreateFrame("Button", nil, ui.header)
+    sortBelow:SetPoint("LEFT", ui.header, "LEFT", 465, 0)
+    sortBelow:SetSize(60, ROW_HEIGHT)
+    sortBelow:SetScript("OnClick", function()
+        ns.SetSortBy("discount")
+        ns.RefreshPanel()
+    end)
+    sortBelow:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:SetText("Click to sort by Discount %", 1, 1, 1)
+        GameTooltip:Show()
+    end)
+    sortBelow:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+    local sortProfit = CreateFrame("Button", nil, ui.header)
+    sortProfit:SetPoint("LEFT", ui.header, "LEFT", 585, 0)
+    sortProfit:SetSize(145, ROW_HEIGHT)
+    sortProfit:SetScript("OnClick", function()
+        ns.SetSortBy("profit")
+        ns.RefreshPanel()
+    end)
+    sortProfit:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:SetText("Click to sort by Estimated Net Profit (after 5% AH cut)", 1, 1, 1)
+        GameTooltip:Show()
+    end)
+    sortProfit:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
     local anchor = ui.header
     for i = 1, MAX_ROWS do
         ui.rows[i] = MakeRow(anchor, "GameFontHighlight", true)
@@ -227,9 +257,7 @@ local function BuildPanel()
     panel:SetScript("OnShow", function() ns.RefreshPanel() end)
 end
 
-local function Money(copper)
-    return C_CurrencyInfo.GetCoinTextureString(math.floor(copper), 12)
-end
+local Money = ns.Money
 
 -- Browse results carry no item names. Ask the client once per item; the
 -- ITEM_DATA_LOAD_RESULT handler below refreshes when a name arrives.
@@ -297,7 +325,15 @@ ShowRowTip = function(row)
     tip:SetOwner(row, "ANCHOR_RIGHT")
     tip:AddLine(ItemName(d), 1, 1, 1)
     tip:AddDoubleLine("Lowest now", Money(d.now), 1, 0.82, 0, 1, 1, 1)
-    tip:AddDoubleLine("Typical", Money(d.typical), 1, 0.82, 0, 1, 1, 1)
+    tip:AddDoubleLine("Typical (median)", Money(d.typical), 1, 0.82, 0, 1, 1, 1)
+    tip:AddDoubleLine("Discount", ("%d%% below typical"):format(math.floor(d.below * 100 + 0.5)), 1, 0.82, 0, 0.25, 1, 0.25)
+    tip:AddDoubleLine("Listed quantity", tostring(d.qty), 1, 0.82, 0, 1, 1, 1)
+    tip:AddLine(" ")
+    tip:AddLine("Profitability (after 5% AH cut):", 1, 0.82, 0)
+    local unitNetStr = (d.netUnitProfit and d.netUnitProfit > 0 and "+" or "") .. Money(d.netUnitProfit or 0)
+    tip:AddDoubleLine("Est. unit net profit", unitNetStr, 0.8, 0.8, 0.8, 1, 1, 1)
+    local totalNetStr = (d.totalNetProfit and d.totalNetProfit > 0 and "+" or "") .. Money(d.totalNetProfit or 0)
+    tip:AddDoubleLine("Est. total flip profit", totalNetStr, 0.8, 0.8, 0.8, 0.25, 1, 0.25)
     tip:AddLine(" ")
     tip:AddLine("Click to see its listings in the Buy view.", 0.4, 1, 0.4, true)
     tip:AddLine("Check the price there before buying: per unit versus per stack is not yet measured.", 0.8, 0.8, 0.8, true)
@@ -312,6 +348,10 @@ function ns.RefreshPanel()
     local title, sub = ns.DealStatus(deals, status)
     local hasDeals = #deals > 0
 
+    local isProfit = ns.GetSortBy() == "profit"
+    ui.header.cells.profit:SetText(isProfit and "|cffffd100Est. Profit ▼|r" or "Est. Profit")
+    ui.header.cells.below:SetText(isProfit and "Below" or "|cffffd100Below ▼|r")
+
     ui.title:SetShown(hasDeals)
     ui.sub:SetShown(hasDeals)
     ui.header:SetShown(hasDeals)
@@ -321,7 +361,8 @@ function ns.RefreshPanel()
     if hasDeals then
         ui.title:SetText(title)
         if #deals > MAX_ROWS then
-            sub = sub .. (" Showing the %d deepest discounts."):format(MAX_ROWS)
+            local sortName = isProfit and "highest net profit" or "deepest discounts"
+            sub = sub .. (" Showing the %d %s."):format(MAX_ROWS, sortName)
         end
         ui.sub:SetText(sub)
     else
@@ -337,6 +378,11 @@ function ns.RefreshPanel()
             row.cells.typical:SetText(Money(d.typical))
             row.cells.below:SetText(("|cff40ff40%d%%|r"):format(math.floor(d.below * 100 + 0.5)))
             row.cells.qty:SetText(tostring(d.qty))
+            if d.totalNetProfit and d.totalNetProfit > 0 then
+                row.cells.profit:SetText("|cff40ff40+" .. Money(d.totalNetProfit) .. "|r")
+            else
+                row.cells.profit:SetText("|cff8888880c|r")
+            end
             row.deal = d
             row:Show()
         else
