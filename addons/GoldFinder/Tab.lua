@@ -188,8 +188,26 @@ local function BuildPanel()
 
     ui.sub = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     ui.sub:SetPoint("TOPLEFT", ui.title, "BOTTOMLEFT", 0, -6)
-    ui.sub:SetPoint("RIGHT", panel, "RIGHT")
+    ui.sub:SetPoint("RIGHT", panel, "RIGHT", -200, 0)
     ui.sub:SetJustifyH("LEFT")
+
+    -- Search box in header to filter deals in real time (#24)
+    local search = CreateFrame("EditBox", nil, panel, "SearchBoxTemplate")
+    search:SetSize(180, 22)
+    search:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -10, -2)
+    search:SetAutoFocus(false)
+    search.Instructions:SetText("Search deals...")
+    search:SetScript("OnTextChanged", function(self)
+        SearchBoxTemplate_OnTextChanged(self)
+        ns.RefreshPanel()
+    end)
+    search:SetScript("OnEscapePressed", function(self)
+        self:ClearFocus()
+    end)
+    search:SetScript("OnEnterPressed", function(self)
+        self:ClearFocus()
+    end)
+    ui.searchBox = search
 
     local spacer = CreateFrame("Frame", nil, panel)
     spacer:SetSize(1, 14)
@@ -255,6 +273,9 @@ local function BuildPanel()
     ui.footerText:SetJustifyH("RIGHT")
 
     panel:SetScript("OnShow", function() ns.RefreshPanel() end)
+    panel:SetScript("OnHide", function()
+        if ui.searchBox then ui.searchBox:ClearFocus() end
+    end)
 end
 
 local Money = ns.Money
@@ -375,8 +396,26 @@ end
 function ns.RefreshPanel()
     if not (panel and panel:IsShown()) then return end
 
-    local deals, status = ns.FindDeals()
-    local title, sub = ns.DealStatus(deals, status)
+    local allDeals, status = ns.FindDeals()
+    local title, sub = ns.DealStatus(allDeals, status)
+
+    -- Filter deals by search query if active (#24)
+    local query = ui.searchBox and ui.searchBox:GetText() or ""
+    query = query:match("^%s*(.-)%s*$")
+    local isFiltered = query ~= ""
+    local deals = allDeals
+
+    if isFiltered then
+        local qLower = query:lower()
+        deals = {}
+        for _, d in ipairs(allDeals) do
+            local name = ItemName(d)
+            if name and name:lower():find(qLower, 1, true) then
+                deals[#deals + 1] = d
+            end
+        end
+    end
+
     local hasDeals = #deals > 0
 
     local isProfit = ns.GetSortBy() == "profit"
@@ -390,15 +429,30 @@ function ns.RefreshPanel()
     ui.emptySub:SetShown(not hasDeals)
 
     if hasDeals then
-        ui.title:SetText(title)
-        if #deals > MAX_ROWS then
+        if isFiltered then
+            ui.title:SetText(("%d deal%s matching \"%s\""):format(#deals, #deals == 1 and "" or "s", query))
             local sortName = isProfit and "highest net profit" or "deepest discounts"
-            sub = sub .. (" Showing the %d %s."):format(MAX_ROWS, sortName)
+            if #deals > MAX_ROWS then
+                ui.sub:SetText(("Found %d of %d total deals. Showing top %d by %s."):format(#deals, #allDeals, MAX_ROWS, sortName))
+            else
+                ui.sub:SetText(("Found %d of %d total deals."):format(#deals, #allDeals))
+            end
+        else
+            ui.title:SetText(title)
+            if #deals > MAX_ROWS then
+                local sortName = isProfit and "highest net profit" or "deepest discounts"
+                sub = sub .. (" Showing the %d %s."):format(MAX_ROWS, sortName)
+            end
+            ui.sub:SetText(sub)
         end
-        ui.sub:SetText(sub)
     else
-        ui.emptyTitle:SetText(title)
-        ui.emptySub:SetText(sub)
+        if isFiltered then
+            ui.emptyTitle:SetText(("No deals matching \"%s\""):format(query))
+            ui.emptySub:SetText("Try a different search query or clear the search box.")
+        else
+            ui.emptyTitle:SetText(title)
+            ui.emptySub:SetText(sub)
+        end
     end
 
     for i = 1, MAX_ROWS do
