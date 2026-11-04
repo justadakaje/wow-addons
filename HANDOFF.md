@@ -695,3 +695,26 @@ Addon Dev"). Practical consequences:
 - Scene collection is "WoW Forever - Duo" with scenes `Forever Only`,
   `Forever + Claude`, `Claude Only`. The user switches via hotkey, so a long
   silent tool-running stretch is dead air — say what is running.
+
+---
+
+## State as of 2026-11-04 (WoW: Forever Launch Day - Build 70707)
+
+### Active Harness
+* **AgyOrch (Windows Master):** Stream HUD, edge deploys, CurseForge releases, Twitch API & Threads social sync.
+* **AgyBuild (WSL Ubuntu 24.04):** Engine running test suites, live Lua AST validation, in-game verification.
+
+### Recent Shipments
+1. **GoldFinder v0.2.0 Live on CurseForge:**
+   * Net profit calculation accounting for 5% AH cut.
+   * Interactive sorting by discount % or net profit.
+   * Tooltip price integration, price trend trajectory analysis, and CSV export.
+2. **In-Tab Search Filter (#24 - Merged to master):**
+   * Real-time search editbox (`SearchBoxTemplate`) at top-right of GoldFinder AH tab.
+   * Case-insensitive substring deal filtering with dynamic result count.
+   * Focus safety: Escape/Enter unfocus handling so player character movement is never trapped.
+   * Live client symlink verified: `F:\World of Warcraft\_forever_\Interface\AddOns\GoldFinder`.
+
+### Next Active Tasks for AgyBuild:
+* **Issue #30:** `[GoldFinder] Minimum profit threshold filter (/gf minprofit)`
+* **In-Game Verification:** In WoW client on build 70707, verify `/reload` loads the search box and test typing queries on active AH scan data.
