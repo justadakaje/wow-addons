@@ -4,6 +4,12 @@ All notable changes to GoldFinder. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Real-Time In-Tab Search Box ([#24](https://github.com/justadakaje/wow-addons/issues/24)):** Added a native SearchBoxTemplate editbox to the top-right of the GoldFinder AH tab. Filters deals live by material name as you type, updates deal counts dynamically, and includes Escape/Enter unfocus handling and clear button support.
+
 ## [0.2.0] - 2026-11-04
 
 ### Added
