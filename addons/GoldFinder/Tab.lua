@@ -118,6 +118,9 @@ local function MakeRow(anchor, font, clickable)
     row:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, 0)
     row:SetPoint("RIGHT", panel, "RIGHT")
     row.cells = {}
+    row.tierBg = row:CreateTexture(nil, "BACKGROUND")
+    row.tierBg:SetAllPoints(row)
+    row.tierBg:Hide()
     if clickable then
         row.hl = row:CreateTexture(nil, "BACKGROUND")
         row.hl:SetAllPoints(row)
@@ -345,6 +348,10 @@ ShowRowTip = function(row)
     local tip = GameTooltip
     tip:SetOwner(row, "ANCHOR_RIGHT")
     tip:AddLine(ItemName(d), 1, 1, 1)
+    local tier = d.tier or (ns.GetDealTier and ns.GetDealTier(d))
+    if tier then
+        tip:AddDoubleLine("Deal tier", tier.colorStr .. tier.label .. "|r", 1, 0.82, 0, tier.r, tier.g, tier.b)
+    end
     tip:AddDoubleLine("Lowest now", Money(d.now), 1, 0.82, 0, 1, 1, 1)
     tip:AddDoubleLine("Typical (median)", Money(d.typical), 1, 0.82, 0, 1, 1, 1)
     tip:AddDoubleLine("Discount", ("%d%% below typical"):format(math.floor(d.below * 100 + 0.5)), 1, 0.82, 0, 0.25, 1, 0.25)
@@ -458,13 +465,22 @@ function ns.RefreshPanel()
     for i = 1, MAX_ROWS do
         local row, d = ui.rows[i], deals[i]
         if d then
-            row.cells.name:SetText(ItemName(d))
+            local tier = d.tier or (ns.GetDealTier and ns.GetDealTier(d))
+            if tier and tier.bgAlpha and tier.bgAlpha > 0 then
+                row.tierBg:SetColorTexture(tier.r, tier.g, tier.b, tier.bgAlpha)
+                row.tierBg:Show()
+            else
+                row.tierBg:Hide()
+            end
+            local tagPrefix = (tier and tier.tag ~= "") and (tier.colorStr .. tier.tag .. "|r ") or ""
+            row.cells.name:SetText(tagPrefix .. ItemName(d))
             row.cells.now:SetText(Money(d.now))
             row.cells.typical:SetText(Money(d.typical))
-            row.cells.below:SetText(("|cff40ff40%d%%|r"):format(math.floor(d.below * 100 + 0.5)))
+            local color = tier and tier.colorStr or "|cff40ff40"
+            row.cells.below:SetText(("%s%d%%|r"):format(color, math.floor(d.below * 100 + 0.5)))
             row.cells.qty:SetText(tostring(d.qty))
             if d.totalNetProfit and d.totalNetProfit > 0 then
-                row.cells.profit:SetText("|cff40ff40+" .. Money(d.totalNetProfit) .. "|r")
+                row.cells.profit:SetText(color .. "+" .. Money(d.totalNetProfit) .. "|r")
             else
                 row.cells.profit:SetText("|cff8888880c|r")
             end
