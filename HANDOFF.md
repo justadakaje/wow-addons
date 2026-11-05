@@ -729,26 +729,26 @@ Addon Dev"). Practical consequences:
      - `_retail_`: `F:\World of Warcraft\_retail_\Interface\AddOns\GoldFinder`
    * Verification: `node scripts/check-toc.js` (8/8 passing) and `node scripts/check-lua.js` (27/27 passing).
 
-### Next Active Tasks for AgyBuild:
-* **Issue #30:** `[GoldFinder] Minimum profit threshold filter (/gf minprofit)`
-* **In-Game Verification:** In WoW client on build 70707, verify `/reload` loads the search box and test typing queries on active AH scan data.
+### Next Active Tasks:
+* **Issue #25 (IN PROGRESS):** `[GoldFinder] Visual tier highlights for high-value flips (Bargain vs Mega Snipe)`
+* **In-Game Verification:** In WoW client on build 70707, verify `/reload` loads `/gf minprofit` and test filtering on active AH scan data.
 
 ---
 
 ## 10-Issue Execution Sprint Queue (Dual-Harness: AgyOrch + AgyBuild)
 
-| Seq | Issue | Title | Scope & Target Files | Owner / Stream Focus |
-|:---:|:---:|:---|:---|:---|
-| **01** | **#30** | Minimum Profit Threshold Filter (`/gf minprofit <amount>`) | `GoldFinderDB.settings.minProfit` floor, `Deals.lua` deal evaluation filter, `Core.lua` slash parser. | AgyBuild (WSL Live Engine) |
-| **02** | **#25** | Visual Tier Highlights (Bargain vs Snipe vs Mega Snipe) | `Tab.lua` row badge color/icon formatting (30% / 50% / 70% discount thresholds). | AgyBuild + AgyOrch UI Review |
-| **03** | **#12** | Category Filters (Herbs, Mining, Cloth, Leather) & Watchlist | `Tab.lua` category filter pill buttons, `Scan.lua` classification indexing. | AgyBuild (Lua AST & UI) |
-| **04** | **#14** | Direct Quick-Buy for Commodity Deals | `Tab.lua` Shift-Click direct purchase shortcut triggering `C_AuctionHouse.StartCommoditiesPurchase`. | AgyBuild (AH API Hooks) |
-| **05** | **#17** | Undercut Detection for Active Player Auctions | `Scan.lua` & `Core.lua` player auction comparison against live lowest buyout prices. | AgyBuild (Data Logic) |
-| **06** | **#22** | Shopping Lists & Material Target Fulfillment Tracker | `GoldFinderDB.shoppingLists` schema, target quantity progress tracking bar in AH tab. | AgyBuild (Persistence & UI) |
-| **07** | **#26** | Customizable Sound Effects & Audio Alert Throttle | `GoldFinderDB.settings.soundId`, PlaySound cooldown throttle, audio dropdown picker. | AgyBuild (Sound & Cooldowns) |
-| **08** | **#23** | LibDataBroker (LDB) Feed & Minimap Button | `libs/LibDataBroker-1.1`, minimap icon registration, tooltip status hover. | AgyBuild + AgyOrch LDB Shim |
-| **09** | **#18** | Crafting Cost vs Sell Value Profitability (Arbitrage) | `Deals.lua` reagent conversion matrix (e.g. Copper Bar = Copper Ore conversion yields). | AgyBuild (Math Models) |
-| **10** | **#27** | Cross-Character & Faction Market Data Sharing | `GoldFinderDB.realmMarketData` global table across character profiles. | AgyBuild (Storage Architect) |
+| Seq | Issue | Title | Scope & Target Files | Status |
+|:---:|:---:|:---|:---|:---:|
+| **01** | **#30** | Minimum Profit Threshold Filter (`/gf minprofit <amount>`) | `GoldFinderDB.settings.minProfit` floor, `Deals.lua` deal evaluation filter, `Core.lua` slash parser. | ✅ **Merged (PR #31)** |
+| **02** | **#25** | Visual Tier Highlights (Bargain vs Snipe vs Mega Snipe) | `Tab.lua` row badge color/icon formatting (30% / 50% / 70% discount thresholds). | 🟡 **In Progress** |
+| **03** | **#12** | Category Filters (Herbs, Mining, Cloth, Leather) & Watchlist | `Tab.lua` category filter pill buttons, `Scan.lua` classification indexing. | Queued |
+| **04** | **#14** | Direct Quick-Buy for Commodity Deals | `Tab.lua` Shift-Click direct purchase shortcut triggering `C_AuctionHouse.StartCommoditiesPurchase`. | Queued |
+| **05** | **#17** | Undercut Detection for Active Player Auctions | `Scan.lua` & `Core.lua` player auction comparison against live lowest buyout prices. | Queued |
+| **06** | **#22** | Shopping Lists & Material Target Fulfillment Tracker | `GoldFinderDB.shoppingLists` schema, target quantity progress tracking bar in AH tab. | Queued |
+| **07** | **#26** | Customizable Sound Effects & Audio Alert Throttle | `GoldFinderDB.settings.soundId`, PlaySound cooldown throttle, audio dropdown picker. | Queued |
+| **08** | **#23** | LibDataBroker (LDB) Feed & Minimap Button | `libs/LibDataBroker-1.1`, minimap icon registration, tooltip status hover. | Queued |
+| **09** | **#18** | Crafting Cost vs Sell Value Profitability (Arbitrage) | `Deals.lua` reagent conversion matrix (e.g. Copper Bar = Copper Ore conversion yields). | Queued |
+| **10** | **#27** | Cross-Character & Faction Market Data Sharing | `GoldFinderDB.realmMarketData` global table across character profiles. | Queued |
 
 ### Milestone Gate:
 Upon completion and squash-merge of all 10 issues, AgyOrch will immediately propose the next 10 backlog issues (Issues #31–#40) to maintain an active backlog pool of $\ge 10$.
