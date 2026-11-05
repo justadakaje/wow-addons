@@ -192,7 +192,10 @@ local function Finish(c, totalRows)
             local topName = top.name or (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(top.itemID)) or ("Item " .. top.itemID)
             local pct = math.floor(top.below * 100 + 0.5)
             local profitStr = top.totalNetProfit and top.totalNetProfit > 0 and (", est. net +" .. ns.Money(top.totalNetProfit)) or ""
-            ns.Good("Found %d deal(s)! Top deal: %s (%d%% off%s)", #deals, topName, pct, profitStr)
+            local tier = top.tier or (ns.GetDealTier and ns.GetDealTier(top))
+            local tierPrefix = (tier and tier.id == "mega") and "|cffa335ee[MEGA SNIPE]|r "
+                            or ((tier and tier.id == "great") and "|cff0070dd[GREAT DEAL]|r " or "")
+            ns.Good("%sFound %d deal(s)! Top deal: %s (%d%% off%s)", tierPrefix, #deals, topName, pct, profitStr)
         end
     end
 

@@ -68,6 +68,48 @@ end
 
 -- Returns deals (sorted by active sort setting) and a status table that
 -- explains everything that was not a deal, so the panel can say why.
+-- Classifies a deal into visual rarity tiers based on discount depth and profit magnitude.
+function ns.GetDealTier(deal)
+    if not deal then return nil end
+    local below = deal.below or 0
+    local profit = deal.totalNetProfit or 0
+
+    -- Mega Snipe: >= 50% discount OR >= 50 gold (500,000 copper) net profit
+    if below >= 0.50 or profit >= 500000 then
+        return {
+            id = "mega",
+            label = "Mega Snipe",
+            tag = "[SNIPE]",
+            hex = "ffa335ee",
+            colorStr = "|cffa335ee",
+            r = 0.64, g = 0.21, b = 0.93,
+            bgAlpha = 0.12,
+        }
+    -- Great Deal: >= 35% discount OR >= 15 gold (150,000 copper) net profit
+    elseif below >= 0.35 or profit >= 150000 then
+        return {
+            id = "great",
+            label = "Great Deal",
+            tag = "[GREAT]",
+            hex = "0070dd",
+            colorStr = "|cff0070dd",
+            r = 0.0, g = 0.44, b = 0.87,
+            bgAlpha = 0.07,
+        }
+    -- Good Flip: Standard qualifying deal
+    else
+        return {
+            id = "good",
+            label = "Good Flip",
+            tag = "",
+            hex = "1eff00",
+            colorStr = "|cff1eff00",
+            r = 0.12, g = 1.0, b = 0.0,
+            bgAlpha = 0.0,
+        }
+    end
+end
+
 function ns.FindDeals()
     local status = { items = 0, judged = 0, needMore = 0, stale = 0, fewestMissing = nil }
     local deals = {}
@@ -117,6 +159,7 @@ function ns.FindDeals()
                         trend          = CalculateTrend(h),
                         history        = h,
                     }
+                    deals[#deals].tier = ns.GetDealTier(deals[#deals])
                     end
                 end
             end
