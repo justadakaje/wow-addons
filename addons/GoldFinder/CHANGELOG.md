@@ -4,13 +4,16 @@ All notable changes to GoldFinder. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.0] - 2026-11-05
 
 ### Added
 
 - **Minimum Profit Threshold Filter ([#30](https://github.com/justadakaje/wow-addons/issues/30)):** Added `/gf minprofit <amount>` slash command (supporting denominations like `5g`, `50s`, `1g50s`, or plain gold amounts like `10`, with `0` to disable) to filter out low-margin micro-deals and focus exclusively on high-yield flips in `ns.FindDeals` and the AH tab.
-- **Real-Time In-Tab Search Box ([#24](https://github.com/justadakaje/wow-addons/issues/24)):** Added a native SearchBoxTemplate editbox to the top-right of the GoldFinder AH tab. Filters deals live by material name as you type, updates deal counts dynamically, and includes Escape/Enter unfocus handling and clear button support.
-- **Multi-Client & Game Version Compatibility:** Added dedicated TOC manifests (`GoldFinder_Vanilla.toc`, `GoldFinder_Mainline.toc`, `GoldFinder_Mists.toc`) for Classic Era (11506–11509 / 20506), Retail / The War Within (110007–110200), and MoP Classic (50400–50504), with backward-compatible runtime shims for metadata, frame backdrops, and AH interaction events.
+- **Visual Tier Highlights ([#25](https://github.com/justadakaje/wow-addons/issues/25)):** Implemented auction row highlights with Epic Purple `[SNIPE]` (deals with >= 500g profit or >= 70% discount), Rare Blue `[GREAT]`, and Good Value tinting, backed by sound alerts and chat frame notifications.
+- **Category Filter Tabs & Watchlist ([#12](https://github.com/justadakaje/wow-addons/issues/12)):** Added native dark bronze inset sub-tabs matching Blizzard AH design (`All`, `Herbs`, `Mining`, `Cloth`, `Leather`, `Watchlist`) and per-row persistent star bookmarking using native `ReputationStar` textures.
+- **Blizzard AddOn List Categorization:** Added `## Category: Auctions` metadata to `GoldFinder.toc` for native hierarchical grouping in WoW Forever build 70707.
+- **Lexical Scope Hotfix:** Forward-declared `ItemName` in `Tab.lua` (line 112) to prevent unassigned global lookup crashes on star click.
+- **Multi-Client Manifest Unification:** Unified multi-client interfaces into a single authoritative `GoldFinder.toc` supporting interface 16001 (Forever), Retail (110007–110200, 120100), Classic Era (11506–11509), and MoP Classic (50400–50504).
 
 ## [0.2.0] - 2026-11-04
 
