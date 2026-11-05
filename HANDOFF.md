@@ -730,8 +730,8 @@ Addon Dev"). Practical consequences:
    * Verification: `node scripts/check-toc.js` (8/8 passing) and `node scripts/check-lua.js` (27/27 passing).
 
 ### Next Active Tasks:
-* **Issue #25 (IN PROGRESS):** `[GoldFinder] Visual tier highlights for high-value flips (Bargain vs Mega Snipe)`
-* **In-Game Verification:** In WoW client on build 70707, verify `/reload` loads `/gf minprofit` and test filtering on active AH scan data.
+* **Issue #12 (IN PROGRESS):** `[GoldFinder] Category filters (Herbs, Mining, Cloth, etc.) and item watchlist`
+* **In-Game Verification:** In WoW client on build 70707, verify `/reload` loads the new tier highlights (Epic Purple `[SNIPE]`, Rare Blue `[GREAT]`) and test `/gf minprofit 5g`.
 
 ---
 
@@ -740,8 +740,8 @@ Addon Dev"). Practical consequences:
 | Seq | Issue | Title | Scope & Target Files | Status |
 |:---:|:---:|:---|:---|:---:|
 | **01** | **#30** | Minimum Profit Threshold Filter (`/gf minprofit <amount>`) | `GoldFinderDB.settings.minProfit` floor, `Deals.lua` deal evaluation filter, `Core.lua` slash parser. | ✅ **Merged (PR #31)** |
-| **02** | **#25** | Visual Tier Highlights (Bargain vs Snipe vs Mega Snipe) | `Tab.lua` row badge color/icon formatting (30% / 50% / 70% discount thresholds). | 🟡 **In Progress** |
-| **03** | **#12** | Category Filters (Herbs, Mining, Cloth, Leather) & Watchlist | `Tab.lua` category filter pill buttons, `Scan.lua` classification indexing. | Queued |
+| **02** | **#25** | Visual Tier Highlights (Bargain vs Snipe vs Mega Snipe) | `Tab.lua` row badge color/icon formatting (30% / 50% / 70% discount thresholds). | ✅ **Merged (PR #32)** |
+| **03** | **#12** | Category Filters (Herbs, Mining, Cloth, Leather) & Watchlist | `Tab.lua` category filter pill buttons, `Scan.lua` classification indexing. | 🟡 **In Progress** |
 | **04** | **#14** | Direct Quick-Buy for Commodity Deals | `Tab.lua` Shift-Click direct purchase shortcut triggering `C_AuctionHouse.StartCommoditiesPurchase`. | Queued |
 | **05** | **#17** | Undercut Detection for Active Player Auctions | `Scan.lua` & `Core.lua` player auction comparison against live lowest buyout prices. | Queued |
 | **06** | **#22** | Shopping Lists & Material Target Fulfillment Tracker | `GoldFinderDB.shoppingLists` schema, target quantity progress tracking bar in AH tab. | Queued |
