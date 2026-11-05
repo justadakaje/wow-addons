@@ -5,7 +5,8 @@
 local ADDON, ns = ...
 
 ns.addonName = ADDON
-ns.version   = C_AddOns.GetAddOnMetadata(ADDON, "Version") or "unknown"
+local getMetadata = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
+ns.version   = (getMetadata and getMetadata(ADDON, "Version")) or "unknown"
 
 local LABEL = "|cffffd100GoldFinder|r"
 
@@ -160,7 +161,8 @@ end
 local exportFrame = nil
 function ns.ShowExportDialog()
     if not exportFrame then
-        exportFrame = CreateFrame("Frame", "GoldFinderExportDialog", UIParent, "BackdropTemplate")
+        local template = BackdropTemplateMixin and "BackdropTemplate" or nil
+        exportFrame = CreateFrame("Frame", "GoldFinderExportDialog", UIParent, template)
         exportFrame:SetSize(640, 420)
         exportFrame:SetPoint("CENTER")
         exportFrame:SetFrameStrata("DIALOG")

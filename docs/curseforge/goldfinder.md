@@ -23,11 +23,17 @@ Tested on **WoW: Forever build 70009**: the tab sits alongside Auctionator's tab
 
 Not yet measured: whether prices for materials that are *not* commodities are per unit or per stack.
 
-## Compatibility
+## Compatibility & Supported Game Versions
 
-- **WoW: Forever only** (Interface 16001).
-- Works alongside Auctionator (tested): GoldFinder shares the auction house tab row through LibAHTab instead of drawing over other addons' tabs. It is also built to warn you if an addon adds a tab without that library, where tabs could overlap — not yet seen, since no such addon was installed.
-- GoldFinder is not based on Auctionator and contains none of its code.
+GoldFinder features dedicated manifests and safe runtime shims across modern and classic game engines:
+
+- **WoW: Forever** (Interface 16001, `GoldFinder.toc`) — Verified on live launch client (Build 70707).
+- **Classic Era & Season of Discovery** (Interface 11506–11509 / 20506, `GoldFinder_Vanilla.toc`) — Classic Lua sandbox and legacy AH event compatibility.
+- **Retail / The War Within** (Interface 110007–110200, `GoldFinder_Mainline.toc`) — Modern Dragonflight & The War Within engine support.
+- **Mists of Pandaria Classic** (Interface 50400–50504, `GoldFinder_Mists.toc`) — MoP Classic client support.
+
+Works alongside Auctionator (tested): GoldFinder shares the auction house tab row through LibAHTab instead of drawing over other addons' tabs. It is also built to warn you if an addon adds a tab without that library, where tabs could overlap.
+GoldFinder is not based on Auctionator and contains none of its code.
 
 ## Roadmap and Feature Backlog
 

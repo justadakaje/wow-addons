@@ -715,6 +715,20 @@ Addon Dev"). Practical consequences:
    * Focus safety: Escape/Enter unfocus handling so player character movement is never trapped.
    * Live client symlink verified: `F:\World of Warcraft\_forever_\Interface\AddOns\GoldFinder`.
 
+3. **Multi-Client Manifests & Compatibility Layer (AgyBuild):**
+   * Multi-TOC support added for GoldFinder: `GoldFinder_Vanilla.toc` (11506-11509, 20506), `GoldFinder_Mainline.toc` (110007-110200), and `GoldFinder_Mists.toc` (50400-50504), alongside baseline `GoldFinder.toc` (16001).
+   * Safe runtime shims applied in `Core.lua`, `Scan.lua`, and `Tab.lua`:
+     - Metadata retrieval fallback (`C_AddOns.GetAddOnMetadata` -> `GetAddOnMetadata`).
+     - Safe backdrop mixin fallback (`BackdropTemplateMixin and "BackdropTemplate" or nil`).
+     - Robust item class enums (`LE_TRADEGOODS` / `LE_REAGENT` constants for Classic Era).
+     - Auction house show events (`AUCTION_HOUSE_SHOW` registered alongside `PLAYER_INTERACTION_MANAGER_FRAME_SHOW`).
+   * Smoke test TOC updated: `AddonSmokeTest.toc` expanded to cover 16001, 20506, 11506-11509, 50400-50500, 110007-110200.
+   * Symlinks verified across client installs:
+     - `_forever_`: `F:\World of Warcraft\_forever_\Interface\AddOns\GoldFinder`
+     - `_classic_era_`: `F:\World of Warcraft\_classic_era_\Interface\AddOns\GoldFinder`
+     - `_retail_`: `F:\World of Warcraft\_retail_\Interface\AddOns\GoldFinder`
+   * Verification: `node scripts/check-toc.js` (8/8 passing) and `node scripts/check-lua.js` (27/27 passing).
+
 ### Next Active Tasks for AgyBuild:
 * **Issue #30:** `[GoldFinder] Minimum profit threshold filter (/gf minprofit)`
 * **In-Game Verification:** In WoW client on build 70707, verify `/reload` loads the search box and test typing queries on active AH scan data.

@@ -539,9 +539,14 @@ local function CheckOverlap()
 end
 
 local events = CreateFrame("Frame")
-events:RegisterEvent("PLAYER_INTERACTION_MANAGER_FRAME_SHOW")
-events:SetScript("OnEvent", function(_, _, interactionType)
-    if interactionType ~= Enum.PlayerInteractionType.Auctioneer then return end
+if EventRegistry and Enum and Enum.PlayerInteractionType and Enum.PlayerInteractionType.Auctioneer then
+    events:RegisterEvent("PLAYER_INTERACTION_MANAGER_FRAME_SHOW")
+end
+events:RegisterEvent("AUCTION_HOUSE_SHOW")
+events:SetScript("OnEvent", function(_, event, interactionType)
+    if event == "PLAYER_INTERACTION_MANAGER_FRAME_SHOW" then
+        if interactionType ~= (Enum and Enum.PlayerInteractionType and Enum.PlayerInteractionType.Auctioneer) then return end
+    end
     CreateTabOnce()
     -- Other addons may add their tabs in the same frame; look after they have.
     C_Timer.After(0, CheckOverlap)

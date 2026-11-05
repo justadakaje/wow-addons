@@ -25,9 +25,12 @@
 local ADDON, ns = ...
 
 -- Trade goods (cloth, herbs, ore, leather...) and reagents.
+local LE_TRADEGOODS = (Enum and Enum.ItemClass and Enum.ItemClass.Tradegoods) or LE_ITEM_CLASS_TRADEGOODS or 7
+local LE_REAGENT    = (Enum and Enum.ItemClass and Enum.ItemClass.Reagent) or LE_ITEM_CLASS_REAGENT or 12
+
 local MATERIAL_CLASSES = {
-    [Enum.ItemClass.Tradegoods] = true,
-    [Enum.ItemClass.Reagent]    = true,
+    [LE_TRADEGOODS] = true,
+    [LE_REAGENT]    = true,
 }
 
 local CHUNK              = 250  -- snapshot listings read per frame

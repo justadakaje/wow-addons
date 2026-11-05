@@ -1,4 +1,8 @@
 ## Interface: 16001
+## Interface-Mainline: 110007, 110100, 110107, 110200
+## Interface-Vanilla: 11506, 11507, 11508, 11509, 20506
+## Interface-Classic: 11509, 20506
+## Interface-MoP: 50400, 50500, 50504
 ## Title: GoldFinder
 ## Notes: Adds a GoldFinder tab to the auction house. Shares the tab row with other auction house addons instead of fighting them for it.
 ## Author: justadakaje
