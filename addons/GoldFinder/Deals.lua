@@ -78,6 +78,7 @@ function ns.FindDeals()
     local ratio = ns.GetDealRatio()
     local minPrior = ns.GetMinPrior()
     local sortBy = ns.GetSortBy()
+    local minProfit = ns.GetMinProfit()
 
     for itemID, rec in pairs(db.items) do
         local h = rec.history
@@ -102,7 +103,8 @@ function ns.FindDeals()
                     -- Net flip profit: after deducting Blizzard's 5% AH cut
                     local netUnit = math.floor(typical * 0.95 - current.min)
                     local totalNet = math.max(0, math.floor(netUnit * (current.qty or 1)))
-                    deals[#deals + 1] = {
+                    if totalNet >= minProfit then
+                        deals[#deals + 1] = {
                         itemID         = itemID,
                         itemKey        = rec.itemKey,  -- nil for items not seen since v0.0.6
                         name           = rec.name,
@@ -115,6 +117,7 @@ function ns.FindDeals()
                         trend          = CalculateTrend(h),
                         history        = h,
                     }
+                    end
                 end
             end
         end
@@ -174,8 +177,11 @@ function ns.DealDetails(status)
     local ratio = ns.GetDealRatio()
     local pct = math.floor((1 - ratio) * 100 + 0.5)
     local sortBy = (ns.GetSortBy() == "profit") and "Est. Net Profit" or "Discount %"
+    local minProfit = ns.GetMinProfit()
+    local minProfitStr = (minProfit > 0) and ns.Money(minProfit) or "None (0c)"
     return {
         { "Threshold", ("%d%% below typical"):format(pct) },
+        { "Min profit", minProfitStr },
         { "Min scans", tostring(ns.GetMinPrior()) },
         { "Sorted by", sortBy },
         { "Tracked", tostring(status.items) },
