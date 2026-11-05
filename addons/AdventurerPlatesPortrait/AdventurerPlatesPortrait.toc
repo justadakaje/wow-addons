@@ -2,6 +2,8 @@
 ## Title: Adventurer Plates (Portrait, shelved)
 ## Notes: Shelved portrait layout, kept for comparison. The landscape card in AdventurerPlates is the supported version.
 ## Author: justadakaje
+## Category: Unit Frames
+## Category-enUS: Unit Frames
 ## Version: 0.1.0
 ## IconTexture: Interface\ICONS\INV_Misc_Note_01
 ## SavedVariables: AdventurerPlatesPortraitDB

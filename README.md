@@ -35,7 +35,11 @@ wow-addons/
 | AddonSmokeTest | Classic Era (20506), Forever (16001) | Proof-of-life, working |
 | ForeverProbe | Forever (16001) | Read-only API/event capture, working |
 | AdventurerPlates | Forever (16001) | v0.3.0 — card, editor and sharing built; sharing untested with a second player |
-| GoldFinder | Forever (16001) | v0.1.0 — finds underpriced materials; click a deal to buy it in the Buy tab |
+| GoldFinder | Multi-Client (Forever 16001, Retail, Classic Era, MoP) | v0.2.0 (v0.3.0 in prep) — AH deal scanner, net profit calc, sub-tabs & search |
+
+### GoldFinder Live Preview
+
+![GoldFinder AH Tab](addons/GoldFinder/assets/GoldFinder-AH-Tab.png)
 
 ## Related repos
 

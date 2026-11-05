@@ -158,6 +158,8 @@ function ns.FindDeals()
                         totalNetProfit = totalNet,
                         trend          = CalculateTrend(h),
                         history        = h,
+                        category       = ns.GetItemCategory and ns.GetItemCategory(itemID) or "other",
+                        isWatched      = ns.IsWatched and ns.IsWatched(itemID) or false,
                     }
                     deals[#deals].tier = ns.GetDealTier(deals[#deals])
                     end
@@ -224,6 +226,8 @@ function ns.DealDetails(status)
     local minProfitStr = (minProfit > 0) and ns.Money(minProfit) or "None (0c)"
     return {
         { "Threshold", ("%d%% below typical"):format(pct) },
+        { "Category", (ns.GetActiveCategory and ns.GetActiveCategory() or "all"):upper() },
+        { "Watchlist", ("%d item(s)"):format(ns.GetWatchlistCount and ns.GetWatchlistCount() or 0) },
         { "Min profit", minProfitStr },
         { "Min scans", tostring(ns.GetMinPrior()) },
         { "Sorted by", sortBy },

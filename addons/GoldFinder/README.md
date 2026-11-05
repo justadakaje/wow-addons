@@ -9,6 +9,23 @@ of scans and searches you already run (Auctionator's Full Scan, the Buy tab,
 anything) and builds a price history from them. One scan feeds every addon,
 and GoldFinder never uses up the auction house's scan cooldown.
 
+## Screenshots & In-Game Previews
+
+| Main Auction House Tab & Sub-Tabs | Item Valuation & Trend Tooltip |
+|:---:|:---:|
+| [![GoldFinder AH Tab](assets/GoldFinder-AH-Tab.png)](assets/GoldFinder-AH-Tab.png) | [![Deal Details & Trend](assets/GoldFinder-AH-Tab_ItemHover.png)](assets/GoldFinder-AH-Tab_ItemHover.png) |
+| *Category sub-tabs (Herbs, Mining, Cloth, Leather, Watchlist), search bar, and visual tier badges* | *Deal tier (`[SNIPE]`, `[GREAT]`), 5% AH cut profit breakdown, and price trends* |
+
+| Market Statistics & Scan Health | Scan Complete Chat Alerts |
+|:---:|:---:|
+| [![Market Stats Tooltip](assets/GoldFinder-AH-Tab_StatsHover.png)](assets/GoldFinder-AH-Tab_StatsHover.png) | [![Scan Notification](assets/AH-FullScan-GoldFinderChatAlert.png)](assets/AH-FullScan-GoldFinderChatAlert.png) |
+| *Scan history, evaluated items count, and threshold stats* | *Instant chat notification when high-margin deals are detected* |
+
+| Native AddOn List Categorization |
+|:---:|
+| [![AddOn List Categories](assets/AddOn%20List.png)](assets/AddOn%20List.png) |
+| *Cleanly organized under Blizzard's native `▼ Auctions` category alongside Auctionator* |
+
 ## What counts as a deal
 
 For each material (trade goods and reagents), GoldFinder keeps up to 30 recorded

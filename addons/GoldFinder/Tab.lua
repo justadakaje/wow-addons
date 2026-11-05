@@ -99,7 +99,7 @@ end
 
 local MAX_ROWS, ROW_HEIGHT = 12, 20
 local COLUMNS = {
-    { key = "name",    x = 0,   w = 230, j = "LEFT",  title = "Material" },
+    { key = "name",    x = 20,  w = 210, j = "LEFT",  title = "Material" },
     { key = "now",     x = 235, w = 110, j = "RIGHT", title = "Lowest now" },
     { key = "typical", x = 350, w = 110, j = "RIGHT", title = "Typical" },
     { key = "below",   x = 465, w = 60,  j = "RIGHT", title = "Below" },
@@ -109,7 +109,7 @@ local COLUMNS = {
 
 local ui = { rows = {} }
 local requested = {}  -- itemIDs whose names we have asked the client to load
-local OpenInBuy, ShowRowTip  -- defined below; rows call them on click/hover
+local OpenInBuy, ShowRowTip, ItemName  -- defined below; rows call them on click/hover
 
 -- clickable rows highlight on hover and open their deal in the Buy view.
 local function MakeRow(anchor, font, clickable)
@@ -136,9 +136,69 @@ local function MakeRow(anchor, font, clickable)
             GameTooltip:Hide()
         end)
         row:SetScript("OnMouseUp", function(self, button)
-            if button == "LeftButton" and self.deal then OpenInBuy(self.deal) end
+            if not self.deal then return end
+            if button == "LeftButton" then
+                OpenInBuy(self.deal)
+            elseif button == "RightButton" then
+                local isWatched = ns.ToggleWatchlist(self.deal.itemID)
+                local name = (ItemName and ItemName(self.deal)) or self.deal.name or ("Item %d"):format(self.deal.itemID)
+                if isWatched then
+                    ns.Good("Added %s to watchlist.", name)
+                else
+                    ns.Print("Removed %s from watchlist.", name)
+                end
+                ns.RefreshPanel()
+            end
         end)
     end
+
+    local star = CreateFrame("Button", nil, row)
+    star:SetPoint("LEFT", row, "LEFT", 0, 0)
+    star:SetSize(18, ROW_HEIGHT)
+    local starIcon = star:CreateTexture(nil, "ARTWORK")
+    starIcon:SetSize(14, 14)
+    starIcon:SetPoint("CENTER", star, "CENTER", 0, 0)
+    starIcon:SetTexture("Interface\\Common\\ReputationStar")
+    star.icon = starIcon
+    star:SetScript("OnClick", function(self)
+        local pRow = self:GetParent()
+        if pRow.deal and pRow.deal.itemID then
+            local id = pRow.deal.itemID
+            local isWatched = ns.ToggleWatchlist(id)
+            local name = (ItemName and ItemName(pRow.deal)) or pRow.deal.name or ("Item %d"):format(id)
+            if isWatched then
+                ns.Good("Added %s to watchlist.", name)
+            else
+                ns.Print("Removed %s from watchlist.", name)
+            end
+            ns.RefreshPanel()
+        end
+    end)
+    star:SetScript("OnEnter", function(self)
+        local pRow = self:GetParent()
+        if not pRow.deal then return end
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        local isWatched = ns.IsWatched(pRow.deal.itemID)
+        GameTooltip:SetText(isWatched and "Watchlist: click to remove" or "Watchlist: click to add", 1, 1, 1)
+        GameTooltip:Show()
+        if not isWatched and self.icon then
+            self.icon:SetAlpha(0.7)
+            self.icon:SetVertexColor(1, 0.9, 0.4)
+        end
+    end)
+    star:SetScript("OnLeave", function(self)
+        GameTooltip:Hide()
+        local pRow = self:GetParent()
+        if pRow and pRow.deal and self.icon then
+            local isWatched = ns.IsWatched(pRow.deal.itemID)
+            if not isWatched then
+                self.icon:SetTexCoord(0.5, 1, 0, 0.5)
+                self.icon:SetVertexColor(0.5, 0.5, 0.5)
+                self.icon:SetAlpha(0.3)
+            end
+        end
+    end)
+    row.star = star
     for _, col in ipairs(COLUMNS) do
         local fs = row:CreateFontString(nil, "OVERLAY", font)
         fs:SetPoint("LEFT", row, "LEFT", col.x, 0)
@@ -212,11 +272,131 @@ local function BuildPanel()
     end)
     ui.searchBox = search
 
-    local spacer = CreateFrame("Frame", nil, panel)
-    spacer:SetSize(1, 14)
-    spacer:SetPoint("TOPLEFT", ui.sub, "BOTTOMLEFT")
+    local CATEGORIES = {
+        { id = "all",       label = "All",       width = 48 },
+        { id = "herbs",     label = "Herbs",     width = 58 },
+        { id = "mining",    label = "Mining",    width = 62 },
+        { id = "cloth",     label = "Cloth",     width = 56 },
+        { id = "leather",   label = "Leather",   width = 66 },
+        { id = "watchlist", label = "Watchlist", width = 88, isWatchlist = true },
+    }
+    local categoryButtons = {}
 
-    ui.header = MakeRow(spacer, "GameFontNormalSmall")
+    local function UpdateCategoryButtons()
+        local active = ns.GetActiveCategory()
+        for _, btn in ipairs(categoryButtons) do
+            local isActive = (btn.catId == active)
+            if isActive then
+                if btn.SetBackdropColor then
+                    btn:SetBackdropColor(0.22, 0.18, 0.10, 0.95)
+                    btn:SetBackdropBorderColor(0.85, 0.70, 0.20, 1.0)
+                end
+                if btn.activeBar then btn.activeBar:Show() end
+                if btn.label then btn.label:SetTextColor(1.0, 0.82, 0.0) end
+                if btn.starIcon then btn.starIcon:SetAlpha(1.0) end
+            else
+                if btn.SetBackdropColor then
+                    btn:SetBackdropColor(0.10, 0.10, 0.12, 0.85)
+                    btn:SetBackdropBorderColor(0.24, 0.24, 0.28, 0.8)
+                end
+                if btn.activeBar then btn.activeBar:Hide() end
+                if btn.label then btn.label:SetTextColor(0.75, 0.75, 0.78) end
+                if btn.starIcon then btn.starIcon:SetAlpha(0.55) end
+            end
+        end
+    end
+    ui.UpdateCategoryButtons = UpdateCategoryButtons
+
+    local filterBar = CreateFrame("Frame", nil, panel)
+    filterBar:SetPoint("TOPLEFT", ui.sub, "BOTTOMLEFT", 0, -6)
+    filterBar:SetSize(520, 24)
+    ui.filterBar = filterBar
+
+    local prevBtn = nil
+    for _, cat in ipairs(CATEGORIES) do
+        local btn = CreateFrame("Button", nil, filterBar, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        btn:SetHeight(22)
+        btn.catId = cat.id
+        btn.baseLabel = cat.label
+        btn:SetWidth(cat.width)
+
+        if btn.SetBackdrop then
+            btn:SetBackdrop({
+                bgFile = "Interface\\Buttons\\WHITE8X8",
+                edgeFile = "Interface\\Buttons\\WHITE8X8",
+                edgeSize = 1,
+                insets = { left = 1, right = 1, top = 1, bottom = 1 },
+            })
+        end
+
+        local activeBar = btn:CreateTexture(nil, "OVERLAY")
+        activeBar:SetHeight(2)
+        activeBar:SetPoint("BOTTOMLEFT", btn, "BOTTOMLEFT", 1, 1)
+        activeBar:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT", -1, 1)
+        activeBar:SetColorTexture(1, 0.82, 0, 1)
+        activeBar:Hide()
+        btn.activeBar = activeBar
+
+        if cat.isWatchlist then
+            local star = btn:CreateTexture(nil, "ARTWORK")
+            star:SetSize(13, 13)
+            star:SetTexture("Interface\\Common\\ReputationStar")
+            star:SetTexCoord(0, 0.5, 0, 0.5)
+            star:SetPoint("LEFT", btn, "LEFT", 7, 0)
+            btn.starIcon = star
+
+            local label = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            label:SetPoint("LEFT", star, "RIGHT", 4, 0)
+            label:SetText(cat.label)
+            btn.label = label
+        else
+            local label = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            label:SetPoint("CENTER", btn, "CENTER", 0, 0)
+            label:SetText(cat.label)
+            btn.label = label
+        end
+
+        if not prevBtn then
+            btn:SetPoint("LEFT", filterBar, "LEFT", 0, 0)
+        else
+            btn:SetPoint("LEFT", prevBtn, "RIGHT", 5, 0)
+        end
+
+        btn:SetScript("OnClick", function(self)
+            ns.SetActiveCategory(self.catId)
+            UpdateCategoryButtons()
+            PlaySound(SOUNDKIT.IG_CHARACTER_INFO_TAB or 841)
+            ns.RefreshPanel()
+        end)
+        btn:SetScript("OnEnter", function(self)
+            local active = ns.GetActiveCategory()
+            if self.catId ~= active then
+                if self.SetBackdropColor then
+                    self:SetBackdropColor(0.18, 0.18, 0.22, 0.95)
+                    self:SetBackdropBorderColor(0.45, 0.45, 0.50, 1.0)
+                end
+                if self.label then self.label:SetTextColor(1.0, 1.0, 1.0) end
+                if self.starIcon then self.starIcon:SetAlpha(0.9) end
+            end
+        end)
+        btn:SetScript("OnLeave", function(self)
+            local active = ns.GetActiveCategory()
+            if self.catId ~= active then
+                if self.SetBackdropColor then
+                    self:SetBackdropColor(0.10, 0.10, 0.12, 0.85)
+                    self:SetBackdropBorderColor(0.24, 0.24, 0.28, 0.8)
+                end
+                if self.label then self.label:SetTextColor(0.75, 0.75, 0.78) end
+                if self.starIcon then self.starIcon:SetAlpha(0.55) end
+            end
+        end)
+
+        categoryButtons[#categoryButtons + 1] = btn
+        prevBtn = btn
+    end
+    UpdateCategoryButtons()
+
+    ui.header = MakeRow(filterBar, "GameFontNormalSmall")
     for _, col in ipairs(COLUMNS) do ui.header.cells[col.key]:SetText(col.title) end
 
     -- Interactive sort buttons on Below and Est. Profit column headers
@@ -285,7 +465,8 @@ local Money = ns.Money
 
 -- Browse results carry no item names. Ask the client once per item; the
 -- ITEM_DATA_LOAD_RESULT handler below refreshes when a name arrives.
-local function ItemName(d)
+ItemName = function(d)
+    if not d then return "" end
     if d.name then return d.name end
     local name = C_Item.GetItemNameByID(d.itemID)
     if name then
@@ -299,6 +480,7 @@ local function ItemName(d)
     end
     return ("|cff999999Item %d (loading)|r"):format(d.itemID)
 end
+ns.ItemName = ItemName
 
 local function KeyFor(d)
     if d.itemKey then return d.itemKey, true end
@@ -394,7 +576,8 @@ ShowRowTip = function(row)
     end
 
     tip:AddLine(" ")
-    tip:AddLine("Click to see its listings in the Buy view.", 0.4, 1, 0.4, true)
+    tip:AddDoubleLine("Watchlist:", ns.IsWatched(d.itemID) and "|cffffd100Starred|r" or "|cff888888Not starred|r", 1, 0.82, 0, 1, 1, 1)
+    tip:AddLine("Left-Click: open in Buy. Right-Click or click star: toggle Watchlist.", 0.4, 0.8, 1, true)
     tip:AddLine("Check the price there before buying: per unit versus per stack is not yet measured.", 0.8, 0.8, 0.8, true)
     tip:Show()
 end
@@ -406,22 +589,46 @@ function ns.RefreshPanel()
     local allDeals, status = ns.FindDeals()
     local title, sub = ns.DealStatus(allDeals, status)
 
-    -- Filter deals by search query if active (#24)
-    local query = ui.searchBox and ui.searchBox:GetText() or ""
-    query = query:match("^%s*(.-)%s*$")
-    local isFiltered = query ~= ""
-    local deals = allDeals
+    if ui.UpdateCategoryButtons then ui.UpdateCategoryButtons() end
 
-    if isFiltered then
+    -- 1. Filter by category (#12)
+    local activeCat = ns.GetActiveCategory()
+    local catDeals = allDeals
+    if activeCat == "watchlist" then
+        catDeals = {}
+        for _, d in ipairs(allDeals) do
+            if ns.IsWatched(d.itemID) then
+                catDeals[#catDeals + 1] = d
+            end
+        end
+    elseif activeCat ~= "all" then
+        catDeals = {}
+        for _, d in ipairs(allDeals) do
+            if d.category == activeCat then
+                catDeals[#catDeals + 1] = d
+            end
+        end
+    end
+
+    -- 2. Filter deals by search query if active (#24)
+    local rawQuery = ui.searchBox and ui.searchBox:GetText() or ""
+    local query = rawQuery:match("^%s*(.-)%s*$") or ""
+    local isSearchFiltered = (query ~= "")
+    local deals = catDeals
+
+    if isSearchFiltered then
         local qLower = query:lower()
         deals = {}
-        for _, d in ipairs(allDeals) do
+        for _, d in ipairs(catDeals) do
             local name = ItemName(d)
             if name and name:lower():find(qLower, 1, true) then
                 deals[#deals + 1] = d
             end
         end
     end
+
+    local isCategoryFiltered = (activeCat ~= "all")
+    local isFiltered = isSearchFiltered or isCategoryFiltered
 
     local hasDeals = #deals > 0
 
@@ -435,27 +642,50 @@ function ns.RefreshPanel()
     ui.emptyTitle:SetShown(not hasDeals)
     ui.emptySub:SetShown(not hasDeals)
 
+    local catDisplayName
+    if activeCat == "watchlist" then
+        catDisplayName = "Watchlist"
+    elseif isCategoryFiltered then
+        catDisplayName = activeCat:sub(1,1):upper() .. activeCat:sub(2)
+    end
+
     if hasDeals then
-        if isFiltered then
+        if isSearchFiltered and isCategoryFiltered then
+            ui.title:SetText(("%d %s deal%s matching \"%s\""):format(#deals, catDisplayName, #deals == 1 and "" or "s", query))
+        elseif isSearchFiltered then
             ui.title:SetText(("%d deal%s matching \"%s\""):format(#deals, #deals == 1 and "" or "s", query))
-            local sortName = isProfit and "highest net profit" or "deepest discounts"
+        elseif isCategoryFiltered then
+            ui.title:SetText(("%d %s deal%s found"):format(#deals, catDisplayName, #deals == 1 and "" or "s"))
+        else
+            ui.title:SetText(title)
+        end
+
+        local sortName = isProfit and "highest net profit" or "deepest discounts"
+        if isFiltered then
             if #deals > MAX_ROWS then
                 ui.sub:SetText(("Found %d of %d total deals. Showing top %d by %s."):format(#deals, #allDeals, MAX_ROWS, sortName))
             else
                 ui.sub:SetText(("Found %d of %d total deals."):format(#deals, #allDeals))
             end
         else
-            ui.title:SetText(title)
             if #deals > MAX_ROWS then
-                local sortName = isProfit and "highest net profit" or "deepest discounts"
                 sub = sub .. (" Showing the %d %s."):format(MAX_ROWS, sortName)
             end
             ui.sub:SetText(sub)
         end
     else
-        if isFiltered then
+        if isSearchFiltered and isCategoryFiltered then
+            ui.emptyTitle:SetText(("No %s deals matching \"%s\""):format(catDisplayName, query))
+            ui.emptySub:SetText("Try a broader search term or select another category.")
+        elseif isSearchFiltered then
             ui.emptyTitle:SetText(("No deals matching \"%s\""):format(query))
             ui.emptySub:SetText("Try a different search query or clear the search box.")
+        elseif activeCat == "watchlist" then
+            ui.emptyTitle:SetText("Watchlist is empty")
+            ui.emptySub:SetText("Click the star next to any deal row (or Right-Click a deal) to add it to your watchlist.")
+        elseif isCategoryFiltered then
+            ui.emptyTitle:SetText(("No %s deals found"):format(catDisplayName))
+            ui.emptySub:SetText(("No %s materials currently meet the discount threshold."):format(catDisplayName:lower()))
         else
             ui.emptyTitle:SetText(title)
             ui.emptySub:SetText(sub)
@@ -473,6 +703,18 @@ function ns.RefreshPanel()
                 row.tierBg:Hide()
             end
             local tagPrefix = (tier and tier.tag ~= "") and (tier.colorStr .. tier.tag .. "|r ") or ""
+            if row.star and row.star.icon then
+                local isWatched = ns.IsWatched(d.itemID)
+                if isWatched then
+                    row.star.icon:SetTexCoord(0, 0.5, 0, 0.5)
+                    row.star.icon:SetVertexColor(1, 0.82, 0)
+                    row.star.icon:SetAlpha(1.0)
+                else
+                    row.star.icon:SetTexCoord(0.5, 1, 0, 0.5)
+                    row.star.icon:SetVertexColor(0.5, 0.5, 0.5)
+                    row.star.icon:SetAlpha(0.3)
+                end
+            end
             row.cells.name:SetText(tagPrefix .. ItemName(d))
             row.cells.now:SetText(Money(d.now))
             row.cells.typical:SetText(Money(d.typical))

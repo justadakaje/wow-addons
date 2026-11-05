@@ -9,6 +9,33 @@
 
 Hover a deal for its prices; hover the grey line at the bottom of the tab for details of the last scan.
 
+## Screenshots & In-Game Gallery
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/justadakaje/wow-addons/master/addons/GoldFinder/assets/GoldFinder-AH-Tab.png" alt="GoldFinder AH Tab" width="700">
+  <br><em>Main GoldFinder Tab featuring category sub-tabs (Herbs, Mining, Cloth, Leather, Watchlist), real-time search box, and visual tier highlights</em>
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/justadakaje/wow-addons/master/addons/GoldFinder/assets/GoldFinder-AH-Tab_ItemHover.png" alt="Deal Details Tooltip" width="700">
+  <br><em>Rich deal inspection tooltip showing Deal Tier, 5% AH cut profit calculation, and price trajectory trends</em>
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/justadakaje/wow-addons/master/addons/GoldFinder/assets/GoldFinder-AH-Tab_StatsHover.png" alt="Market Statistics Tooltip" width="700">
+  <br><em>Market statistics and scan database health hover</em>
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/justadakaje/wow-addons/master/addons/GoldFinder/assets/AH-FullScan-GoldFinderChatAlert.png" alt="Chat Notification" width="700">
+  <br><em>Instant chat notification when qualifying deals and Mega Snipes are detected upon scan completion</em>
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/justadakaje/wow-addons/master/addons/GoldFinder/assets/AddOn%20List.png" alt="Native AddOn List Categorization" width="700">
+  <br><em>Organized under Blizzard's native Auctions category alongside Auctionator</em>
+</p>
+
 ## What counts as a deal
 
 - **Typical price** is the median of an item's *earlier* prices, so one listing at 1 copper or 999 gold barely moves it, and a new cheap listing cannot drag its own baseline down.

@@ -716,7 +716,9 @@ Addon Dev"). Practical consequences:
    * Live client symlink verified: `F:\World of Warcraft\_forever_\Interface\AddOns\GoldFinder`.
 
 3. **Multi-Client Manifests & Compatibility Layer (AgyBuild):**
-   * Multi-TOC support added for GoldFinder: `GoldFinder_Vanilla.toc` (11506-11509, 20506), `GoldFinder_Mainline.toc` (110007-110200), and `GoldFinder_Mists.toc` (50400-50504), alongside baseline `GoldFinder.toc` (16001).
+   * Multi-TOC collision resolved:
+     - Root cause: In WoW: Forever, the engine project ID is `Mainline` (1). When scanning `GoldFinder/`, the client prioritized `GoldFinder_Mainline.toc` over `GoldFinder.toc`. Because `GoldFinder_Mainline.toc` only targeted `110007-110200` (missing Forever `16001` and Retail Midnight `120100-120107`), the client flagged GoldFinder red and incompatible!
+     - Solution: Consolidated all client interfaces (`16001, 120100, 120105, 120107, 110007, 110100, 110107, 110200, 20506, 11506-11509, 50400-50504`) onto a single unified `GoldFinder.toc` (matching `AddonSmokeTest`, `Auctionator`, `Bagnon`, `BetterFishing`, `BugGrabber`), and removed redundant sibling TOCs (`_Mainline.toc`, `_Vanilla.toc`, `_Mists.toc`) since the codebase is 100% shared with runtime feature gates.
    * Safe runtime shims applied in `Core.lua`, `Scan.lua`, and `Tab.lua`:
      - Metadata retrieval fallback (`C_AddOns.GetAddOnMetadata` -> `GetAddOnMetadata`).
      - Safe backdrop mixin fallback (`BackdropTemplateMixin and "BackdropTemplate" or nil`).
@@ -727,11 +729,30 @@ Addon Dev"). Practical consequences:
      - `_forever_`: `F:\World of Warcraft\_forever_\Interface\AddOns\GoldFinder`
      - `_classic_era_`: `F:\World of Warcraft\_classic_era_\Interface\AddOns\GoldFinder`
      - `_retail_`: `F:\World of Warcraft\_retail_\Interface\AddOns\GoldFinder`
-   * Verification: `node scripts/check-toc.js` (8/8 passing) and `node scripts/check-lua.js` (27/27 passing).
+   * Verification: `node scripts/check-toc.js` (5/5 passing) and `node scripts/check-lua.js` (27/27 passing).
 
 ### Next Active Tasks:
-* **Issue #12 (IN PROGRESS):** `[GoldFinder] Category filters (Herbs, Mining, Cloth, etc.) and item watchlist`
-* **In-Game Verification:** In WoW client on build 70707, verify `/reload` loads the new tier highlights (Epic Purple `[SNIPE]`, Rare Blue `[GREAT]`) and test `/gf minprofit 5g`.
+* **Live In-Game Feedback from Jakob Mortikus (RESOLVED):**
+  - Inspected 4 screenshots in `docs/media/feedback-01-goldfinder-tab.jpg` through `feedback-04-auctions-subtabs.jpg` and `docs/media/FEEDBACK_INSPECTION.md`.
+  - **Refinements Applied in `Tab.lua`:**
+    1. Replaced red dialog `UIPanelButtonTemplate` with dark bronze inset sub-tabs matching Blizzard's native `[ Auctions ] [ Bids ]` tabs in `feedback-04-auctions-subtabs.jpg` (charcoal backdrops, subtle borders, Blizzard gold active indicator bar, soft hover states, and tab click audio).
+    2. Replaced missing unicode font glyphs (`★` / `☆` displaying as square `[]` boxes) with native Blizzard `Interface\Common\ReputationStar` icon textures on both the Watchlist category pill and deal row star buttons.
+    3. Expanded button widths and padding (`All`: 48, `Herbs`: 58, `Mining`: 62, `Cloth`: 56, `Leather`: 66, `Watchlist`: 88) with 5px margins for spacious layout.
+    4. Fixed search query whitespace trimming and separated category empty states (`Watchlist is empty`, `No <Category> deals found`) from search empty states.
+    5. Fixed nil `ItemName` error on row star click / right-click watchlist toggle: forward-declared `ItemName` alongside `OpenInBuy` and `ShowRowTip` at top of `Tab.lua`, ensuring closures capture the function rather than resolving to nil global `_G.ItemName`.
+  - Verified with `node scripts/check-lua.js` (27/27) and `node scripts/check-toc.js` (5/5).
+### Blizzard AddOn List Category Grouping (Build 70707 Discovery):
+* **Observed Behavior (Screenshots: docs/media/feedback-05-addon-list-categories.jpg & feedback-06-addon-list-uncategorized.jpg):**
+  - Modern WoW client groups addons into expandable category trees (Auctions, Bags & Inventory, Combat, Development Tools, Equipment, Professions).
+  - Addons without explicit category metadata fall to the bottom of the list under uncategorized root items.
+* **TOC Directives Applied:**
+  - `GoldFinder.toc`: Added `## Category: Auctions` and `## Category-enUS: Auctions` (plus localized fallbacks). Nests GoldFinder cleanly alongside Auctionator and Journalator.
+  - `ForeverProbe.toc`: Added `## Category: Development Tools` (nests alongside BugGrabber / BugSack).
+  - `AddonSmokeTest.toc`: Added `## Category: Development Tools`.
+  - `AdventurerPlates.toc` & `AdventurerPlatesPortrait.toc`: Added `## Category: Unit Frames`.
+* **Verification:** `node scripts/check-toc.js` (5/5 passing).
+
+* **Next Sprint Queue Task:** **Issue #14:** `[GoldFinder] Direct Quick-Buy for Commodity Deals` (Shift-Click direct purchase shortcut).
 
 ---
 
@@ -741,7 +762,7 @@ Addon Dev"). Practical consequences:
 |:---:|:---:|:---|:---|:---:|
 | **01** | **#30** | Minimum Profit Threshold Filter (`/gf minprofit <amount>`) | `GoldFinderDB.settings.minProfit` floor, `Deals.lua` deal evaluation filter, `Core.lua` slash parser. | ✅ **Merged (PR #31)** |
 | **02** | **#25** | Visual Tier Highlights (Bargain vs Snipe vs Mega Snipe) | `Tab.lua` row badge color/icon formatting (30% / 50% / 70% discount thresholds). | ✅ **Merged (PR #32)** |
-| **03** | **#12** | Category Filters (Herbs, Mining, Cloth, Leather) & Watchlist | `Tab.lua` category filter pill buttons, `Scan.lua` classification indexing. | 🟡 **In Progress** |
+| **03** | **#12** | Category Filters (Herbs, Mining, Cloth, Leather) & Watchlist | `Tab.lua` category filter pill buttons, `Scan.lua` classification indexing, `Core.lua` watchlist state, row star buttons. | ✅ **Completed (AgyBuild)** |
 | **04** | **#14** | Direct Quick-Buy for Commodity Deals | `Tab.lua` Shift-Click direct purchase shortcut triggering `C_AuctionHouse.StartCommoditiesPurchase`. | Queued |
 | **05** | **#17** | Undercut Detection for Active Player Auctions | `Scan.lua` & `Core.lua` player auction comparison against live lowest buyout prices. | Queued |
 | **06** | **#22** | Shopping Lists & Material Target Fulfillment Tracker | `GoldFinderDB.shoppingLists` schema, target quantity progress tracking bar in AH tab. | Queued |

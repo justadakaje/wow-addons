@@ -53,6 +53,31 @@ local function ClassID(itemID)
     return c
 end
 
+local itemCategoryCache = {}
+function ns.GetItemCategory(itemID)
+    if not itemID then return "other" end
+    local cat = itemCategoryCache[itemID]
+    if cat ~= nil then return cat end
+
+    local _, _, subType, _, _, classID, subClassID = C_Item.GetItemInfoInstant(itemID)
+    local subLower = subType and subType:lower() or ""
+
+    if subClassID == 9 or subLower:find("herb") then
+        cat = "herbs"
+    elseif subClassID == 7 or subLower:find("metal") or subLower:find("stone") or subLower:find("ore") or subLower:find("mining") then
+        cat = "mining"
+    elseif subClassID == 5 or subLower:find("cloth") then
+        cat = "cloth"
+    elseif subClassID == 6 or subLower:find("leather") or subLower:find("hide") or subLower:find("scale") then
+        cat = "leather"
+    else
+        cat = "other"
+    end
+
+    itemCategoryCache[itemID] = cat
+    return cat
+end
+
 ---------------------------------------------------------------------------
 -- A capture collects rows, then folds them into per-item history.
 

@@ -344,9 +344,55 @@ boot:SetScript("OnEvent", function(self, _, name)
     if db.settings.sortBy == nil then db.settings.sortBy = "profit" end
     if db.settings.tooltip == nil then db.settings.tooltip = true end
     if db.settings.minProfit == nil then db.settings.minProfit = 0 end
+    if type(db.watchlist) ~= "table" then db.watchlist = {} end
 
     ns.db = db
 end)
+
+---------------------------------------------------------------------------
+-- Category & Watchlist State
+
+ns.activeCategory = "all"
+
+function ns.GetActiveCategory()
+    return ns.activeCategory or "all"
+end
+
+function ns.SetActiveCategory(cat)
+    cat = cat and cat:lower() or "all"
+    local valid = { all = true, herbs = true, mining = true, cloth = true, leather = true, watchlist = true }
+    ns.activeCategory = valid[cat] and cat or "all"
+end
+
+function ns.IsWatched(itemID)
+    if not itemID or not ns.db or not ns.db.watchlist then return false end
+    return ns.db.watchlist[itemID] == true
+end
+
+function ns.SetWatched(itemID, state)
+    if not itemID or not ns.db then return end
+    ns.db.watchlist = ns.db.watchlist or {}
+    if state then
+        ns.db.watchlist[itemID] = true
+    else
+        ns.db.watchlist[itemID] = nil
+    end
+end
+
+function ns.ToggleWatchlist(itemID)
+    if not itemID then return false end
+    local newState = not ns.IsWatched(itemID)
+    ns.SetWatched(itemID, newState)
+    return newState
+end
+
+function ns.GetWatchlistCount()
+    local count = 0
+    if ns.db and ns.db.watchlist then
+        for _ in pairs(ns.db.watchlist) do count = count + 1 end
+    end
+    return count
+end
 
 ---------------------------------------------------------------------------
 -- Slash commands
@@ -449,6 +495,44 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         else
             ns.Warn("Usage: /gf resetitem <itemID or item link>")
         end
+    elseif cmd == "watch" then
+        local itemID = tonumber(arg) or tonumber(arg and arg:match("item:(%d+)"))
+        if itemID then
+            ns.SetWatched(itemID, true)
+            local name = C_Item.GetItemNameByID(itemID) or ("Item " .. itemID)
+            ns.Good("Added %s to watchlist.", name)
+            if ns.RefreshPanel then ns.RefreshPanel() end
+        else
+            ns.Warn("Usage: /gf watch <itemID or item link>")
+        end
+    elseif cmd == "unwatch" then
+        local itemID = tonumber(arg) or tonumber(arg and arg:match("item:(%d+)"))
+        if itemID then
+            ns.SetWatched(itemID, false)
+            local name = C_Item.GetItemNameByID(itemID) or ("Item " .. itemID)
+            ns.Good("Removed %s from watchlist.", name)
+            if ns.RefreshPanel then ns.RefreshPanel() end
+        else
+            ns.Warn("Usage: /gf unwatch <itemID or item link>")
+        end
+    elseif cmd == "watchlist" then
+        local count = ns.GetWatchlistCount()
+        ns.Print("Watchlist contains %d item(s):", count)
+        if ns.db and ns.db.watchlist then
+            for id in pairs(ns.db.watchlist) do
+                local name = C_Item.GetItemNameByID(id) or ("Item " .. id)
+                ns.Print("  - %s (ID: %d)", name, id)
+            end
+        end
+    elseif cmd == "cat" or cmd == "category" then
+        arg = arg and arg:lower() or ""
+        if arg == "all" or arg == "herbs" or arg == "mining" or arg == "cloth" or arg == "leather" or arg == "watchlist" then
+            ns.SetActiveCategory(arg)
+            ns.Good("Active category filter set to: %s", arg:upper())
+            if ns.RefreshPanel then ns.RefreshPanel() end
+        else
+            ns.Warn("Usage: /gf cat <all|herbs|mining|cloth|leather|watchlist>")
+        end
     elseif cmd == "preset" then
         arg = arg and arg:lower() or ""
         if arg == "snipe" then
@@ -495,5 +579,9 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         ns.Print("  /gf prune [days]     - prune items not seen in [days] (default 30)")
         ns.Print("  /gf resetitem <link> - clear price history for a specific item")
         ns.Print("  /gf preset <snipe|standard|volume> - apply preset trading profile")
+        ns.Print("  /gf cat <all|herbs|mining|cloth|leather|watchlist> - switch active category")
+        ns.Print("  /gf watch <link|id>   - add item to watchlist")
+        ns.Print("  /gf unwatch <link|id> - remove item from watchlist")
+        ns.Print("  /gf watchlist         - view all starred watchlist items")
     end
 end
