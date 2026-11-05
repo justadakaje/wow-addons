@@ -34,6 +34,27 @@ function ns.Money(copper, height)
     if s > 0 then return ("%ds %dc"):format(s, c) end
     return ("%dc"):format(c)
 end
+function ns.ParseMoneyString(str)
+    if not str or str == "" then return nil end
+    str = str:lower():gsub("%s+", "")
+    if str == "0" or str == "none" or str == "off" then return 0 end
+
+    local g = tonumber(str:match("(%d+)g")) or 0
+    local s = tonumber(str:match("(%d+)s")) or 0
+    local c = tonumber(str:match("(%d+)c")) or 0
+
+    if g > 0 or s > 0 or c > 0 then
+        return (g * 10000) + (s * 100) + c
+    end
+
+    local plainNum = tonumber(str)
+    if plainNum then
+        -- Default numeric values without unit suffix to gold (e.g. '10' -> 10 gold)
+        return math.floor(plainNum * 10000)
+    end
+    return nil
+end
+
 
 -- Settings accessors with safe defaults
 function ns.GetDealRatio()
@@ -110,6 +131,20 @@ function ns.SetTooltipEnabled(val)
         ns.db.settings.tooltip = val
     end
 end
+
+function ns.GetMinProfit()
+    local s = ns.db and ns.db.settings
+    return (s and s.minProfit) or 0
+end
+
+function ns.SetMinProfit(copper)
+    copper = math.max(0, math.floor(copper or 0))
+    if ns.db then
+        ns.db.settings = ns.db.settings or {}
+        ns.db.settings.minProfit = copper
+    end
+end
+
 
 ---------------------------------------------------------------------------
 -- Database maintenance & export
@@ -308,6 +343,7 @@ boot:SetScript("OnEvent", function(self, _, name)
     if db.settings.chatAlert == nil then db.settings.chatAlert = true end
     if db.settings.sortBy == nil then db.settings.sortBy = "profit" end
     if db.settings.tooltip == nil then db.settings.tooltip = true end
+    if db.settings.minProfit == nil then db.settings.minProfit = 0 end
 
     ns.db = db
 end)
@@ -366,6 +402,30 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         else val = not ns.IsChatAlertEnabled() end
         ns.SetChatAlert(val)
         ns.Good("Deal chat summary notification %s.", val and "enabled" or "disabled")
+    elseif cmd == "minprofit" or cmd == "profit" then
+        arg = arg and arg:match("^%s*(.-)%s*$") or ""
+        if arg == "" then
+            local current = ns.GetMinProfit()
+            if current > 0 then
+                ns.Print("Current minimum profit threshold: %s", ns.Money(current))
+            else
+                ns.Print("Minimum profit threshold is currently disabled (0c).")
+            end
+            ns.Print("Usage: /gf minprofit <amount> (e.g. /gf minprofit 5g, /gf minprofit 50s, /gf minprofit 0)")
+        else
+            local copper = ns.ParseMoneyString(arg)
+            if copper ~= nil then
+                ns.SetMinProfit(copper)
+                if copper > 0 then
+                    ns.Good("Minimum net profit threshold set to %s.", ns.Money(copper))
+                else
+                    ns.Good("Minimum net profit threshold disabled (showing all deals).")
+                end
+                if ns.RefreshPanel then ns.RefreshPanel() end
+            else
+                ns.Warn("Invalid amount. Usage: /gf minprofit <amount> (e.g. /gf minprofit 5g, /gf minprofit 10, /gf minprofit 0)")
+            end
+        end
     elseif cmd == "tooltip" then
         arg = arg and arg:lower() or ""
         local val
@@ -420,12 +480,16 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         ns.Print("  - Audio chime: %s", ns.IsSoundAlertEnabled() and "on" or "off")
         ns.Print("  - Chat notification: %s", ns.IsChatAlertEnabled() and "on" or "off")
         ns.Print("  - Item tooltip pricing: %s", ns.IsTooltipEnabled() and "on" or "off")
+        local minProfit = ns.GetMinProfit()
+        local minProfitStr = (minProfit > 0) and ns.Money(minProfit) or "none (0c)"
+        ns.Print("  - Min profit floor: %s", minProfitStr)
         ns.Print("Commands:")
         ns.Print("  /gf ratio <5-95>     - set discount percentage threshold")
         ns.Print("  /gf minscans <1-20>  - set minimum prior scans required")
         ns.Print("  /gf sort             - toggle sort: profit vs discount")
         ns.Print("  /gf sound [on|off]   - toggle audio chime on deal find")
         ns.Print("  /gf chat [on|off]    - toggle chat summary on deal find")
+        ns.Print("  /gf minprofit <amt>  - set minimum net profit filter (e.g. 5g, 50s, 0)")
         ns.Print("  /gf tooltip [on|off] - toggle item tooltip market pricing")
         ns.Print("  /gf export           - open CSV data export window")
         ns.Print("  /gf prune [days]     - prune items not seen in [days] (default 30)")

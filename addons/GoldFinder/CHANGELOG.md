@@ -8,6 +8,7 @@ All notable changes to GoldFinder. Format follows
 
 ### Added
 
+- **Minimum Profit Threshold Filter ([#30](https://github.com/justadakaje/wow-addons/issues/30)):** Added `/gf minprofit <amount>` slash command (supporting denominations like `5g`, `50s`, `1g50s`, or plain gold amounts like `10`, with `0` to disable) to filter out low-margin micro-deals and focus exclusively on high-yield flips in `ns.FindDeals` and the AH tab.
 - **Real-Time In-Tab Search Box ([#24](https://github.com/justadakaje/wow-addons/issues/24)):** Added a native SearchBoxTemplate editbox to the top-right of the GoldFinder AH tab. Filters deals live by material name as you type, updates deal counts dynamically, and includes Escape/Enter unfocus handling and clear button support.
 - **Multi-Client & Game Version Compatibility:** Added dedicated TOC manifests (`GoldFinder_Vanilla.toc`, `GoldFinder_Mainline.toc`, `GoldFinder_Mists.toc`) for Classic Era (11506–11509 / 20506), Retail / The War Within (110007–110200), and MoP Classic (50400–50504), with backward-compatible runtime shims for metadata, frame backdrops, and AH interaction events.
 
