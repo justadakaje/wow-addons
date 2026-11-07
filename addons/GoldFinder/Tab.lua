@@ -134,6 +134,7 @@ local function MakeRow(anchor, font, clickable)
         row:SetScript("OnLeave", function(self)
             self.hl:Hide()
             GameTooltip:Hide()
+            if ns.HideSparkline then ns.HideSparkline() end
         end)
         row:SetScript("OnMouseUp", function(self, button)
             if not self.deal then return end
@@ -658,6 +659,9 @@ ShowRowTip = function(row)
         tip:AddLine(" ")
         tip:AddLine("Click: cancel auction to relist at current market price.", 0.25, 1, 0.25, true)
         tip:Show()
+    if ns.ShowSparkline then
+        ns.ShowSparkline(tip, d.history, d.typical, d.now)
+    end
         return
     end
 
@@ -677,6 +681,9 @@ ShowRowTip = function(row)
         tip:AddLine("Shift-Click: direct Quick-Buy batch.", 0.4, 0.8, 1, true)
         tip:AddLine("Type /gf unbuy <item> to remove from shopping list.", 0.6, 0.6, 0.6, true)
         tip:Show()
+    if ns.ShowSparkline then
+        ns.ShowSparkline(tip, d.history, d.typical, d.now)
+    end
         return
     end
 
@@ -700,6 +707,9 @@ ShowRowTip = function(row)
         tip:AddLine(" ")
         tip:AddLine("Left-Click: open crafted item in Buy view.", 0.4, 0.8, 1, true)
         tip:Show()
+    if ns.ShowSparkline then
+        ns.ShowSparkline(tip, d.history, d.typical, d.now)
+    end
         return
     end
     local tier = d.tier or (ns.GetDealTier and ns.GetDealTier(d))
@@ -761,6 +771,9 @@ ShowRowTip = function(row)
     tip:AddLine("Right-Click or click star: toggle Watchlist.", 0.4, 0.8, 1, true)
     tip:AddLine("Alt+Right-Click: Blacklist/ignore item from deals.", 0.8, 0.45, 0.45, true)
     tip:Show()
+    if ns.ShowSparkline then
+        ns.ShowSparkline(tip, d.history, d.typical, d.now)
+    end
 end
 
 -- Safe to call any time: does nothing until the panel exists and is shown.

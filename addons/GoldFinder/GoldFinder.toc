@@ -33,4 +33,5 @@ Tooltip.lua
 Broker.lua
 SellHelper.lua
 Config.lua
+Sparkline.lua
 Tab.lua
