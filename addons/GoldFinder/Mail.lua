@@ -281,29 +281,6 @@ local function CreateMailButtonOnce()
 end
 
 ---------------------------------------------------------------------------
--- Tooltip Relist Advisor on Mail Items
-
-local function HookMailTooltips()
-    if GameTooltip and GameTooltip.HookScript then
-        GameTooltip:HookScript("OnTooltipSetItem", function(self)
-            if not MailFrame or not MailFrame:IsShown() then return end
-            local _, link = self:GetItem()
-            if not link then return end
-            local itemID = tonumber(link:match("item:(%d+)"))
-            if not itemID then return end
-
-            local advice = EvaluateExpiredAuction(itemID)
-            if advice then
-                self:AddLine(" ")
-                self:AddDoubleLine("GoldFinder Relist Advisor:", advice.tag, 1, 0.82, 0, advice.r, advice.g, advice.b)
-                self:AddLine(advice.reason, 0.85, 0.85, 0.85, true)
-                self:Show()
-            end
-        end)
-    end
-end
-
----------------------------------------------------------------------------
 -- Event Registration
 
 local mailFrameEvents = CreateFrame("Frame")
@@ -322,5 +299,3 @@ mailFrameEvents:SetScript("OnEvent", function(self, event)
         pendingCollection = {}
     end
 end)
-
-HookMailTooltips()

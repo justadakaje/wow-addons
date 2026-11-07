@@ -88,6 +88,16 @@ local function AddPriceLines(tip, itemID)
         tip:AddDoubleLine("GoldFinder Safety Stock:", ("%s%d / %d target%s|r"):format(color, currentStock, restockTarget, statusTag), 1, 0.82, 0, 1, 1, 1)
     end
 
+    -- Mailbox expired auction relist advisor (#43)
+    if MailFrame and MailFrame:IsShown() and ns.EvaluateExpiredAuction then
+        local advice = ns.EvaluateExpiredAuction(itemID)
+        if advice then
+            tip:AddLine(" ")
+            tip:AddDoubleLine("GoldFinder Relist Advisor:", advice.tag, 1, 0.82, 0, advice.r, advice.g, advice.b)
+            tip:AddLine(advice.reason, 0.85, 0.85, 0.85, true)
+        end
+    end
+
     tip:Show()
 end
 
