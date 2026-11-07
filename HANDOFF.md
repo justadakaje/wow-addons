@@ -765,7 +765,7 @@ Addon Dev"). Practical consequences:
   - **#12** Category sub-tabs (`All`, `Herbs`, `Mining`, `Cloth`, `Leather`, `Watchlist`) & watchlist stars.
   - Multi-client TOC consolidation & native `Auctions` category grouping.
 
-* **Next Active Sprint 2 Task:** **Issue #18:** `[GoldFinder] Reagent Conversion & Crafting Arbitrage` (Smelting, milling, cloth bolts, transmutes).
+* **Next Active Sprint 2 Task:** **Issue #17:** `[GoldFinder] Active Auction Undercut Detection & Cancel Assistant`.
 
 ---
 
@@ -776,8 +776,8 @@ Ranked and approved by user direction prioritizing execution velocity, reagent c
 | Seq | Issue | Title | Scope & Target Files | Status |
 |:---:|:---:|:---|:---|:---:|
 | **01** | **#14** | Direct Quick-Buy for Commodity Deals | `Tab.lua` Shift-Click direct purchase shortcut triggering `C_AuctionHouse.StartCommoditiesPurchase` & `ConfirmCommoditiesPurchase` with spend cap safety. | ✅ **Completed** |
-| **02** | **#18** | Reagent Conversion & Crafting Arbitrage | `Deals.lua` reagent conversion matrix (smelting ores $\rightarrow$ bars, milling herbs $\rightarrow$ inks, cloth $\rightarrow$ bolts, transmutes) & new `[ Conversions ]` sub-tab. | Queued (Next) |
-| **03** | **#17** | Active Auction Undercut Detection & Cancel Assistant | `Scan.lua` & `Tab.lua` player auction comparison against live lowest buyout prices via `C_AuctionHouse.GetOwnedAuctions()` & `CancelAuction()`. | Queued |
+| **02** | **#18** | Reagent Conversion & Crafting Arbitrage | `Deals.lua` reagent conversion matrix (smelting ores $\rightarrow$ bars, milling herbs $\rightarrow$ inks, cloth $\rightarrow$ bolts, transmutes) & new `[ Conversions ]` sub-tab. | ✅ **Completed** |
+| **03** | **#17** | Active Auction Undercut Detection & Cancel Assistant | `Scan.lua` & `Tab.lua` player auction comparison against live lowest buyout prices via `C_AuctionHouse.GetOwnedAuctions()` & `CancelAuction()`. | Queued (Next) |
 | **04** | **#22** | Shopping Lists & Material Quota Tracker | `GoldFinderDB.shoppingLists` schema, bag/bank tracking via `C_Item.GetItemCount()`, quota progress bar, and required gold projection. | Queued |
 | **05** | **#33** | Selling & Relisting Price Helper (Sell Tab Integration) | Hook Blizzard Sell tab (`AuctionHouseFrame.ItemSellFrame`) to overlay GoldFinder median market price, current lowest price, and smart undercut suggestion. | Queued |
 | **06** | **#34** | Market Depth & Sighting Confidence Score | Statistical confidence rating (🟢 High, 🟡 Moderate, 🔴 Speculative) based on sample count $N$, time span, and variance to mitigate thin-market false positives. | Queued |

@@ -110,6 +110,143 @@ function ns.GetDealTier(deal)
     end
 end
 
+-- CLASSIC CRAFTING CONVERSIONS (Arbitrage)
+-- All item IDs verified against WoW database records (QuestieDB / Wowhead Classic):
+-- Metals: Copper Ore 2770, Copper Bar 2840, Tin Ore 2772, Tin Bar 3576, Silver Ore 2775, Silver Bar 2842,
+--         Bronze Bar 2841, Iron Ore 3858, Iron Bar 3575, Steel Bar 3859, Coal 3857,
+--         Gold Ore 2776, Gold Bar 3577, Mithril Ore 3858, Mithril Bar 3860,
+--         Truesilver Ore 7911, Truesilver Bar 6037, Thorium Ore 10620, Thorium Bar 12359,
+--         Dark Iron Ore 11370, Dark Iron Bar 11371, Arcane Crystal 12363, Arcanite Bar 12360.
+-- Cloth:  Linen Cloth 2589, Bolt of Linen 2996, Wool Cloth 2592, Bolt of Wool 2997,
+--         Silk Cloth 4306, Bolt of Silk 4305, Mageweave Cloth 4338, Bolt of Mageweave 4339,
+--         Runecloth 14047, Bolt of Runecloth 14048.
+ns.CONVERSIONS = {
+    -- Smelting
+    { name = "Smelt Copper",       category = "mining", output = { itemID = 2840, qty = 1 }, reagents = { { itemID = 2770, qty = 1 } } },
+    { name = "Smelt Tin",          category = "mining", output = { itemID = 3576, qty = 1 }, reagents = { { itemID = 2772, qty = 1 } } },
+    { name = "Smelt Silver",       category = "mining", output = { itemID = 2842, qty = 1 }, reagents = { { itemID = 2775, qty = 1 } } },
+    { name = "Smelt Bronze",       category = "mining", output = { itemID = 2841, qty = 2 }, reagents = { { itemID = 2840, qty = 1 }, { itemID = 3576, qty = 1 } } },
+    { name = "Smelt Iron",         category = "mining", output = { itemID = 3575, qty = 1 }, reagents = { { itemID = 3858, qty = 1 } } },
+    { name = "Smelt Steel",        category = "mining", output = { itemID = 3859, qty = 1 }, reagents = { { itemID = 3575, qty = 1 }, { itemID = 3857, qty = 1, fixedPrice = 500 } } },
+    { name = "Smelt Gold",         category = "mining", output = { itemID = 3577, qty = 1 }, reagents = { { itemID = 2776, qty = 1 } } },
+    { name = "Smelt Mithril",      category = "mining", output = { itemID = 3860, qty = 1 }, reagents = { { itemID = 3858, qty = 1 } } },
+    { name = "Smelt Truesilver",   category = "mining", output = { itemID = 6037, qty = 1 }, reagents = { { itemID = 7911, qty = 1 } } },
+    { name = "Smelt Thorium",      category = "mining", output = { itemID = 12359, qty = 1 }, reagents = { { itemID = 10620, qty = 1 } } },
+    { name = "Smelt Dark Iron",    category = "mining", output = { itemID = 11371, qty = 1 }, reagents = { { itemID = 11370, qty = 8 } } },
+
+    -- Alchemy Transmutes
+    { name = "Transmute Arcanite", category = "other",  output = { itemID = 12360, qty = 1 }, reagents = { { itemID = 12363, qty = 1 }, { itemID = 12359, qty = 1 } } },
+
+    -- Tailoring Bolts
+    { name = "Bolt of Linen",      category = "cloth",  output = { itemID = 2996, qty = 1 }, reagents = { { itemID = 2589, qty = 2 } } },
+    { name = "Bolt of Woolen",     category = "cloth",  output = { itemID = 2997, qty = 1 }, reagents = { { itemID = 2592, qty = 3 } } },
+    { name = "Bolt of Silk",       category = "cloth",  output = { itemID = 4305, qty = 1 }, reagents = { { itemID = 4306, qty = 4 } } },
+    { name = "Bolt of Mageweave",  category = "cloth",  output = { itemID = 4339, qty = 1 }, reagents = { { itemID = 4338, qty = 4 } } },
+    { name = "Bolt of Runecloth",  category = "cloth",  output = { itemID = 14048, qty = 1 }, reagents = { { itemID = 14047, qty = 5 } } },
+}
+
+function ns.GetItemTypicalPrice(itemID)
+    local db = ns.db
+    if not db or not db.items or not db.items[itemID] then return nil end
+    local h = db.items[itemID].history
+    if not h or #h == 0 then return nil end
+    if #h == 1 then return h[1].min end
+    local prior = {}
+    for i = 1, #h - 1 do prior[i] = h[i].min end
+    return Median(prior)
+end
+
+function ns.GetItemCurrentPrice(itemID)
+    local db = ns.db
+    if not db or not db.items or not db.items[itemID] then return nil end
+    local h = db.items[itemID].history
+    if not h or #h == 0 then return nil end
+    local now = GetServerTime()
+    local cur = h[#h]
+    if now - (cur.seen or cur.t) <= FRESH_SECONDS then
+        return cur.min
+    end
+    return ns.GetItemTypicalPrice(itemID)
+end
+
+function ns.FindConversionDeals()
+    local deals = {}
+    local minProfit = ns.GetMinProfit()
+
+    for _, conv in ipairs(ns.CONVERSIONS) do
+        local outTypical = ns.GetItemTypicalPrice(conv.output.itemID)
+        local outCurrent = ns.GetItemCurrentPrice(conv.output.itemID)
+        local outUnitPrice = outCurrent or outTypical
+
+        if outUnitPrice and outUnitPrice > 0 then
+            local totalOutValue = math.floor(outUnitPrice * conv.output.qty * 0.95)
+            local totalCost = 0
+            local hasAllReagents = true
+            local reagentSummary = {}
+
+            for _, r in ipairs(conv.reagents) do
+                local rCost = r.fixedPrice or ns.GetItemCurrentPrice(r.itemID) or ns.GetItemTypicalPrice(r.itemID)
+                if not rCost or rCost <= 0 then
+                    hasAllReagents = false
+                    break
+                end
+                local subCost = rCost * r.qty
+                totalCost = totalCost + subCost
+                reagentSummary[#reagentSummary + 1] = {
+                    itemID = r.itemID,
+                    qty = r.qty,
+                    unitCost = rCost,
+                    totalCost = subCost,
+                }
+            end
+
+            if hasAllReagents and totalCost > 0 then
+                local netProfit = totalOutValue - totalCost
+                if netProfit > 0 and netProfit >= minProfit then
+                    local roi = netProfit / totalCost
+                    local deal = {
+                        isConversion   = true,
+                        conversion     = conv,
+                        itemID         = conv.output.itemID,
+                        name           = conv.name,
+                        now            = totalCost,
+                        typical        = totalOutValue,
+                        below          = math.min(0.95, math.max(0.05, roi / (1 + roi))),
+                        roi            = roi,
+                        qty            = conv.output.qty,
+                        netUnitProfit  = math.floor(netProfit / conv.output.qty),
+                        totalNetProfit = netProfit,
+                        reagents       = reagentSummary,
+                        category       = "conversions",
+                        isWatched      = ns.IsWatched and ns.IsWatched(conv.output.itemID) or false,
+                    }
+                    deal.tier = ns.GetDealTier(deal)
+                    deals[#deals + 1] = deal
+                end
+            end
+        end
+    end
+
+    local sortBy = ns.GetSortBy()
+    if sortBy == "profit" then
+        table.sort(deals, function(a, b)
+            if a.totalNetProfit ~= b.totalNetProfit then
+                return a.totalNetProfit > b.totalNetProfit
+            end
+            return a.below > b.below
+        end)
+    else
+        table.sort(deals, function(a, b)
+            if a.below ~= b.below then
+                return a.below > b.below
+            end
+            return a.totalNetProfit > b.totalNetProfit
+        end)
+    end
+
+    return deals
+end
+
 function ns.FindDeals()
     local status = { items = 0, judged = 0, needMore = 0, stale = 0, fewestMissing = nil }
     local deals = {}
@@ -166,6 +303,11 @@ function ns.FindDeals()
                 end
             end
         end
+    end
+
+    local convDeals = ns.FindConversionDeals()
+    for _, cd in ipairs(convDeals) do
+        deals[#deals + 1] = cd
     end
 
     if sortBy == "profit" then

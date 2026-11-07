@@ -9,6 +9,7 @@ All notable changes to GoldFinder. Format follows
 ### Added
 
 - **Direct Quick-Buy for Commodities ([#14](https://github.com/justadakaje/wow-addons/issues/14)):** Added Shift-Left-Click shortcut on deal rows to purchase commodity items instantly without navigating to Blizzard's Buy tab. Built on `C_AuctionHouse.StartCommoditiesPurchase` and `ConfirmCommoditiesPurchase` with full two-step server price verification and coin audio confirmation.
+- **Crafting Conversion & Arbitrage ([#18](https://github.com/justadakaje/wow-addons/issues/18)):** Implemented the second core pillar of GoldFinder: detecting profitable reagent conversions where output market sell value exceeds total ingredient costs. Added high-volume deterministic recipes for Smelting (Copper, Tin, Bronze, Iron, Steel, Gold, Mithril, Truesilver, Thorium, Dark Iron), Tailoring (Linen, Wool, Silk, Mageweave, Runecloth bolts), and Alchemy (Transmute Arcanite). Added dedicated `[ Crafts ]` category sub-tab with ROI % calculations and detailed reagent cost breakdowns on hover.
 - **Configurable Quick-Buy Spend Cap:** Added `/gf maxspend <amount>` (and `/gf quickbuy <amount>`) to establish a safety spend threshold (default: `50g`, supports values like `100g`, `25g50s`, or `0` to disable), guarding against accidental high-value purchases on large lots.
 
 ## [0.3.0] - 2026-11-05
