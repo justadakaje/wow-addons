@@ -821,9 +821,9 @@ function ns.RefreshPanel()
         ui.header.cells.profit:SetText("Est. Cost")
     else
         ui.header.cells.typical:SetText("Typical")
-        ui.header.cells.below:SetText(isProfit and "Below" or "|cffffd100Below ▼|r")
+        ui.header.cells.below:SetText(isProfit and "Below" or "|cffffd100Below |TInterface\\Buttons\\UI-SortArrow:10:9:0:-1:32:32:0:18:0:32|t|r")
         ui.header.cells.qty:SetText("Listed")
-        ui.header.cells.profit:SetText(isProfit and "|cffffd100Est. Profit ▼|r" or "Est. Profit")
+        ui.header.cells.profit:SetText(isProfit and "|cffffd100Est. Profit |TInterface\\Buttons\\UI-SortArrow:10:9:0:-1:32:32:0:18:0:32|t|r" or "Est. Profit")
     end
 
     ui.title:SetShown(hasDeals)
