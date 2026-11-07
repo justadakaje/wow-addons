@@ -237,7 +237,12 @@ end
 -- MailFrame UI Integration
 
 local function UpdateCollectButton()
-    if not collectBtn or not collectBtn:IsShown() then return end
+    if not collectBtn then return end
+    if InboxFrame and not InboxFrame:IsShown() then
+        collectBtn:Hide()
+        return
+    end
+    collectBtn:Show()
     if isCollecting then return end
 
     local candidates = ScanInboxDeals()
@@ -255,10 +260,12 @@ local function CreateMailButtonOnce()
     if collectBtn or not MailFrame then return end
     if not (ns.IsMailCollectorEnabled and ns.IsMailCollectorEnabled()) then return end
 
-    local btn = CreateFrame("Button", "GoldFinderMailCollectBtn", MailFrame, "UIPanelButtonTemplate")
-    btn:SetSize(130, 22)
-    -- Position in top header area of MailFrame
-    btn:SetPoint("TOPRIGHT", MailFrame, "TOPRIGHT", -50, -32)
+    -- Parent directly to InboxFrame so the button automatically hides on the Send Mail tab
+    local parent = InboxFrame or MailFrame
+    local btn = CreateFrame("Button", "GoldFinderMailCollectBtn", parent, "UIPanelButtonTemplate")
+    btn:SetSize(125, 22)
+    -- Position in top header area of the Inbox tab (below the Close button, away from mail items)
+    btn:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -48, -32)
     btn:SetText("Collect Deals")
     btn:SetScript("OnClick", StartCollection)
     btn:SetScript("OnEnter", function(self)
@@ -275,6 +282,21 @@ local function CreateMailButtonOnce()
         GameTooltip:Show()
     end)
     btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+    -- Hook InboxFrame Show and Hide explicitly to guarantee tab switching sync
+    if InboxFrame and InboxFrame.HookScript then
+        InboxFrame:HookScript("OnShow", function()
+            if collectBtn then
+                collectBtn:Show()
+                UpdateCollectButton()
+            end
+        end)
+        InboxFrame:HookScript("OnHide", function()
+            if collectBtn then
+                collectBtn:Hide()
+            end
+        end)
+    end
 
     collectBtn = btn
     UpdateCollectButton()
