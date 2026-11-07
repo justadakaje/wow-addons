@@ -206,11 +206,8 @@ local function Finish(c, totalRows)
     -- Trigger deal alerts if qualifying deals are detected
     local deals = ns.FindDeals and ns.FindDeals()
     if deals and #deals > 0 then
-        if ns.IsSoundAlertEnabled and ns.IsSoundAlertEnabled() then
-            local soundID = (SOUNDKIT and (SOUNDKIT.AUCTION_WINDOW_OPEN or SOUNDKIT.IG_MAINMENU_OPEN)) or 888
-            if type(PlaySound) == "function" then
-                pcall(PlaySound, soundID)
-            end
+        if ns.PlayDealSound then
+            ns.PlayDealSound()
         end
         if ns.IsChatAlertEnabled and ns.IsChatAlertEnabled() then
             local top = deals[1]

@@ -93,6 +93,63 @@ function ns.SetSortBy(mode)
     end
 end
 
+ns.SOUND_CHOICES = {
+    auction = { name = "Auction Window", id = 888 },
+    coins   = { name = "Coin Chime",      id = 895 },
+    whisper = { name = "Whisper Ping",    id = 3081 },
+    raid    = { name = "Raid Warning",    id = 8959 },
+    loot    = { name = "Loot Coin",       id = 120 },
+}
+
+function ns.GetSoundChoice()
+    local s = ns.db and ns.db.settings
+    local key = (s and s.soundName) or "auction"
+    return key, ns.SOUND_CHOICES[key] or ns.SOUND_CHOICES.auction
+end
+
+function ns.SetSoundChoice(key)
+    key = key and key:lower() or "auction"
+    if not ns.SOUND_CHOICES[key] then key = "auction" end
+    if ns.db then
+        ns.db.settings = ns.db.settings or {}
+        ns.db.settings.soundName = key
+    end
+    local info = ns.SOUND_CHOICES[key]
+    if info and type(PlaySound) == "function" then
+        pcall(PlaySound, info.id)
+    end
+    return key, info
+end
+
+function ns.GetSoundThrottle()
+    local s = ns.db and ns.db.settings
+    if s and s.soundThrottle ~= nil then return s.soundThrottle end
+    return 30  -- 30 seconds default
+end
+
+function ns.SetSoundThrottle(sec)
+    sec = math.max(0, math.floor(tonumber(sec) or 0))
+    if ns.db then
+        ns.db.settings = ns.db.settings or {}
+        ns.db.settings.soundThrottle = sec
+    end
+end
+
+function ns.PlayDealSound()
+    if not ns.IsSoundAlertEnabled() then return end
+    local now = GetServerTime()
+    local throttle = ns.GetSoundThrottle()
+    if ns.lastSoundTime and (now - ns.lastSoundTime) < throttle then
+        return
+    end
+    ns.lastSoundTime = now
+    local _, choice = ns.GetSoundChoice()
+    local soundID = (choice and choice.id) or 888
+    if type(PlaySound) == "function" then
+        pcall(PlaySound, soundID)
+    end
+end
+
 function ns.IsSoundAlertEnabled()
     local s = ns.db and ns.db.settings
     if s and s.soundAlert ~= nil then return s.soundAlert end
@@ -387,6 +444,8 @@ boot:SetScript("OnEvent", function(self, _, name)
     if db.settings.minPrior == nil then db.settings.minPrior = 3 end
     if db.settings.soundAlert == nil then db.settings.soundAlert = true end
     if db.settings.chatAlert == nil then db.settings.chatAlert = true end
+    if db.settings.soundName == nil then db.settings.soundName = "auction" end
+    if db.settings.soundThrottle == nil then db.settings.soundThrottle = 30 end
     if db.settings.sortBy == nil then db.settings.sortBy = "profit" end
     if db.settings.tooltip == nil then db.settings.tooltip = true end
     if db.settings.minProfit == nil then db.settings.minProfit = 0 end
@@ -628,12 +687,36 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         if ns.RefreshPanel then ns.RefreshPanel() end
     elseif cmd == "sound" then
         arg = arg and arg:lower() or ""
-        local val
-        if arg == "on" or arg == "1" or arg == "true" then val = true
-        elseif arg == "off" or arg == "0" or arg == "false" then val = false
-        else val = not ns.IsSoundAlertEnabled() end
-        ns.SetSoundAlert(val)
-        ns.Good("Deal audio chime %s.", val and "enabled" or "disabled")
+        if arg == "on" or arg == "1" or arg == "true" then
+            ns.SetSoundAlert(true)
+            ns.Good("Deal audio chime enabled.")
+        elseif arg == "off" or arg == "0" or arg == "false" then
+            ns.SetSoundAlert(false)
+            ns.Good("Deal audio chime disabled.")
+        elseif ns.SOUND_CHOICES[arg] then
+            ns.SetSoundAlert(true)
+            local _, info = ns.SetSoundChoice(arg)
+            ns.Good("Deal audio chime set to: %s (enabled).", info.name)
+        elseif arg == "" then
+            local val = not ns.IsSoundAlertEnabled()
+            ns.SetSoundAlert(val)
+            ns.Good("Deal audio chime %s.", val and "enabled" or "disabled")
+        else
+            ns.Warn("Usage: /gf sound [on|off|auction|coins|whisper|raid|loot]")
+        end
+    elseif cmd == "soundthrottle" or cmd == "throttle" then
+        local sec = tonumber(arg)
+        if sec ~= nil and sec >= 0 and sec <= 300 then
+            ns.SetSoundThrottle(sec)
+            if sec > 0 then
+                ns.Good("Audio alert throttle window set to %d seconds.", sec)
+            else
+                ns.Good("Audio alert throttle disabled (chime on every deal find).")
+            end
+        else
+            ns.Print("Current audio throttle window: %d seconds.", ns.GetSoundThrottle())
+            ns.Warn("Usage: /gf soundthrottle <seconds> (e.g. /gf soundthrottle 30, /gf soundthrottle 0)")
+        end
     elseif cmd == "chat" then
         arg = arg and arg:lower() or ""
         local val
@@ -915,7 +998,8 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         ns.Print("  - Threshold: %d%% below typical (ratio %.2f)", pct, ratio)
         ns.Print("  - History needed: %d prior scans", ns.GetMinPrior())
         ns.Print("  - Sort order: %s", ns.GetSortBy() == "profit" and "Estimated Net Profit" or "Discount %")
-        ns.Print("  - Audio chime: %s", ns.IsSoundAlertEnabled() and "on" or "off")
+        local soundKey, soundInfo = ns.GetSoundChoice()
+        ns.Print("  - Audio chime: %s (%s, throttle %ds)", ns.IsSoundAlertEnabled() and "on" or "off", soundInfo.name, ns.GetSoundThrottle())
         ns.Print("  - Chat notification: %s", ns.IsChatAlertEnabled() and "on" or "off")
         ns.Print("  - Item tooltip pricing: %s", ns.IsTooltipEnabled() and "on" or "off")
         ns.Print("  - Sell tab market helper: %s", (ns.IsSellHelperEnabled and ns.IsSellHelperEnabled()) and "on" or "off")
@@ -936,7 +1020,8 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         ns.Print("  /gf sync             - view database realm and faction sharing status")
         ns.Print("  /gf minimap [on|off] - toggle minimap coin icon")
         ns.Print("  /gf sort             - toggle sort: profit vs discount")
-        ns.Print("  /gf sound [on|off]   - toggle audio chime on deal find")
+        ns.Print("  /gf sound [on|off|auction|coins|whisper|raid|loot] - select alert sound kit")
+        ns.Print("  /gf soundthrottle <sec> - set audio alert cooldown throttle (e.g. 30, 0)")
         ns.Print("  /gf chat [on|off]    - toggle chat summary on deal find")
         ns.Print("  /gf minprofit <amt>  - set minimum net profit filter (e.g. 5g, 50s, 0)")
         ns.Print("  /gf maxspend <amt>   - set Quick-Buy spend cap (e.g. 50g, 100g, 0)")

@@ -765,7 +765,7 @@ Addon Dev"). Practical consequences:
   - **#12** Category sub-tabs (`All`, `Herbs`, `Mining`, `Cloth`, `Leather`, `Watchlist`) & watchlist stars.
   - Multi-client TOC consolidation & native `Auctions` category grouping.
 
-* **Next Active Sprint 2 Task:** **Issue #26:** `[GoldFinder] Customizable Audio Alerts & Cooldown Throttle`.
+* **Sprint 2 Status:** **ALL 10 SPRINT 2 FEATURES COMPLETED & MERGED.** GoldFinder is ready for release tag **v0.5.0**.
 
 ---
 
@@ -784,9 +784,7 @@ Ranked and approved by user direction prioritizing execution velocity, reagent c
 | **07** | **#27** | Cross-Character & Faction Market Data Sharing | `GoldFinderDB.realmMarketData` global table across character profiles with neutral/faction AH partition toggles. | ✅ **Completed** |
 | **08** | **#35** | Item Blacklist & Market Ignore Filter | `GoldFinderDB.blacklist` table, right-click "Ignore Item" context menu, and `/gf ignore <link\|itemID>` filter. | ✅ **Completed** |
 | **09** | **#23** | LibDataBroker (LDB) Feed & Minimap Button | Vendor `libs/LibDataBroker-1.1` & `LibDBIcon-1.0`, minimap coin icon, and background deal count tooltip preview. | ✅ **Completed** |
-| **10** | **#26** | Customizable Audio Alerts & Cooldown Throttle | `GoldFinderDB.settings.soundId` sound kit picker (`Auction`, `Coins`, `Whisper`, `RaidAlert`) and audio throttle cooldown. | Queued (Next) |
-| **09** | **#23** | LibDataBroker (LDB) Feed & Minimap Button | Vendor `libs/LibDataBroker-1.1` & `LibDBIcon-1.0`, minimap coin icon, and background deal count tooltip preview. | Queued |
-| **10** | **#26** | Customizable Audio Alerts & Cooldown Throttle | `GoldFinderDB.settings.soundId` sound kit picker (`Auction`, `Coins`, `Whisper`, `RaidAlert`) and audio throttle cooldown. | Queued |
+| **10** | **#26** | Customizable Audio Alerts & Cooldown Throttle | `GoldFinderDB.settings.soundName` sound kit picker (`auction`, `coins`, `whisper`, `raid`, `loot`) and audio throttle cooldown. | ✅ **Completed** |
 
 ### Milestone Gate:
 Sprint 2 execution is split into **v0.4.0** (Issues 01–04: High-Velocity Arbitrage & Goal Procurement) and **v0.5.0** (Issues 05–10: Trading Intelligence & Ecosystem Polish).
