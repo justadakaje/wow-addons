@@ -294,7 +294,7 @@ end
 
 -- SavedVariables format version. Bump when the persisted shape changes and
 -- migrate; never discard a stored table.
-ns.DB_SCHEMA = 3
+ns.DB_SCHEMA = 4
 
 -- Each migration takes the db from schema n-1 to n. Plain table work only.
 local MIGRATIONS = {
@@ -342,6 +342,22 @@ local MIGRATIONS = {
         db.scans = kept
         return removed, "repeated scan record(s)"
     end,
+
+    -- 3 -> 4: partition stored market pricing by realm so characters across
+    -- different servers do not share prices, while alts on the same realm
+    -- share complete scan history and tooltips (#27).
+    [4] = function(db)
+        if type(db.realms) ~= "table" then db.realms = {} end
+        local realm = (GetNormalizedRealmName and GetNormalizedRealmName()) or (GetRealmName and GetRealmName()) or "Default"
+        if not db.realms[realm] then
+            db.realms[realm] = {
+                items = db.items or {},
+                scans = db.scans or {},
+                factions = {},
+            }
+        end
+        return 0, "partitioned price database by realm"
+    end,
 }
 
 -- Nothing here can crash: plain table checks only. The save path stays that way.
@@ -376,11 +392,79 @@ boot:SetScript("OnEvent", function(self, _, name)
     if db.settings.minProfit == nil then db.settings.minProfit = 0 end
     if db.settings.maxQuickBuySpend == nil then db.settings.maxQuickBuySpend = 500000 end
     if db.settings.minConfidence == nil then db.settings.minConfidence = "any" end
+    if db.settings.factionShare == nil then db.settings.factionShare = true end
     if type(db.watchlist) ~= "table" then db.watchlist = {} end
     if type(db.shoppingLists) ~= "table" then db.shoppingLists = {} end
+    if type(db.realms) ~= "table" then db.realms = {} end
+
+    -- Active realm and faction partition binding
+    local realm = (GetNormalizedRealmName and GetNormalizedRealmName()) or (GetRealmName and GetRealmName()) or "Default"
+    if not db.realms[realm] then
+        db.realms[realm] = {
+            items = db.items or {},
+            scans = db.scans or {},
+            factions = {},
+        }
+    end
+
+    local rData = db.realms[realm]
+    if db.settings.factionShare == false then
+        local fKey = (UnitFactionGroup and UnitFactionGroup("player")) or "Neutral"
+        rData.factions = rData.factions or {}
+        if not rData.factions[fKey] then
+            rData.factions[fKey] = { items = {}, scans = {} }
+        end
+        db.items = rData.factions[fKey].items
+        db.scans = rData.factions[fKey].scans
+    else
+        db.items = rData.items
+        db.scans = rData.scans
+    end
 
     ns.db = db
 end)
+
+---------------------------------------------------------------------------
+-- Cross-Character & Realm Market Sharing (#27)
+
+function ns.GetActiveRealm()
+    return (GetNormalizedRealmName and GetNormalizedRealmName()) or (GetRealmName and GetRealmName()) or "Default"
+end
+
+function ns.GetActiveFaction()
+    return (UnitFactionGroup and UnitFactionGroup("player")) or "Neutral"
+end
+
+function ns.IsFactionShareEnabled()
+    local s = ns.db and ns.db.settings
+    if s and s.factionShare ~= nil then return s.factionShare end
+    return true
+end
+
+function ns.SetFactionShareEnabled(val)
+    if not ns.db then return end
+    ns.db.settings = ns.db.settings or {}
+    ns.db.settings.factionShare = val
+
+    local realm = ns.GetActiveRealm()
+    ns.db.realms = ns.db.realms or {}
+    local rData = ns.db.realms[realm] or { items = {}, scans = {}, factions = {} }
+    ns.db.realms[realm] = rData
+
+    if val == false then
+        local fKey = ns.GetActiveFaction()
+        rData.factions = rData.factions or {}
+        rData.factions[fKey] = rData.factions[fKey] or { items = {}, scans = {} }
+        ns.db.items = rData.factions[fKey].items
+        ns.db.scans = rData.factions[fKey].scans
+    else
+        db = ns.db
+        db.items = rData.items
+        db.scans = rData.scans
+    end
+
+    if ns.RefreshPanel then ns.RefreshPanel() end
+end
 
 ---------------------------------------------------------------------------
 -- Category & Watchlist State
@@ -598,6 +682,33 @@ SlashCmdList["GOLDFINDER"] = function(msg)
             ns.Print("Current minimum confidence filter: %s", ns.GetMinConfidence():upper())
             ns.Warn("Usage: /gf minconf <any | med | high>")
         end
+    elseif cmd == "factionshare" or cmd == "crossfaction" then
+        arg = arg and arg:lower() or ""
+        local val
+        if arg == "on" or arg == "1" or arg == "true" then val = true
+        elseif arg == "off" or arg == "0" or arg == "false" then val = false
+        else val = not ns.IsFactionShareEnabled() end
+        ns.SetFactionShareEnabled(val)
+        ns.Good("Cross-faction market sharing %s on %s.", val and "enabled" or "disabled", ns.GetActiveRealm())
+    elseif cmd == "sync" or cmd == "realms" then
+        local realm = ns.GetActiveRealm()
+        local faction = ns.GetActiveFaction()
+        local shared = ns.IsFactionShareEnabled()
+        local rData = ns.db and ns.db.realms and ns.db.realms[realm]
+        local itemCount = 0
+        if rData and rData.items then
+            for _ in pairs(rData.items) do itemCount = itemCount + 1 end
+        end
+        local realmCount = 0
+        if ns.db and ns.db.realms then
+            for _ in pairs(ns.db.realms) do realmCount = realmCount + 1 end
+        end
+        ns.Print("GoldFinder Database Scope:")
+        ns.Print("  - Active Realm: %s", realm)
+        ns.Print("  - Active Faction: %s", faction)
+        ns.Print("  - Cross-Faction Sharing: %s", shared and "ON (realm-wide shared data)" or "OFF (partitioned by faction)")
+        ns.Print("  - Realm Items Tracked: %d item(s)", itemCount)
+        ns.Print("  - Total Realms in Database: %d", realmCount)
     elseif cmd == "export" then
         ns.ShowExportDialog()
     elseif cmd == "prune" then
@@ -739,6 +850,7 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         ns.Print("  - Item tooltip pricing: %s", ns.IsTooltipEnabled() and "on" or "off")
         ns.Print("  - Sell tab market helper: %s", (ns.IsSellHelperEnabled and ns.IsSellHelperEnabled()) and "on" or "off")
         ns.Print("  - Min sighting confidence: %s", (ns.GetMinConfidence and ns.GetMinConfidence():upper()) or "ANY")
+        ns.Print("  - Cross-faction sharing: %s (Realm: %s)", ns.IsFactionShareEnabled() and "on" or "off", ns.GetActiveRealm())
         local minProfit = ns.GetMinProfit()
         local minProfitStr = (minProfit > 0) and ns.Money(minProfit) or "none (0c)"
         ns.Print("  - Min profit floor: %s", minProfitStr)
@@ -749,6 +861,8 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         ns.Print("  /gf ratio <5-95>     - set discount percentage threshold")
         ns.Print("  /gf minscans <1-20>  - set minimum prior scans required")
         ns.Print("  /gf minconf <any|med|high> - filter deals by sighting confidence rating")
+        ns.Print("  /gf factionshare [on|off] - toggle cross-faction market sharing")
+        ns.Print("  /gf sync             - view database realm and faction sharing status")
         ns.Print("  /gf sort             - toggle sort: profit vs discount")
         ns.Print("  /gf sound [on|off]   - toggle audio chime on deal find")
         ns.Print("  /gf chat [on|off]    - toggle chat summary on deal find")
