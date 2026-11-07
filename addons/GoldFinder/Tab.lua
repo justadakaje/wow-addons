@@ -162,6 +162,27 @@ local function MakeRow(anchor, font, clickable)
                         ns.Print("Removed %s from blacklist.", name)
                     end
                     ns.RefreshPanel()
+                elseif IsShiftKeyDown() then
+                    local activeCat = ns.GetActiveCategory()
+                    local customCat = ns.GetCustomCategory and ns.GetCustomCategory(activeCat)
+                    if customCat then
+                        if customCat.items and customCat.items[self.deal.itemID] then
+                            ns.RemoveCustomCategoryItem(activeCat, self.deal.itemID)
+                            ns.Good("Removed %s from group '%s'.", name, customCat.label or activeCat)
+                        else
+                            ns.AddCustomCategoryItem(activeCat, self.deal.itemID)
+                            ns.Good("Added %s to group '%s'.", name, customCat.label or activeCat)
+                        end
+                        ns.RefreshPanel()
+                    else
+                        local isWatched = ns.ToggleWatchlist(self.deal.itemID)
+                        if isWatched then
+                            ns.Good("Added %s to watchlist.", name)
+                        else
+                            ns.Print("Removed %s from watchlist.", name)
+                        end
+                        ns.RefreshPanel()
+                    end
                 else
                     local isWatched = ns.ToggleWatchlist(self.deal.itemID)
                     if isWatched then
@@ -316,6 +337,87 @@ local function BuildPanel()
     end)
     ui.searchBox = search
 
+    local createGroupDialog = nil
+    local function ShowCreateGroupDialog()
+        if not createGroupDialog then
+            local template = BackdropTemplateMixin and "BackdropTemplate" or nil
+            local f = CreateFrame("Frame", "GoldFinderCreateGroupDialog", UIParent, template)
+            f:SetSize(320, 140)
+            f:SetPoint("CENTER", UIParent, "CENTER", 0, 80)
+            f:SetFrameStrata("DIALOG")
+            f:EnableMouse(true)
+            f:SetMovable(true)
+            f:RegisterForDrag("LeftButton")
+            f:SetScript("OnDragStart", f.StartMoving)
+            f:SetScript("OnDragStop", f.StopMovingOrSizing)
+            f:SetClampedToScreen(true)
+
+            f:SetBackdrop({
+                bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+                edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+                tile = true, tileSize = 32, edgeSize = 32,
+                insets = { left = 8, right = 8, top = 8, bottom = 8 }
+            })
+
+            local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            title:SetPoint("TOP", 0, -16)
+            title:SetText("Create Material Group")
+
+            local hint = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            hint:SetPoint("TOP", title, "BOTTOM", 0, -6)
+            hint:SetText("Enter a name for the new custom category tab:")
+
+            local eb = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
+            eb:SetSize(220, 22)
+            eb:SetPoint("TOP", hint, "BOTTOM", 0, -10)
+            eb:SetAutoFocus(false)
+            f.editBox = eb
+
+            local createBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+            createBtn:SetSize(90, 22)
+            createBtn:SetPoint("BOTTOMLEFT", 45, 16)
+            createBtn:SetText("Create")
+
+            local function doCreate()
+                local text = eb:GetText():match("^%s*(.-)%s*$")
+                if text and text ~= "" then
+                    local id, cat = ns.CreateCustomCategory(text)
+                    if cat then
+                        ns.Good("Created custom material group: %s.", cat.label)
+                        ns.SetActiveCategory(id)
+                        if ns.RefreshPanel then ns.RefreshPanel() end
+                    end
+                    f:Hide()
+                    eb:SetText("")
+                end
+            end
+
+            createBtn:SetScript("OnClick", doCreate)
+            eb:SetScript("OnEnterPressed", doCreate)
+            eb:SetScript("OnEscapePressed", function()
+                f:Hide()
+                eb:SetText("")
+            end)
+
+            local cancelBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+            cancelBtn:SetSize(90, 22)
+            cancelBtn:SetPoint("BOTTOMRIGHT", -45, 16)
+            cancelBtn:SetText("Cancel")
+            cancelBtn:SetScript("OnClick", function()
+                f:Hide()
+                eb:SetText("")
+            end)
+
+            createGroupDialog = f
+        end
+
+        createGroupDialog:Show()
+        createGroupDialog:Raise()
+        createGroupDialog.editBox:SetText("")
+        createGroupDialog.editBox:SetFocus()
+    end
+    ns.ShowCreateGroupDialog = ShowCreateGroupDialog
+
     local CATEGORIES = {
         { id = "all",         label = "All",       width = 44 },
         { id = "herbs",       label = "Herbs",     width = 54 },
@@ -328,6 +430,7 @@ local function BuildPanel()
         { id = "watchlist",   label = "Watchlist", width = 84, isWatchlist = true },
     }
     local categoryButtons = {}
+    local createGroupBtn = nil
 
     local function UpdateCategoryButtons()
         local active = ns.GetActiveCategory()
@@ -353,95 +456,224 @@ local function BuildPanel()
         end
     end
     ui.UpdateCategoryButtons = UpdateCategoryButtons
+    ns.UpdateCategoryButtons = UpdateCategoryButtons
 
     local filterBar = CreateFrame("Frame", nil, panel)
     filterBar:SetPoint("TOPLEFT", ui.sub, "BOTTOMLEFT", 0, -6)
     filterBar:SetSize(620, 24)
     ui.filterBar = filterBar
 
-    local prevBtn = nil
-    for _, cat in ipairs(CATEGORIES) do
-        local btn = CreateFrame("Button", nil, filterBar, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        btn:SetHeight(22)
-        btn.catId = cat.id
-        btn.baseLabel = cat.label
-        btn:SetWidth(cat.width)
+    local function RebuildCategoryButtons()
+        if not filterBar then return end
 
-        if btn.SetBackdrop then
-            btn:SetBackdrop({
-                bgFile = "Interface\\Buttons\\WHITE8X8",
-                edgeFile = "Interface\\Buttons\\WHITE8X8",
-                edgeSize = 1,
-                insets = { left = 1, right = 1, top = 1, bottom = 1 },
-            })
+        for _, btn in ipairs(categoryButtons) do
+            btn:Hide()
+        end
+        if createGroupBtn then createGroupBtn:Hide() end
+
+        local allCats = {}
+        for _, c in ipairs(CATEGORIES) do
+            allCats[#allCats + 1] = {
+                id = c.id,
+                label = c.label,
+                width = c.width,
+                isWatchlist = c.isWatchlist,
+                isCustom = false,
+            }
         end
 
-        local activeBar = btn:CreateTexture(nil, "OVERLAY")
-        activeBar:SetHeight(2)
-        activeBar:SetPoint("BOTTOMLEFT", btn, "BOTTOMLEFT", 1, 1)
-        activeBar:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT", -1, 1)
-        activeBar:SetColorTexture(1, 0.82, 0, 1)
-        activeBar:Hide()
-        btn.activeBar = activeBar
+        local customCats = ns.GetCustomCategories and ns.GetCustomCategories() or {}
+        local customList = {}
+        for id, c in pairs(customCats) do
+            customList[#customList + 1] = { id = id, label = c.label or id }
+        end
+        table.sort(customList, function(a, b) return (a.label or a.id) < (b.label or b.id) end)
 
-        if cat.isWatchlist then
-            local star = btn:CreateTexture(nil, "ARTWORK")
-            star:SetSize(13, 13)
-            star:SetTexture("Interface\\Common\\ReputationStar")
-            star:SetTexCoord(0, 0.5, 0, 0.5)
-            star:SetPoint("LEFT", btn, "LEFT", 7, 0)
-            btn.starIcon = star
-
-            local label = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-            label:SetPoint("LEFT", star, "RIGHT", 4, 0)
-            label:SetText(cat.label)
-            btn.label = label
-        else
-            local label = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-            label:SetPoint("CENTER", btn, "CENTER", 0, 0)
-            label:SetText(cat.label)
-            btn.label = label
+        for _, c in ipairs(customList) do
+            local textLen = string.len(c.label)
+            local w = math.max(54, math.min(120, textLen * 8 + 16))
+            allCats[#allCats + 1] = {
+                id = c.id,
+                label = c.label,
+                width = w,
+                isCustom = true,
+            }
         end
 
-        if not prevBtn then
-            btn:SetPoint("LEFT", filterBar, "LEFT", 0, 0)
-        else
-            btn:SetPoint("LEFT", prevBtn, "RIGHT", 5, 0)
-        end
+        local curX = 0
+        local curY = 0
+        local rowHeight = 22
+        local spacing = 5
+        local maxLineWidth = 730
 
-        btn:SetScript("OnClick", function(self)
-            ns.SetActiveCategory(self.catId)
-            UpdateCategoryButtons()
-            PlaySound(SOUNDKIT.IG_CHARACTER_INFO_TAB or 841)
-            ns.RefreshPanel()
-        end)
-        btn:SetScript("OnEnter", function(self)
-            local active = ns.GetActiveCategory()
-            if self.catId ~= active then
-                if self.SetBackdropColor then
-                    self:SetBackdropColor(0.18, 0.18, 0.22, 0.95)
-                    self:SetBackdropBorderColor(0.45, 0.45, 0.50, 1.0)
+        for i, cat in ipairs(allCats) do
+            local btn = categoryButtons[i]
+            if not btn then
+                btn = CreateFrame("Button", nil, filterBar, BackdropTemplateMixin and "BackdropTemplate" or nil)
+                btn:SetHeight(rowHeight)
+                if btn.SetBackdrop then
+                    btn:SetBackdrop({
+                        bgFile = "Interface\\Buttons\\WHITE8X8",
+                        edgeFile = "Interface\\Buttons\\WHITE8X8",
+                        edgeSize = 1,
+                        insets = { left = 1, right = 1, top = 1, bottom = 1 },
+                    })
                 end
-                if self.label then self.label:SetTextColor(1.0, 1.0, 1.0) end
-                if self.starIcon then self.starIcon:SetAlpha(0.9) end
-            end
-        end)
-        btn:SetScript("OnLeave", function(self)
-            local active = ns.GetActiveCategory()
-            if self.catId ~= active then
-                if self.SetBackdropColor then
-                    self:SetBackdropColor(0.10, 0.10, 0.12, 0.85)
-                    self:SetBackdropBorderColor(0.24, 0.24, 0.28, 0.8)
-                end
-                if self.label then self.label:SetTextColor(0.75, 0.75, 0.78) end
-                if self.starIcon then self.starIcon:SetAlpha(0.55) end
-            end
-        end)
 
-        categoryButtons[#categoryButtons + 1] = btn
-        prevBtn = btn
+                local activeBar = btn:CreateTexture(nil, "OVERLAY")
+                activeBar:SetHeight(2)
+                activeBar:SetPoint("BOTTOMLEFT", btn, "BOTTOMLEFT", 1, 1)
+                activeBar:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT", -1, 1)
+                activeBar:SetColorTexture(1, 0.82, 0, 1)
+                activeBar:Hide()
+                btn.activeBar = activeBar
+
+                local star = btn:CreateTexture(nil, "ARTWORK")
+                star:SetSize(13, 13)
+                star:SetTexture("Interface\\Common\\ReputationStar")
+                star:SetTexCoord(0, 0.5, 0, 0.5)
+                star:SetPoint("LEFT", btn, "LEFT", 7, 0)
+                star:Hide()
+                btn.starIcon = star
+
+                local label = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                label:SetPoint("CENTER", btn, "CENTER", 0, 0)
+                btn.label = label
+
+                btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+                btn:SetScript("OnClick", function(self, button)
+                    if button == "RightButton" and self.isCustom then
+                        local customCat = ns.GetCustomCategory and ns.GetCustomCategory(self.catId)
+                        local cLabel = customCat and customCat.label or self.catId
+                        ns.DeleteCustomCategory(self.catId)
+                        ns.Good("Deleted custom material group '%s'.", cLabel)
+                    else
+                        ns.SetActiveCategory(self.catId)
+                        UpdateCategoryButtons()
+                        PlaySound(SOUNDKIT.IG_CHARACTER_INFO_TAB or 841)
+                        ns.RefreshPanel()
+                    end
+                end)
+
+                btn:SetScript("OnEnter", function(self)
+                    local active = ns.GetActiveCategory()
+                    if self.catId ~= active then
+                        if self.SetBackdropColor then
+                            self:SetBackdropColor(0.18, 0.18, 0.22, 0.95)
+                            self:SetBackdropBorderColor(0.45, 0.45, 0.50, 1.0)
+                        end
+                        if self.label then self.label:SetTextColor(1.0, 1.0, 1.0) end
+                        if self.starIcon and self.starIcon:IsShown() then self.starIcon:SetAlpha(0.9) end
+                    end
+                    if self.isCustom then
+                        local customCat = ns.GetCustomCategory and ns.GetCustomCategory(self.catId)
+                        local count = 0
+                        if customCat and customCat.items then
+                            for _ in pairs(customCat.items) do count = count + 1 end
+                        end
+                        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+                        GameTooltip:SetText(customCat and customCat.label or self.catId, 1, 0.82, 0)
+                        GameTooltip:AddLine(("Custom material group (%d items)."):format(count), 1, 1, 1)
+                        GameTooltip:AddLine("Left-Click: Filter to this group.", 0.4, 0.8, 1)
+                        GameTooltip:AddLine("Right-Click: Delete this group.", 1, 0.4, 0.4)
+                        GameTooltip:Show()
+                    end
+                end)
+                btn:SetScript("OnLeave", function(self)
+                    local active = ns.GetActiveCategory()
+                    if self.catId ~= active then
+                        if self.SetBackdropColor then
+                            self:SetBackdropColor(0.10, 0.10, 0.12, 0.85)
+                            self:SetBackdropBorderColor(0.24, 0.24, 0.28, 0.8)
+                        end
+                        if self.label then self.label:SetTextColor(0.75, 0.75, 0.78) end
+                        if self.starIcon and self.starIcon:IsShown() then self.starIcon:SetAlpha(0.55) end
+                    end
+                    GameTooltip:Hide()
+                end)
+
+                categoryButtons[i] = btn
+            end
+
+            btn.catId = cat.id
+            btn.baseLabel = cat.label
+            btn.isCustom = cat.isCustom
+            btn:SetWidth(cat.width)
+
+            if cat.isWatchlist then
+                btn.starIcon:Show()
+                btn.label:ClearAllPoints()
+                btn.label:SetPoint("LEFT", btn.starIcon, "RIGHT", 4, 0)
+            else
+                btn.starIcon:Hide()
+                btn.label:ClearAllPoints()
+                btn.label:SetPoint("CENTER", btn, "CENTER", 0, 0)
+            end
+            btn.label:SetText(cat.label)
+
+            if curX + cat.width > maxLineWidth and curX > 0 then
+                curX = 0
+                curY = curY - (rowHeight + 4)
+            end
+
+            btn:ClearAllPoints()
+            btn:SetPoint("TOPLEFT", filterBar, "TOPLEFT", curX, curY)
+            btn:Show()
+
+            curX = curX + cat.width + spacing
+        end
+
+        local plusW = 60
+        if curX + plusW > maxLineWidth and curX > 0 then
+            curX = 0
+            curY = curY - (rowHeight + 4)
+        end
+
+        if not createGroupBtn then
+            createGroupBtn = CreateFrame("Button", nil, filterBar, BackdropTemplateMixin and "BackdropTemplate" or nil)
+            createGroupBtn:SetHeight(rowHeight)
+            if createGroupBtn.SetBackdrop then
+                createGroupBtn:SetBackdrop({
+                    bgFile = "Interface\\Buttons\\WHITE8X8",
+                    edgeFile = "Interface\\Buttons\\WHITE8X8",
+                    edgeSize = 1,
+                    insets = { left = 1, right = 1, top = 1, bottom = 1 },
+                })
+                createGroupBtn:SetBackdropColor(0.08, 0.14, 0.18, 0.85)
+                createGroupBtn:SetBackdropBorderColor(0.2, 0.45, 0.65, 0.8)
+            end
+            local plusLabel = createGroupBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            plusLabel:SetPoint("CENTER", createGroupBtn, "CENTER", 0, 0)
+            plusLabel:SetText("+ Group")
+            plusLabel:SetTextColor(0.3, 0.8, 1.0)
+            createGroupBtn.label = plusLabel
+
+            createGroupBtn:SetScript("OnClick", function()
+                ShowCreateGroupDialog()
+            end)
+            createGroupBtn:SetScript("OnEnter", function(self)
+                GameTooltip:SetOwner(self, "ANCHOR_TOP")
+                GameTooltip:SetText("Create Material Group", 1, 0.82, 0)
+                GameTooltip:AddLine("Define a custom category tab for specific crafting reagents or arbitrage items.", 1, 1, 1, true)
+                GameTooltip:AddLine("You can also use: /gf group create <name>", 0.7, 0.7, 0.7)
+                GameTooltip:Show()
+            end)
+            createGroupBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        end
+
+        createGroupBtn:SetWidth(plusW)
+        createGroupBtn:ClearAllPoints()
+        createGroupBtn:SetPoint("TOPLEFT", filterBar, "TOPLEFT", curX, curY)
+        createGroupBtn:Show()
+
+        local totalBarHeight = math.abs(curY) + rowHeight
+        filterBar:SetHeight(totalBarHeight)
+
+        UpdateCategoryButtons()
     end
-    UpdateCategoryButtons()
+    ns.RebuildCategoryButtons = RebuildCategoryButtons
+
+    RebuildCategoryButtons()
 
     ui.header = MakeRow(filterBar, "GameFontNormalSmall")
     for _, col in ipairs(COLUMNS) do ui.header.cells[col.key]:SetText(col.title) end
@@ -786,6 +1018,11 @@ ShowRowTip = function(row)
     tip:AddLine("Left-Click: open in Buy. Shift-Click: direct Quick-Buy commodity.", 0.4, 0.8, 1, true)
     tip:AddLine("Right-Click or click star: toggle Watchlist.", 0.4, 0.8, 1, true)
     tip:AddLine("Alt+Right-Click: Blacklist/ignore item from deals.", 0.8, 0.45, 0.45, true)
+    if ns.GetCustomCategory and ns.GetCustomCategory(ns.GetActiveCategory()) then
+        local customCat = ns.GetCustomCategory(ns.GetActiveCategory())
+        local inGroup = customCat.items and customCat.items[d.itemID]
+        tip:AddLine(("Shift+Right-Click: %s group '%s'."):format(inGroup and "Remove from" or "Add to", customCat.label or ns.GetActiveCategory()), 0.4, 1.0, 0.6, true)
+    end
     tip:Show()
     if ns.ShowSparkline then
         ns.ShowSparkline(tip, d.history, d.typical, d.now)
@@ -801,13 +1038,28 @@ function ns.RefreshPanel()
 
     if ui.UpdateCategoryButtons then ui.UpdateCategoryButtons() end
 
-    -- 1. Filter by category (#12)
+    -- 1. Filter by category (#12, #39)
     local activeCat = ns.GetActiveCategory()
     local catDeals = allDeals
     if activeCat == "watchlist" then
         catDeals = {}
         for _, d in ipairs(allDeals) do
             if ns.IsWatched(d.itemID) then
+                catDeals[#catDeals + 1] = d
+            end
+        end
+    elseif activeCat == "conversions" or activeCat == "undercuts" or activeCat == "shopping" then
+        catDeals = {}
+        for _, d in ipairs(allDeals) do
+            if d.category == activeCat then
+                catDeals[#catDeals + 1] = d
+            end
+        end
+    elseif ns.GetCustomCategory and ns.GetCustomCategory(activeCat) then
+        local customCat = ns.GetCustomCategory(activeCat)
+        catDeals = {}
+        for _, d in ipairs(allDeals) do
+            if d.itemID and customCat.items and customCat.items[d.itemID] then
                 catDeals[#catDeals + 1] = d
             end
         end
@@ -870,6 +1122,8 @@ function ns.RefreshPanel()
         catDisplayName = "Undercuts"
     elseif activeCat == "shopping" then
         catDisplayName = "Shopping"
+    elseif ns.GetCustomCategory and ns.GetCustomCategory(activeCat) then
+        catDisplayName = ns.GetCustomCategory(activeCat).label or activeCat
     elseif isCategoryFiltered then
         catDisplayName = activeCat:sub(1,1):upper() .. activeCat:sub(2)
     end
@@ -914,6 +1168,19 @@ function ns.RefreshPanel()
         elseif activeCat == "shopping" then
             ui.emptyTitle:SetText("Shopping list is empty")
             ui.emptySub:SetText("Track target materials with: /gf buy <link|itemID> <targetQty> [maxUnitPrice]")
+        elseif ns.GetCustomCategory and ns.GetCustomCategory(activeCat) then
+            local customCat = ns.GetCustomCategory(activeCat)
+            local count = 0
+            if customCat and customCat.items then
+                for _ in pairs(customCat.items) do count = count + 1 end
+            end
+            if count == 0 then
+                ui.emptyTitle:SetText(("Material group '%s' is empty"):format(catDisplayName))
+                ui.emptySub:SetText("Shift+Right-Click any deal row to add it to this group, or use: /gf group add \"" .. catDisplayName .. "\" <link|id>")
+            else
+                ui.emptyTitle:SetText(("No active deals for '%s'"):format(catDisplayName))
+                ui.emptySub:SetText(("None of the %d materials in this group currently meet the discount threshold."):format(count))
+            end
         elseif isCategoryFiltered then
             ui.emptyTitle:SetText(("No %s deals found"):format(catDisplayName))
             ui.emptySub:SetText(("No %s materials currently meet the discount threshold."):format(catDisplayName:lower()))
