@@ -74,11 +74,11 @@ which broke things that the API diff did not show. Then:
   which was true when written and is no longer. **For any single name prefer
   `lookup_api` over `list_deprecated`** — see Legacy globals for why.
 
-## Current work — AdventurerPlates
+## Current work — GoldFinder (Roadmap to v1.0.0)
 
-**This is the active work. Read `addons/AdventurerPlates/README.md` first.**
+> ⏸️ **AdventurerPlates is ON HOLD (Deprecated)**: Shelved per user direction in favor of GoldFinder. All active engineering focus is 100% dedicated to GoldFinder's march toward Production Gold Master (`v1.0.0`).
 
-### State as of 2026-09-27: 0.3.2, sharing tested with a second player
+### Archived Context: AdventurerPlates (Historical)
 
 Live test with Ava (Erica Cartwoman) on build 70009. Full results and every
 measurement: [`docs/facts-build-70009.md`](docs/facts-build-70009.md).
@@ -787,4 +787,39 @@ Ranked and approved by user direction prioritizing execution velocity, reagent c
 | **10** | **#26** | Customizable Audio Alerts & Cooldown Throttle | `GoldFinderDB.settings.soundName` sound kit picker (`auction`, `coins`, `whisper`, `raid`, `loot`) and audio throttle cooldown. | ✅ **Completed** |
 
 ### Milestone Gate:
-Sprint 2 execution is split into **v0.4.0** (Issues 01–04: High-Velocity Arbitrage & Goal Procurement) and **v0.5.0** (Issues 05–10: Trading Intelligence & Ecosystem Polish).
+Sprint 2 execution is split into **v0.4.0** (Issues 01–04: High-Velocity Arbitrage & Goal Procurement) and **v0.5.0** (Issues 05–10: Trading Intelligence & Ecosystem Polish). **Both phases complete and released in v0.5.0.**
+
+---
+
+## GoldFinder Master Roadmap to v1.0.0 (Production Gold Master)
+
+Populated across GitHub Issues #36 through #53:
+
+### Sprint 3: Visual Options & Price Intelligence (Target: v0.6.0)
+* **#36 (In Progress - AgyBuild):** Graphical options & configuration panel (Settings UI) — native Blizzard Settings integration & `/gf config`.
+* **#37:** 14-day historical sparklines & price trend curve on deal tooltips.
+* **#38:** Alternative valuation engine (Trimmed mean & 7-day EMA).
+* **#39:** Custom category builder & material group editor (`/gf group add/remove`).
+
+### Sprint 4: Mailbox Procurement & Realized Margin Ledger (Target: v0.7.0)
+* **#40:** Mailbox one-click deal collector & cost tracking (`MAIL_INBOX_UPDATE`).
+* **#41:** Realized profit & loss (P&L) goblin ledger (`/gf ledger`).
+* **#42:** Inventory cost basis tooltip overlay on bags & bank items.
+* **#43:** Expired auction re-listing evaluator & relist advisor.
+
+### Sprint 5: Live Snipe Engine & Goal Automation (Target: v0.8.0)
+* **#44:** Live snipe mode & high-value audio alarm (> 70% discount / > 100g profit).
+* **#45:** Inventory restock & stockout safety level warnings.
+* **#46:** Fixed vendor reagent cost integration (Coal, Flux, Thread, Vials).
+* **#47:** Multi-item quick-buy staging cart.
+
+### Sprint 6: Data Portability, Profiles & Cross-Realm Compaction (Target: v0.9.0)
+* **#48:** Base64 string profile import / export (`/gf profile export/import`).
+* **#49:** Multi-account SavedVariables database merger.
+* **#50:** Database compaction & auto-vacuum maintenance (< 2MB file size guarantee).
+
+### Sprint 7: Production Gold Master Certification (Target: v1.0.0)
+* **#51:** Interactive first-run tour & onboarding walkthrough (`/gf tour`).
+* **#52:** Full multi-language localization engine (enUS, deDE, frFR, esES, zhCN, koKR).
+* **#53:** Memory profiling, GC tuning & benchmark certification (< 5MB working set).
+
