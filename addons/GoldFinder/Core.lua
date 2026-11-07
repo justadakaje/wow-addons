@@ -657,7 +657,13 @@ SlashCmdList["GOLDFINDER"] = function(msg)
     local cmd, arg = msg:match("^(%S+)%s*(.*)$")
     cmd = cmd and cmd:lower() or ""
 
-    if cmd == "ratio" or cmd == "discount" then
+    if cmd == "config" or cmd == "options" or cmd == "opt" or cmd == "settings" then
+        if ns.OpenConfig then
+            ns.OpenConfig()
+        elseif ns.ToggleConfig then
+            ns.ToggleConfig()
+        end
+    elseif cmd == "ratio" or cmd == "discount" then
         local num = tonumber(arg)
         if num and num >= 5 and num <= 95 then
             local ratio = (100 - num) / 100
@@ -1013,6 +1019,7 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         local maxSpendStr = (maxSpend > 0) and ns.Money(maxSpend) or "none (no limit)"
         ns.Print("  - Quick-Buy max spend cap: %s", maxSpendStr)
         ns.Print("Commands:")
+        ns.Print("  /gf config           - open graphical options & configuration panel")
         ns.Print("  /gf ratio <5-95>     - set discount percentage threshold")
         ns.Print("  /gf minscans <1-20>  - set minimum prior scans required")
         ns.Print("  /gf minconf <any|med|high> - filter deals by sighting confidence rating")
