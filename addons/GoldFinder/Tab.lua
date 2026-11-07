@@ -688,6 +688,14 @@ ShowRowTip = function(row)
         end
     end
 
+    if d.confidence then
+        tip:AddLine(" ")
+        tip:AddDoubleLine("Market depth:", d.confidence.colorStr .. d.confidence.label .. "|r", 1, 0.82, 0, d.confidence.r, d.confidence.g, d.confidence.b)
+        if d.confidence.reason then
+            tip:AddLine(d.confidence.reason, 0.75, 0.75, 0.75, true)
+        end
+    end
+
     tip:AddLine(" ")
     tip:AddLine("Profitability (after 5% AH cut):", 1, 0.82, 0)
     local unitNetStr = (d.netUnitProfit and d.netUnitProfit > 0 and "+" or "") .. Money(d.netUnitProfit or 0)

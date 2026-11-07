@@ -38,8 +38,14 @@ local function AddPriceLines(tip, itemID)
         ageStr = ("%.0fh ago"):format(age / 3600)
     end
 
+    local conf = ns.GetConfidenceScore and ns.GetConfidenceScore(h)
+    local typStr = ns.Money(typical)
+    if conf and conf.tag then
+        typStr = ("%s %s%s|r"):format(typStr, conf.colorStr, conf.tag)
+    end
+
     tip:AddLine(" ")
-    tip:AddDoubleLine("GoldFinder Typical:", ns.Money(typical), 1, 0.82, 0, 1, 1, 1)
+    tip:AddDoubleLine("GoldFinder Typical:", typStr, 1, 0.82, 0, 1, 1, 1)
     tip:AddDoubleLine("GoldFinder Lowest:", ("%s (%s)"):format(ns.Money(latest.min), ageStr), 1, 0.82, 0, 0.7, 0.7, 0.7)
     tip:Show()
 end

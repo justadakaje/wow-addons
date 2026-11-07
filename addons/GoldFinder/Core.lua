@@ -161,6 +161,20 @@ function ns.SetMaxQuickBuySpend(copper)
     end
 end
 
+function ns.GetMinConfidence()
+    local s = ns.db and ns.db.settings
+    return (s and s.minConfidence) or "any"
+end
+
+function ns.SetMinConfidence(lvl)
+    lvl = lvl and lvl:lower() or "any"
+    if lvl ~= "high" and lvl ~= "med" and lvl ~= "moderate" then lvl = "any" end
+    if ns.db then
+        ns.db.settings = ns.db.settings or {}
+        ns.db.settings.minConfidence = lvl
+    end
+end
+
 
 ---------------------------------------------------------------------------
 -- Database maintenance & export
@@ -361,6 +375,7 @@ boot:SetScript("OnEvent", function(self, _, name)
     if db.settings.tooltip == nil then db.settings.tooltip = true end
     if db.settings.minProfit == nil then db.settings.minProfit = 0 end
     if db.settings.maxQuickBuySpend == nil then db.settings.maxQuickBuySpend = 500000 end
+    if db.settings.minConfidence == nil then db.settings.minConfidence = "any" end
     if type(db.watchlist) ~= "table" then db.watchlist = {} end
     if type(db.shoppingLists) ~= "table" then db.shoppingLists = {} end
 
@@ -573,6 +588,16 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         else val = not (ns.IsSellHelperEnabled and ns.IsSellHelperEnabled()) end
         if ns.SetSellHelperEnabled then ns.SetSellHelperEnabled(val) end
         ns.Good("Sell tab market helper %s.", val and "enabled" or "disabled")
+    elseif cmd == "minconf" or cmd == "confidence" or cmd == "minconfidence" then
+        arg = arg and arg:lower():match("^%s*(.-)%s*$") or ""
+        if arg == "high" or arg == "med" or arg == "moderate" or arg == "any" then
+            ns.SetMinConfidence(arg)
+            ns.Good("Minimum sighting confidence filter set to: %s.", arg:upper())
+            if ns.RefreshPanel then ns.RefreshPanel() end
+        else
+            ns.Print("Current minimum confidence filter: %s", ns.GetMinConfidence():upper())
+            ns.Warn("Usage: /gf minconf <any | med | high>")
+        end
     elseif cmd == "export" then
         ns.ShowExportDialog()
     elseif cmd == "prune" then
@@ -713,6 +738,7 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         ns.Print("  - Chat notification: %s", ns.IsChatAlertEnabled() and "on" or "off")
         ns.Print("  - Item tooltip pricing: %s", ns.IsTooltipEnabled() and "on" or "off")
         ns.Print("  - Sell tab market helper: %s", (ns.IsSellHelperEnabled and ns.IsSellHelperEnabled()) and "on" or "off")
+        ns.Print("  - Min sighting confidence: %s", (ns.GetMinConfidence and ns.GetMinConfidence():upper()) or "ANY")
         local minProfit = ns.GetMinProfit()
         local minProfitStr = (minProfit > 0) and ns.Money(minProfit) or "none (0c)"
         ns.Print("  - Min profit floor: %s", minProfitStr)
@@ -722,6 +748,7 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         ns.Print("Commands:")
         ns.Print("  /gf ratio <5-95>     - set discount percentage threshold")
         ns.Print("  /gf minscans <1-20>  - set minimum prior scans required")
+        ns.Print("  /gf minconf <any|med|high> - filter deals by sighting confidence rating")
         ns.Print("  /gf sort             - toggle sort: profit vs discount")
         ns.Print("  /gf sound [on|off]   - toggle audio chime on deal find")
         ns.Print("  /gf chat [on|off]    - toggle chat summary on deal find")

@@ -67,6 +67,77 @@ local function CalculateTrend(history)
 end
 ns.CalculateTrend = CalculateTrend
 
+function ns.GetConfidenceScore(history)
+    if not history or #history == 0 then
+        return {
+            level    = "speculative",
+            label    = "Speculative",
+            score    = 1,
+            tag      = "[THIN]",
+            colorStr = "|cffff6644",
+            r = 1.0, g = 0.40, b = 0.27,
+            reason   = "No historical scans recorded yet.",
+        }
+    end
+
+    local N = #history
+    local first = history[1].seen or history[1].t or 0
+    local last = history[N].seen or history[N].t or 0
+    local timeSpan = math.max(0, last - first)
+
+    local sum = 0
+    for i = 1, N do sum = sum + (history[i].min or 0) end
+    local mean = sum / N
+
+    local varianceSum = 0
+    for i = 1, N do
+        local diff = (history[i].min or 0) - mean
+        varianceSum = varianceSum + (diff * diff)
+    end
+    local stdDev = math.sqrt(varianceSum / N)
+    local cv = (mean > 0) and (stdDev / mean) or 0
+
+    if N >= 12 and timeSpan >= 86400 and cv <= 0.45 then
+        local days = timeSpan / 86400
+        return {
+            level    = "high",
+            label    = "High Confidence",
+            score    = 3,
+            tag      = "[HIGH]",
+            colorStr = "|cff40ff40",
+            r = 0.25, g = 1.0, b = 0.25,
+            reason   = ("High depth: %d scans across %.1f days (low variance)."):format(N, days),
+        }
+    elseif N >= 5 and timeSpan >= 21600 and cv <= 0.75 then
+        local hours = timeSpan / 3600
+        return {
+            level    = "moderate",
+            label    = "Moderate Confidence",
+            score    = 2,
+            tag      = "[MED]",
+            colorStr = "|cffffd100",
+            r = 1.0, g = 0.82, b = 0.0,
+            reason   = ("Moderate depth: %d scans across %.1f hours."):format(N, hours),
+        }
+    else
+        local reason
+        if N < 5 then
+            reason = ("Thin market: only %d scan(s) recorded."):format(N)
+        else
+            reason = ("High volatility (CV: %.0f%%): wide price swings."):format(cv * 100)
+        end
+        return {
+            level    = "speculative",
+            label    = "Speculative / Thin",
+            score    = 1,
+            tag      = "[THIN]",
+            colorStr = "|cffff6644",
+            r = 1.0, g = 0.40, b = 0.27,
+            reason   = reason,
+        }
+    end
+end
+
 -- Returns deals (sorted by active sort setting) and a status table that
 -- explains everything that was not a deal, so the panel can say why.
 -- Classifies a deal into visual rarity tiers based on discount depth and profit magnitude.
@@ -447,27 +518,36 @@ function ns.FindDeals()
                 for i = 1, n - 1 do prior[i] = h[i].min end
                 local typical = Median(prior)
                 if typical > 0 and current.min <= ratio * typical then
-                    -- Net flip profit: after deducting Blizzard's 5% AH cut
-                    local netUnit = math.floor(typical * 0.95 - current.min)
-                    local totalNet = math.max(0, math.floor(netUnit * (current.qty or 1)))
-                    if totalNet >= minProfit then
-                        deals[#deals + 1] = {
-                        itemID         = itemID,
-                        itemKey        = rec.itemKey,  -- nil for items not seen since v0.0.6
-                        name           = rec.name,
-                        now            = current.min,
-                        typical        = typical,
-                        below          = 1 - current.min / typical,
-                        qty            = current.qty or 0,
-                        netUnitProfit  = netUnit,
-                        totalNetProfit = totalNet,
-                        trend          = CalculateTrend(h),
-                        history        = h,
-                        category       = ns.GetItemCategory and ns.GetItemCategory(itemID) or "other",
-                        isWatched      = ns.IsWatched and ns.IsWatched(itemID) or false,
-                        isShoppingGoal = (ns.GetShoppingItem and ns.GetShoppingItem(itemID) ~= nil),
-                    }
-                    deals[#deals].tier = ns.GetDealTier(deals[#deals])
+                    local conf = ns.GetConfidenceScore(h)
+                    local minConf = ns.GetMinConfidence and ns.GetMinConfidence() or "any"
+                    local passConf = true
+                    if minConf == "high" and conf.score < 3 then passConf = false end
+                    if (minConf == "med" or minConf == "moderate") and conf.score < 2 then passConf = false end
+
+                    if passConf then
+                        -- Net flip profit: after deducting Blizzard's 5% AH cut
+                        local netUnit = math.floor(typical * 0.95 - current.min)
+                        local totalNet = math.max(0, math.floor(netUnit * (current.qty or 1)))
+                        if totalNet >= minProfit then
+                            deals[#deals + 1] = {
+                                itemID         = itemID,
+                                itemKey        = rec.itemKey,  -- nil for items not seen since v0.0.6
+                                name           = rec.name,
+                                now            = current.min,
+                                typical        = typical,
+                                below          = 1 - current.min / typical,
+                                qty            = current.qty or 0,
+                                netUnitProfit  = netUnit,
+                                totalNetProfit = totalNet,
+                                trend          = CalculateTrend(h),
+                                history        = h,
+                                category       = ns.GetItemCategory and ns.GetItemCategory(itemID) or "other",
+                                isWatched      = ns.IsWatched and ns.IsWatched(itemID) or false,
+                                isShoppingGoal = (ns.GetShoppingItem and ns.GetShoppingItem(itemID) ~= nil),
+                                confidence     = conf,
+                            }
+                            deals[#deals].tier = ns.GetDealTier(deals[#deals])
+                        end
                     end
                 end
             end
