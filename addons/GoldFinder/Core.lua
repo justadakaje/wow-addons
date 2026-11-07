@@ -145,6 +145,22 @@ function ns.SetMinProfit(copper)
     end
 end
 
+function ns.GetMaxQuickBuySpend()
+    local s = ns.db and ns.db.settings
+    if s and s.maxQuickBuySpend ~= nil then
+        return s.maxQuickBuySpend
+    end
+    return 500000  -- 50g default
+end
+
+function ns.SetMaxQuickBuySpend(copper)
+    copper = math.max(0, math.floor(copper or 0))
+    if ns.db then
+        ns.db.settings = ns.db.settings or {}
+        ns.db.settings.maxQuickBuySpend = copper
+    end
+end
+
 
 ---------------------------------------------------------------------------
 -- Database maintenance & export
@@ -344,6 +360,7 @@ boot:SetScript("OnEvent", function(self, _, name)
     if db.settings.sortBy == nil then db.settings.sortBy = "profit" end
     if db.settings.tooltip == nil then db.settings.tooltip = true end
     if db.settings.minProfit == nil then db.settings.minProfit = 0 end
+    if db.settings.maxQuickBuySpend == nil then db.settings.maxQuickBuySpend = 500000 end
     if type(db.watchlist) ~= "table" then db.watchlist = {} end
 
     ns.db = db
@@ -472,6 +489,29 @@ SlashCmdList["GOLDFINDER"] = function(msg)
                 ns.Warn("Invalid amount. Usage: /gf minprofit <amount> (e.g. /gf minprofit 5g, /gf minprofit 10, /gf minprofit 0)")
             end
         end
+    elseif cmd == "maxspend" or cmd == "quickbuy" then
+        arg = arg and arg:match("^%s*(.-)%s*$") or ""
+        if arg == "" then
+            local current = ns.GetMaxQuickBuySpend()
+            if current > 0 then
+                ns.Print("Current Quick-Buy max spend cap: %s", ns.Money(current))
+            else
+                ns.Print("Quick-Buy max spend cap is disabled (no limit).")
+            end
+            ns.Print("Usage: /gf maxspend <amount> (e.g. /gf maxspend 50g, /gf maxspend 100g, /gf maxspend 0)")
+        else
+            local copper = ns.ParseMoneyString(arg)
+            if copper ~= nil then
+                ns.SetMaxQuickBuySpend(copper)
+                if copper > 0 then
+                    ns.Good("Quick-Buy max spend cap set to %s.", ns.Money(copper))
+                else
+                    ns.Good("Quick-Buy max spend cap disabled (no limit).")
+                end
+            else
+                ns.Warn("Invalid amount. Usage: /gf maxspend <amount> (e.g. /gf maxspend 50g, /gf maxspend 0)")
+            end
+        end
     elseif cmd == "tooltip" then
         arg = arg and arg:lower() or ""
         local val
@@ -567,6 +607,9 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         local minProfit = ns.GetMinProfit()
         local minProfitStr = (minProfit > 0) and ns.Money(minProfit) or "none (0c)"
         ns.Print("  - Min profit floor: %s", minProfitStr)
+        local maxSpend = ns.GetMaxQuickBuySpend()
+        local maxSpendStr = (maxSpend > 0) and ns.Money(maxSpend) or "none (no limit)"
+        ns.Print("  - Quick-Buy max spend cap: %s", maxSpendStr)
         ns.Print("Commands:")
         ns.Print("  /gf ratio <5-95>     - set discount percentage threshold")
         ns.Print("  /gf minscans <1-20>  - set minimum prior scans required")
@@ -574,6 +617,7 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         ns.Print("  /gf sound [on|off]   - toggle audio chime on deal find")
         ns.Print("  /gf chat [on|off]    - toggle chat summary on deal find")
         ns.Print("  /gf minprofit <amt>  - set minimum net profit filter (e.g. 5g, 50s, 0)")
+        ns.Print("  /gf maxspend <amt>   - set Quick-Buy spend cap (e.g. 50g, 100g, 0)")
         ns.Print("  /gf tooltip [on|off] - toggle item tooltip market pricing")
         ns.Print("  /gf export           - open CSV data export window")
         ns.Print("  /gf prune [days]     - prune items not seen in [days] (default 30)")

@@ -109,7 +109,7 @@ local COLUMNS = {
 
 local ui = { rows = {} }
 local requested = {}  -- itemIDs whose names we have asked the client to load
-local OpenInBuy, ShowRowTip, ItemName  -- defined below; rows call them on click/hover
+local OpenInBuy, ShowRowTip, ItemName, QuickBuy  -- defined below; rows call them on click/hover
 
 -- clickable rows highlight on hover and open their deal in the Buy view.
 local function MakeRow(anchor, font, clickable)
@@ -138,7 +138,11 @@ local function MakeRow(anchor, font, clickable)
         row:SetScript("OnMouseUp", function(self, button)
             if not self.deal then return end
             if button == "LeftButton" then
-                OpenInBuy(self.deal)
+                if IsShiftKeyDown() then
+                    QuickBuy(self.deal)
+                else
+                    OpenInBuy(self.deal)
+                end
             elseif button == "RightButton" then
                 local isWatched = ns.ToggleWatchlist(self.deal.itemID)
                 local name = (ItemName and ItemName(self.deal)) or self.deal.name or ("Item %d"):format(self.deal.itemID)
@@ -524,6 +528,78 @@ OpenInBuy = function(d)
     end
 end
 
+QuickBuy = function(d)
+    if not (AuctionHouseFrame and AuctionHouseFrame:IsShown()) then
+        ns.Warn("The auction house must be open to use Quick-Buy.")
+        return
+    end
+
+    if ns.pendingQuickBuy then
+        ns.Warn("A Quick-Buy purchase is already in progress for %s. Please wait.", ns.pendingQuickBuy.name)
+        return
+    end
+
+    local key, exact = KeyFor(d)
+    local name = ItemName(d)
+    local keyInfo = C_AuctionHouse.GetItemKeyInfo(key)
+    if not keyInfo then
+        C_Item.RequestLoadItemDataByID(d.itemID)
+        ns.Warn("%s is still loading from the server. Click again in a moment.", name)
+        return
+    end
+
+    if not keyInfo.isCommodity then
+        ns.Print("%s is not a commodity. Opening in Buy tab instead.", name)
+        OpenInBuy(d)
+        return
+    end
+
+    local availableQty = math.max(1, d.qty or 1)
+    local unitPrice = math.floor(d.now or 0)
+    local maxSpend = ns.GetMaxQuickBuySpend and ns.GetMaxQuickBuySpend() or 500000
+
+    local qtyToBuy = availableQty
+    if maxSpend > 0 and unitPrice > 0 then
+        local maxAffordable = math.floor(maxSpend / unitPrice)
+        if maxAffordable < 1 then
+            ns.Warn("Quick-Buy cancelled: 1x %s costs %s, exceeding your max spend cap of %s. Use /gf maxspend to raise cap.",
+                name, Money(unitPrice), Money(maxSpend))
+            return
+        end
+        if qtyToBuy > maxAffordable then
+            qtyToBuy = maxAffordable
+        end
+    end
+
+    ns.pendingQuickBuy = {
+        itemID            = d.itemID,
+        name              = name,
+        quantity          = qtyToBuy,
+        expectedUnitPrice = unitPrice,
+        maxSpend          = maxSpend,
+        deal              = d,
+        startedAt         = GetTime(),
+    }
+
+    -- Safety timeout: clear after 6 seconds if server does not respond
+    C_Timer.After(6, function()
+        if ns.pendingQuickBuy and ns.pendingQuickBuy.itemID == d.itemID then
+            ns.Warn("Quick-Buy request timed out for %s.", ns.pendingQuickBuy.name)
+            ns.pendingQuickBuy = nil
+        end
+    end)
+
+    local ok, err = pcall(C_AuctionHouse.StartCommoditiesPurchase, d.itemID, qtyToBuy)
+    if not ok then
+        ns.Bad("Could not initiate commodity quick-buy for %s: %s", name, tostring(err))
+        ns.pendingQuickBuy = nil
+    else
+        ns.Print("Quick-buying %dx %s (%s each, max total %s)...",
+            qtyToBuy, name, Money(unitPrice), Money(qtyToBuy * unitPrice))
+    end
+end
+ns.QuickBuy = QuickBuy
+
 ShowRowTip = function(row)
     local d = row.deal
     if not d then return end
@@ -577,8 +653,8 @@ ShowRowTip = function(row)
 
     tip:AddLine(" ")
     tip:AddDoubleLine("Watchlist:", ns.IsWatched(d.itemID) and "|cffffd100Starred|r" or "|cff888888Not starred|r", 1, 0.82, 0, 1, 1, 1)
-    tip:AddLine("Left-Click: open in Buy. Right-Click or click star: toggle Watchlist.", 0.4, 0.8, 1, true)
-    tip:AddLine("Check the price there before buying: per unit versus per stack is not yet measured.", 0.8, 0.8, 0.8, true)
+    tip:AddLine("Left-Click: open in Buy. Shift-Click: direct Quick-Buy commodity.", 0.4, 0.8, 1, true)
+    tip:AddLine("Right-Click or click star: toggle Watchlist.", 0.4, 0.8, 1, true)
     tip:Show()
 end
 
@@ -753,6 +829,67 @@ nameEvents:SetScript("OnEvent", function(_, _, itemID)
         nameRefreshArmed = false
         ns.RefreshPanel()
     end)
+end)
+
+---------------------------------------------------------------------------
+-- Quick-Buy commodity purchase events
+
+local qbEvents = CreateFrame("Frame")
+qbEvents:RegisterEvent("COMMODITY_PRICE_UPDATED")
+qbEvents:RegisterEvent("COMMODITY_PRICE_UNAVAILABLE")
+qbEvents:RegisterEvent("COMMODITY_PURCHASE_FAILED")
+qbEvents:RegisterEvent("COMMODITY_PURCHASE_SUCCEEDED")
+qbEvents:RegisterEvent("COMMODITY_PURCHASED")
+qbEvents:RegisterEvent("AUCTION_HOUSE_CLOSED")
+qbEvents:SetScript("OnEvent", function(self, event, arg1, arg2)
+    local pb = ns.pendingQuickBuy
+    if event == "AUCTION_HOUSE_CLOSED" then
+        ns.pendingQuickBuy = nil
+        return
+    end
+
+    if not pb then return end
+
+    if event == "COMMODITY_PRICE_UPDATED" then
+        local updatedUnitPrice, updatedTotalPrice = arg1, arg2
+        -- Spend cap protection
+        if pb.maxSpend > 0 and updatedTotalPrice > pb.maxSpend then
+            ns.Warn("Quick-Buy cancelled: confirmed total (%s) exceeds your spend cap of %s. Raise cap with /gf maxspend.",
+                Money(updatedTotalPrice), Money(pb.maxSpend))
+            ns.pendingQuickBuy = nil
+            return
+        end
+        -- Unit price spike protection (> 5% increase)
+        if updatedUnitPrice > math.floor(pb.expectedUnitPrice * 1.05) then
+            ns.Warn("Quick-Buy cancelled: unit price rose from %s to %s.",
+                Money(pb.expectedUnitPrice), Money(updatedUnitPrice))
+            ns.pendingQuickBuy = nil
+            return
+        end
+
+        pb.confirmedUnitPrice = updatedUnitPrice
+        pb.confirmedTotalPrice = updatedTotalPrice
+
+        local ok, err = pcall(C_AuctionHouse.ConfirmCommoditiesPurchase, pb.itemID, pb.quantity)
+        if not ok then
+            ns.Bad("Could not confirm commodity purchase: %s", tostring(err))
+            ns.pendingQuickBuy = nil
+        end
+    elseif event == "COMMODITY_PRICE_UNAVAILABLE" then
+        ns.Warn("%s is no longer available at that price (already bought or cancelled).", pb.name)
+        ns.pendingQuickBuy = nil
+    elseif event == "COMMODITY_PURCHASE_FAILED" then
+        ns.Bad("Quick-Buy failed for %s (insufficient gold or full bags).", pb.name)
+        ns.pendingQuickBuy = nil
+    elseif event == "COMMODITY_PURCHASE_SUCCEEDED" or event == "COMMODITY_PURCHASED" then
+        local totalStr = pb.confirmedTotalPrice and Money(pb.confirmedTotalPrice) or Money(pb.expectedUnitPrice * pb.quantity)
+        ns.Good("Quick-bought %dx %s for %s!", pb.quantity, pb.name, totalStr)
+        if type(PlaySound) == "function" then
+            pcall(PlaySound, (SOUNDKIT and SOUNDKIT.IG_BACKPACK_COIN_OK) or 895)
+        end
+        ns.pendingQuickBuy = nil
+        if ns.RefreshPanel then ns.RefreshPanel() end
+    end
 end)
 
 ---------------------------------------------------------------------------
