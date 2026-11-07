@@ -795,11 +795,11 @@ Sprint 2 execution is split into **v0.4.0** (Issues 01–04: High-Velocity Arbit
 
 Populated across GitHub Issues #36 through #53:
 
-### Sprint 3: Visual Options & Price Intelligence (Target: v0.6.0)
-* **#36 (Completed):** Graphical options & configuration panel (Settings UI) — native Blizzard Settings & standalone `/gf config` window.
-* **#37:** 14-day historical sparklines & price trend curve on deal tooltips.
-* **#38:** Alternative valuation engine (Trimmed mean & 7-day EMA).
-* **#39:** Custom category builder & material group editor (`/gf group add/remove`).
+### Sprint 3: Visual Options & Price Intelligence (v0.6.0) — ✅ COMPLETED
+* **#36 (Completed):** Graphical options & configuration panel (Settings UI) — native Blizzard Settings & standalone `/gf config` draggable dialog with interactive sliders, sound kit picker, and toggles.
+* **#37 (Completed):** 14-day historical sparklines & price trend curve on deal tooltips with dynamic median reference line and high/low labels (`Sparkline.lua`).
+* **#38 (Completed):** Alternative valuation engine with Standard Median, Trimmed Mean (10% outlier trim), and 7-Day Exponential Moving Average (EMA) selectable via Settings UI and `/gf valuation <median|trimmed|ema>`.
+* **#39 (Completed):** Custom category builder & material group editor with dynamic category tab bar, wrapping layout, in-game creation modal, Shift+Right-Click item assignment, and `/gf group create|delete|add|remove|list`.
 
 ### Sprint 4: Mailbox Procurement & Realized Margin Ledger (Target: v0.7.0)
 * **#40:** Mailbox one-click deal collector & cost tracking (`MAIL_INBOX_UPDATE`).
