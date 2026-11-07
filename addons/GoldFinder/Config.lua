@@ -168,6 +168,13 @@ local function RefreshControls()
     if not controls.confButtons[conf] then conf = "any" end
     SetButtonGroupActive(controls.confButtons, conf)
 
+    -- e2) Valuation Baseline Engine (#38)
+    if controls.valModelButtons then
+        local valModel = ns.GetValuationModel()
+        if not controls.valModelButtons[valModel] then valModel = "median" end
+        SetButtonGroupActive(controls.valModelButtons, valModel)
+    end
+
     -- f) Alert sound picker
     local soundKey
     if not ns.IsSoundAlertEnabled() then
@@ -209,6 +216,7 @@ local function ResetDefaults()
     ns.SetMinProfit(0)     -- 0c (disabled)
     ns.SetMaxQuickBuySpend(500000) -- 50g cap
     ns.SetMinConfidence("any")
+    ns.SetValuationModel("median")
     ns.SetSoundAlert(true)
     ns.SetSoundChoice("auction")
     ns.SetSoundThrottle(30)
@@ -246,7 +254,7 @@ local function CreateConfigFrameOnce()
 
     local template = BackdropTemplateMixin and "BackdropTemplate" or nil
     local f = CreateFrame("Frame", "GoldFinderConfigFrame", UIParent, template)
-    f:SetSize(620, 540)
+    f:SetSize(620, 590)
     f:SetPoint("CENTER", UIParent, "CENTER", 0, 20)
     f:SetFrameStrata("DIALOG")
     f:EnableMouse(true)
@@ -297,7 +305,7 @@ local function CreateConfigFrameOnce()
         5, 50, 1,
         function(val) return ("%d%% below typical"):format(val) end,
         "Discount Threshold",
-        "Percentage below typical median market price required to qualify as an underpriced deal.",
+        "Percentage below typical market price required to qualify as an underpriced deal.",
         function(_, val)
             local ratio = (100 - val) / 100
             ns.SetDealRatio(ratio)
@@ -309,7 +317,7 @@ local function CreateConfigFrameOnce()
         end
     )
     controls.discountSlider:SetSize(250, 16)
-    controls.discountSlider:SetPoint("TOPLEFT", 28, -90)
+    controls.discountSlider:SetPoint("TOPLEFT", 28, -82)
 
     -- b) Minimum Sighting Count slider (1 to 20, step 1)
     controls.minScansSlider = CreateSlider(
@@ -329,7 +337,7 @@ local function CreateConfigFrameOnce()
         end
     )
     controls.minScansSlider:SetSize(250, 16)
-    controls.minScansSlider:SetPoint("TOPLEFT", 330, -90)
+    controls.minScansSlider:SetPoint("TOPLEFT", 330, -82)
 
     -- c) Minimum Profit Floor input/slider (0 to 50g, step 0.5g = 50s)
     controls.minProfitSlider = CreateSlider(
@@ -354,7 +362,7 @@ local function CreateConfigFrameOnce()
         end
     )
     controls.minProfitSlider:SetSize(250, 16)
-    controls.minProfitSlider:SetPoint("TOPLEFT", 28, -150)
+    controls.minProfitSlider:SetPoint("TOPLEFT", 28, -134)
 
     -- d) Buyout Spend Cap input/slider (0 to 500g, step 10g)
     controls.spendCapSlider = CreateSlider(
@@ -378,11 +386,11 @@ local function CreateConfigFrameOnce()
         end
     )
     controls.spendCapSlider:SetSize(250, 16)
-    controls.spendCapSlider:SetPoint("TOPLEFT", 330, -150)
+    controls.spendCapSlider:SetPoint("TOPLEFT", 330, -134)
 
     -- e) Sighting Confidence Filter (Any, Medium+, High Only)
     local confLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    confLabel:SetPoint("TOPLEFT", 28, -200)
+    confLabel:SetPoint("TOPLEFT", 28, -178)
     confLabel:SetText("Sighting Confidence Rating Filter:")
 
     controls.confButtons = {}
@@ -394,7 +402,7 @@ local function CreateConfigFrameOnce()
     for i, opt in ipairs(confOptions) do
         local btn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
         btn:SetSize(opt.width, 22)
-        btn:SetPoint("TOPLEFT", 28 + (i - 1) * 188, -218)
+        btn:SetPoint("TOPLEFT", 28 + (i - 1) * 188, -196)
         btn.rawLabel = opt.label
         btn:SetText(opt.label)
         btn:SetScript("OnClick", function()
@@ -416,15 +424,47 @@ local function CreateConfigFrameOnce()
         controls.confButtons[opt.key] = btn
     end
 
+    -- f) Valuation Baseline Engine (#38)
+    local valModelLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    valModelLabel:SetPoint("TOPLEFT", 28, -226)
+    valModelLabel:SetText("Valuation Baseline Engine:")
+
+    controls.valModelButtons = {}
+    local valModelOptions = {
+        { key = "median",  label = "Median (Default)", tip = "Standard statistical median. Best for most markets; immune to extreme single-listing spikes and 1c bait.", width = 175 },
+        { key = "trimmed", label = "Trimmed Mean",     tip = "Discards top & bottom 10% outlier prices, averaging the middle 80%. Balances stability with distribution.", width = 175 },
+        { key = "ema",     label = "7-Day EMA",        tip = "7-period Exponential Moving Average. Weights recent auction scans higher for volatile or shifting markets.", width = 175 },
+    }
+    for i, opt in ipairs(valModelOptions) do
+        local btn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        btn:SetSize(opt.width, 22)
+        btn:SetPoint("TOPLEFT", 28 + (i - 1) * 188, -244)
+        btn.rawLabel = opt.label
+        btn:SetText(opt.label)
+        btn:SetScript("OnClick", function()
+            ns.SetValuationModel(opt.key)
+            SetButtonGroupActive(controls.valModelButtons, opt.key)
+            if ns.RefreshPanel then ns.RefreshPanel() end
+        end)
+        btn:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText(opt.label, 1, 0.82, 0)
+            GameTooltip:AddLine(opt.tip, 1, 1, 1, true)
+            GameTooltip:Show()
+        end)
+        btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        controls.valModelButtons[opt.key] = btn
+    end
+
     -----------------------------------------------------------------------
     -- Section 2: Audio Alerts & Cooldown
     -----------------------------------------------------------------------
     local sec2 = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    sec2:SetPoint("TOPLEFT", 24, -256)
+    sec2:SetPoint("TOPLEFT", 24, -280)
     sec2:SetText("|cffffd100Audio Alerts & Cooldown|r")
 
     local soundLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    soundLabel:SetPoint("TOPLEFT", 28, -276)
+    soundLabel:SetPoint("TOPLEFT", 28, -300)
     soundLabel:SetText("Deal Found Alert Sound:")
 
     controls.soundButtons = {}
@@ -440,7 +480,7 @@ local function CreateConfigFrameOnce()
     for _, opt in ipairs(soundOptions) do
         local btn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
         btn:SetSize(opt.width, 22)
-        btn:SetPoint("TOPLEFT", curX, -294)
+        btn:SetPoint("TOPLEFT", curX, -318)
         btn.rawLabel = opt.label
         btn:SetText(opt.label)
         curX = curX + opt.width + 6
@@ -471,7 +511,7 @@ local function CreateConfigFrameOnce()
     -- [ Test Sound ] button
     local testBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     testBtn:SetSize(110, 22)
-    testBtn:SetPoint("TOPLEFT", curX + 10, -294)
+    testBtn:SetPoint("TOPLEFT", curX + 10, -318)
     testBtn:SetText("Test Sound")
     testBtn:SetScript("OnClick", function()
         if not ns.IsSoundAlertEnabled() then
@@ -508,13 +548,13 @@ local function CreateConfigFrameOnce()
         end
     )
     controls.throttleSlider:SetSize(250, 16)
-    controls.throttleSlider:SetPoint("TOPLEFT", 28, -344)
+    controls.throttleSlider:SetPoint("TOPLEFT", 28, -360)
 
     -----------------------------------------------------------------------
     -- Section 3: General & Database Settings
     -----------------------------------------------------------------------
     local sec3 = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    sec3:SetPoint("TOPLEFT", 24, -390)
+    sec3:SetPoint("TOPLEFT", 24, -402)
     sec3:SetText("|cffffd100Database & Interface Settings|r")
 
     -- h) Checkbox: Cross-Faction Market Data Sharing
@@ -531,7 +571,7 @@ local function CreateConfigFrameOnce()
             end
         end
     )
-    controls.crossFactionCb:SetPoint("TOPLEFT", 28, -414)
+    controls.crossFactionCb:SetPoint("TOPLEFT", 28, -424)
 
     -- i) Checkbox: Show Minimap Button
     controls.minimapCb = CreateCheckbox(
@@ -549,7 +589,7 @@ local function CreateConfigFrameOnce()
             end
         end
     )
-    controls.minimapCb:SetPoint("TOPLEFT", 28, -444)
+    controls.minimapCb:SetPoint("TOPLEFT", 28, -452)
 
     -- j) Checkbox: Show Selling Tab Price Helper
     controls.sellHelperCb = CreateCheckbox(
@@ -563,7 +603,7 @@ local function CreateConfigFrameOnce()
             end
         end
     )
-    controls.sellHelperCb:SetPoint("TOPLEFT", 330, -414)
+    controls.sellHelperCb:SetPoint("TOPLEFT", 330, -424)
 
     -----------------------------------------------------------------------
     -- Section 4: Action Buttons at Bottom

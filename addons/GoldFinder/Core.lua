@@ -232,6 +232,45 @@ function ns.SetMinConfidence(lvl)
     end
 end
 
+ns.VALUATION_MODELS = {
+    median = {
+        id = "median",
+        name = "Standard Median",
+        shortName = "Median",
+        desc = "Immune to single-listing 1c bait and 999g spikes. Standard statistical baseline.",
+    },
+    trimmed = {
+        id = "trimmed",
+        name = "Trimmed Mean (10%)",
+        shortName = "Trimmed",
+        desc = "Discards top & bottom 10% outlier prices, averaging the middle 80%.",
+    },
+    ema = {
+        id = "ema",
+        name = "7-Day EMA",
+        shortName = "7d EMA",
+        desc = "7-period Exponential Moving Average. Weights recent auction scans higher for volatile markets.",
+    },
+}
+
+function ns.GetValuationModel()
+    local s = ns.db and ns.db.settings
+    local model = (s and s.valuationModel) or "median"
+    if not ns.VALUATION_MODELS[model] then model = "median" end
+    return model
+end
+
+function ns.SetValuationModel(model)
+    model = model and model:lower() or "median"
+    if not ns.VALUATION_MODELS[model] then model = "median" end
+    if ns.db then
+        ns.db.settings = ns.db.settings or {}
+        ns.db.settings.valuationModel = model
+        ns.db.valuationModel = model
+    end
+    return model, ns.VALUATION_MODELS[model]
+end
+
 
 ---------------------------------------------------------------------------
 -- Database maintenance & export
@@ -451,6 +490,7 @@ boot:SetScript("OnEvent", function(self, _, name)
     if db.settings.minProfit == nil then db.settings.minProfit = 0 end
     if db.settings.maxQuickBuySpend == nil then db.settings.maxQuickBuySpend = 500000 end
     if db.settings.minConfidence == nil then db.settings.minConfidence = "any" end
+    if db.settings.valuationModel == nil then db.settings.valuationModel = "median" end
     if db.settings.factionShare == nil then db.settings.factionShare = true end
     if type(db.watchlist) ~= "table" then db.watchlist = {} end
     if type(db.shoppingLists) ~= "table" then db.shoppingLists = {} end
@@ -803,6 +843,19 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         else
             ns.Print("Current minimum confidence filter: %s", ns.GetMinConfidence():upper())
             ns.Warn("Usage: /gf minconf <any | med | high>")
+        end
+    elseif cmd == "valuation" or cmd == "baseline" or cmd == "model" then
+        arg = arg and arg:lower():match("^%s*(.-)%s*$") or ""
+        if arg == "median" or arg == "trimmed" or arg == "ema" then
+            local model, info = ns.SetValuationModel(arg)
+            ns.Good("Valuation baseline engine set to: %s.", info.name)
+            ns.Print("  %s", info.desc)
+            if ns.RefreshPanel then ns.RefreshPanel() end
+        else
+            local curModel = ns.GetValuationModel()
+            local curInfo = ns.VALUATION_MODELS[curModel]
+            ns.Print("Current valuation engine: %s (%s)", curInfo.name, curInfo.desc)
+            ns.Warn("Usage: /gf valuation <median | trimmed | ema>")
         end
     elseif cmd == "factionshare" or cmd == "crossfaction" then
         arg = arg and arg:lower() or ""
