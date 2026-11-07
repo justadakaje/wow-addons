@@ -246,9 +246,10 @@ function ns.FindConversionDeals()
     local minProfit = ns.GetMinProfit()
 
     for _, conv in ipairs(ns.CONVERSIONS) do
-        local outTypical = ns.GetItemTypicalPrice(conv.output.itemID)
-        local outCurrent = ns.GetItemCurrentPrice(conv.output.itemID)
-        local outUnitPrice = outCurrent or outTypical
+        if not (ns.IsBlacklisted and ns.IsBlacklisted(conv.output.itemID)) then
+            local outTypical = ns.GetItemTypicalPrice(conv.output.itemID)
+            local outCurrent = ns.GetItemCurrentPrice(conv.output.itemID)
+            local outUnitPrice = outCurrent or outTypical
 
         if outUnitPrice and outUnitPrice > 0 then
             local totalOutValue = math.floor(outUnitPrice * conv.output.qty * 0.95)
@@ -297,6 +298,7 @@ function ns.FindConversionDeals()
                 end
             end
         end
+    end
     end
 
     local sortBy = ns.GetSortBy()
@@ -501,7 +503,7 @@ function ns.FindDeals()
     for itemID, rec in pairs(db.items) do
         local h = rec.history
         local n = h and #h or 0
-        if n > 0 then
+        if not (ns.IsBlacklisted and ns.IsBlacklisted(itemID)) and n > 0 then
             status.items = status.items + 1
             local current = h[n]
             if now - (current.seen or current.t) > FRESH_SECONDS then

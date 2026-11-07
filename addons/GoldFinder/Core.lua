@@ -395,6 +395,7 @@ boot:SetScript("OnEvent", function(self, _, name)
     if db.settings.factionShare == nil then db.settings.factionShare = true end
     if type(db.watchlist) ~= "table" then db.watchlist = {} end
     if type(db.shoppingLists) ~= "table" then db.shoppingLists = {} end
+    if type(db.blacklist) ~= "table" then db.blacklist = {} end
     if type(db.realms) ~= "table" then db.realms = {} end
 
     -- Active realm and faction partition binding
@@ -508,6 +509,38 @@ function ns.GetWatchlistCount()
     local count = 0
     if ns.db and ns.db.watchlist then
         for _ in pairs(ns.db.watchlist) do count = count + 1 end
+    end
+    return count
+end
+
+---------------------------------------------------------------------------
+-- Item Blacklist / Ignore Filter (#35)
+
+function ns.IsBlacklisted(itemID)
+    if not itemID or not ns.db or not ns.db.blacklist then return false end
+    return ns.db.blacklist[itemID] == true
+end
+
+function ns.SetBlacklisted(itemID, state)
+    if not itemID or not ns.db then return end
+    ns.db.blacklist = ns.db.blacklist or {}
+    if state then
+        ns.db.blacklist[itemID] = true
+    else
+        ns.db.blacklist[itemID] = nil
+    end
+end
+
+function ns.ToggleBlacklist(itemID)
+    local cur = ns.IsBlacklisted(itemID)
+    ns.SetBlacklisted(itemID, not cur)
+    return not cur
+end
+
+function ns.GetBlacklistCount()
+    local count = 0
+    if ns.db and ns.db.blacklist then
+        for _ in pairs(ns.db.blacklist) do count = count + 1 end
     end
     return count
 end
@@ -752,6 +785,35 @@ SlashCmdList["GOLDFINDER"] = function(msg)
                 local name = C_Item.GetItemNameByID(id) or ("Item " .. id)
                 ns.Print("  - %s (ID: %d)", name, id)
             end
+        end
+    elseif cmd == "ignore" or cmd == "blacklist" then
+        local itemID = tonumber(arg) or tonumber(arg and arg:match("item:(%d+)"))
+        if itemID then
+            ns.SetBlacklisted(itemID, true)
+            local name = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID)) or ("Item " .. itemID)
+            ns.Good("Added %s to blacklist. It will no longer appear in deals or alerts.", name)
+            if ns.RefreshPanel then ns.RefreshPanel() end
+        else
+            local count = ns.GetBlacklistCount()
+            ns.Print("Blacklist / Ignored Items (%d):", count)
+            if count == 0 then
+                ns.Print("  No items currently ignored. Add one with: /gf ignore <link|id>")
+            else
+                for id in pairs(ns.db.blacklist) do
+                    local name = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(id)) or ("Item " .. id)
+                    ns.Print("  - %s (ID: %d)", name, id)
+                end
+            end
+        end
+    elseif cmd == "unignore" or cmd == "unblacklist" then
+        local itemID = tonumber(arg) or tonumber(arg and arg:match("item:(%d+)"))
+        if itemID then
+            ns.SetBlacklisted(itemID, false)
+            local name = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID)) or ("Item " .. itemID)
+            ns.Good("Removed %s from blacklist.", name)
+            if ns.RefreshPanel then ns.RefreshPanel() end
+        else
+            ns.Warn("Usage: /gf unignore <itemID or item link>")
         end
     elseif cmd == "buy" then
         local itemID = tonumber(arg:match("item:(%d+)"))

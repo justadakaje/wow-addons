@@ -152,14 +152,24 @@ local function MakeRow(anchor, font, clickable)
                     OpenInBuy(self.deal)
                 end
             elseif button == "RightButton" then
-                local isWatched = ns.ToggleWatchlist(self.deal.itemID)
                 local name = (ItemName and ItemName(self.deal)) or self.deal.name or ("Item %d"):format(self.deal.itemID)
-                if isWatched then
-                    ns.Good("Added %s to watchlist.", name)
+                if IsAltKeyDown() then
+                    local isIgnored = ns.ToggleBlacklist(self.deal.itemID)
+                    if isIgnored then
+                        ns.Good("Blacklisted %s. Item will no longer appear in GoldFinder deals.", name)
+                    else
+                        ns.Print("Removed %s from blacklist.", name)
+                    end
+                    ns.RefreshPanel()
                 else
-                    ns.Print("Removed %s from watchlist.", name)
+                    local isWatched = ns.ToggleWatchlist(self.deal.itemID)
+                    if isWatched then
+                        ns.Good("Added %s to watchlist.", name)
+                    else
+                        ns.Print("Removed %s from watchlist.", name)
+                    end
+                    ns.RefreshPanel()
                 end
-                ns.RefreshPanel()
             end
         end)
     end
@@ -728,6 +738,7 @@ ShowRowTip = function(row)
     tip:AddDoubleLine("Watchlist:", ns.IsWatched(d.itemID) and "|cffffd100Starred|r" or "|cff888888Not starred|r", 1, 0.82, 0, 1, 1, 1)
     tip:AddLine("Left-Click: open in Buy. Shift-Click: direct Quick-Buy commodity.", 0.4, 0.8, 1, true)
     tip:AddLine("Right-Click or click star: toggle Watchlist.", 0.4, 0.8, 1, true)
+    tip:AddLine("Alt+Right-Click: Blacklist/ignore item from deals.", 0.8, 0.45, 0.45, true)
     tip:Show()
 end
 
