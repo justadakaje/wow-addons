@@ -48,7 +48,8 @@ function ns.ShowBrokerTooltip(tip)
 
     tip:AddLine(" ")
     tip:AddLine("Left-Click: Open GoldFinder tab at Auction House.", 0.4, 0.8, 1, true)
-    tip:AddLine("Right-Click / Shift-Click: Open CSV data export dialog.", 0.4, 0.8, 1, true)
+    tip:AddLine("Right-Click: Open GoldFinder Options & Configuration.", 0.4, 0.8, 1, true)
+    tip:AddLine("Shift-Click: Open CSV data export dialog.", 0.4, 0.8, 1, true)
     tip:AddLine("Type /gf minimap to toggle this minimap button.", 0.6, 0.6, 0.6, true)
 end
 
@@ -90,7 +91,15 @@ local function InitBroker()
                     end
                 end
             elseif button == "RightButton" then
-                ns.ShowExportDialog()
+                if IsShiftKeyDown() then
+                    ns.ShowExportDialog()
+                else
+                    if ns.OpenConfig then
+                        ns.OpenConfig()
+                    elseif ns.ToggleConfig then
+                        ns.ToggleConfig()
+                    end
+                end
             end
         end,
     })

@@ -273,13 +273,34 @@ local function BuildPanel()
 
     ui.sub = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     ui.sub:SetPoint("TOPLEFT", ui.title, "BOTTOMLEFT", 0, -6)
-    ui.sub:SetPoint("RIGHT", panel, "RIGHT", -200, 0)
+    ui.sub:SetPoint("RIGHT", panel, "RIGHT", -270, 0)
     ui.sub:SetJustifyH("LEFT")
+
+    -- Options button in header to open settings UI (#36)
+    local optBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+    optBtn:SetSize(68, 22)
+    optBtn:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -10, -2)
+    optBtn:SetText("Options")
+    optBtn:SetScript("OnClick", function()
+        if ns.OpenConfig then
+            ns.OpenConfig()
+        elseif ns.ToggleConfig then
+            ns.ToggleConfig()
+        end
+    end)
+    optBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("GoldFinder Options", 1, 0.82, 0)
+        GameTooltip:AddLine("Open graphical settings panel to configure deal thresholds, sound alerts, and filters.", 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    optBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    ui.optionsButton = optBtn
 
     -- Search box in header to filter deals in real time (#24)
     local search = CreateFrame("EditBox", nil, panel, "SearchBoxTemplate")
-    search:SetSize(180, 22)
-    search:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -10, -2)
+    search:SetSize(170, 22)
+    search:SetPoint("TOPRIGHT", optBtn, "TOPLEFT", -8, 0)
     search:SetAutoFocus(false)
     search.Instructions:SetText("Search deals...")
     search:SetScript("OnTextChanged", function(self)

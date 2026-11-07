@@ -32,4 +32,5 @@ Deals.lua
 Tooltip.lua
 Broker.lua
 SellHelper.lua
+Config.lua
 Tab.lua
