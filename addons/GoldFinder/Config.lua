@@ -277,6 +277,7 @@ local function CreateConfigFrameOnce()
     f:SetSize(620, 630)
     f:SetPoint("CENTER", UIParent, "CENTER", 0, 20)
     f:SetFrameStrata("DIALOG")
+    f:SetToplevel(true)
     f:EnableMouse(true)
     f:SetMovable(true)
     f:RegisterForDrag("LeftButton")
@@ -290,6 +291,14 @@ local function CreateConfigFrameOnce()
         tile = true, tileSize = 32, edgeSize = 32,
         insets = { left = 8, right = 8, top = 8, bottom = 8 }
     })
+    if f.SetBackdropColor then
+        f:SetBackdropColor(0, 0, 0, 1)
+    end
+
+    local solidBg = f:CreateTexture(nil, "BACKGROUND", nil, -8)
+    solidBg:SetPoint("TOPLEFT", 6, -6)
+    solidBg:SetPoint("BOTTOMRIGHT", -6, 6)
+    solidBg:SetColorTexture(0.08, 0.08, 0.10, 0.98)
 
     tinsert(UISpecialFrames, "GoldFinderConfigFrame")
 
@@ -678,6 +687,7 @@ local function CreateConfigFrameOnce()
     openLedgerBtn:SetPoint("TOPLEFT", 28, -514)
     openLedgerBtn:SetText("Open Goblin P&L Ledger")
     openLedgerBtn:SetScript("OnClick", function()
+        f:Hide()
         if ns.OpenLedger then
             ns.OpenLedger()
         end
@@ -697,6 +707,7 @@ local function CreateConfigFrameOnce()
     openCartBtn:SetPoint("TOPLEFT", 330, -514)
     openCartBtn:SetText("Open Staging Cart")
     openCartBtn:SetScript("OnClick", function()
+        f:Hide()
         if ns.OpenCart then
             ns.OpenCart()
         end

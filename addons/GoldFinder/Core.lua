@@ -457,6 +457,7 @@ function ns.ShowExportDialog()
         exportFrame:SetSize(640, 420)
         exportFrame:SetPoint("CENTER")
         exportFrame:SetFrameStrata("DIALOG")
+        exportFrame:SetToplevel(true)
         exportFrame:EnableMouse(true)
         exportFrame:SetMovable(true)
         exportFrame:RegisterForDrag("LeftButton")
@@ -469,6 +470,14 @@ function ns.ShowExportDialog()
             tile = true, tileSize = 32, edgeSize = 32,
             insets = { left = 8, right = 8, top = 8, bottom = 8 }
         })
+        if exportFrame.SetBackdropColor then
+            exportFrame:SetBackdropColor(0, 0, 0, 1)
+        end
+
+        local solidBg = exportFrame:CreateTexture(nil, "BACKGROUND", nil, -8)
+        solidBg:SetPoint("TOPLEFT", 6, -6)
+        solidBg:SetPoint("BOTTOMRIGHT", -6, 6)
+        solidBg:SetColorTexture(0.08, 0.08, 0.10, 0.98)
 
         local title = exportFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
         title:SetPoint("TOP", 0, -18)

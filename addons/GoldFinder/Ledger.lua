@@ -153,8 +153,9 @@ local function CreateLedgerFrameOnce()
     local template = BackdropTemplateMixin and "BackdropTemplate" or nil
     local f = CreateFrame("Frame", "GoldFinderLedgerFrame", UIParent, template)
     f:SetSize(720, 520)
-    f:SetPoint("CENTER", UIParent, "CENTER", 0, 30)
+    f:SetPoint("CENTER", UIParent, "CENTER", 0, 25)
     f:SetFrameStrata("DIALOG")
+    f:SetToplevel(true)
     f:EnableMouse(true)
     f:SetMovable(true)
     f:RegisterForDrag("LeftButton")
@@ -168,6 +169,14 @@ local function CreateLedgerFrameOnce()
         tile = true, tileSize = 32, edgeSize = 32,
         insets = { left = 8, right = 8, top = 8, bottom = 8 }
     })
+    if f.SetBackdropColor then
+        f:SetBackdropColor(0, 0, 0, 1)
+    end
+
+    local solidBg = f:CreateTexture(nil, "BACKGROUND", nil, -8)
+    solidBg:SetPoint("TOPLEFT", 6, -6)
+    solidBg:SetPoint("BOTTOMRIGHT", -6, 6)
+    solidBg:SetColorTexture(0.08, 0.08, 0.10, 0.98)
 
     tinsert(UISpecialFrames, "GoldFinderLedgerFrame")
 
@@ -361,10 +370,28 @@ local function CreateLedgerFrameOnce()
     resetBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     local bottomClose = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    bottomClose:SetSize(100, 24)
+    bottomClose:SetSize(90, 24)
     bottomClose:SetPoint("BOTTOMRIGHT", -26, 18)
     bottomClose:SetText("Close")
     bottomClose:SetScript("OnClick", function() f:Hide() end)
+
+    local optBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    optBtn:SetSize(90, 24)
+    optBtn:SetPoint("RIGHT", bottomClose, "LEFT", -8, 0)
+    optBtn:SetText("Options")
+    optBtn:SetScript("OnClick", function()
+        f:Hide()
+        if ns.OpenConfig then
+            ns.OpenConfig()
+        end
+    end)
+    optBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("GoldFinder Options", 1, 0.82, 0)
+        GameTooltip:AddLine("Return to the GoldFinder settings and configuration panel.", 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    optBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     f:SetScript("OnShow", function(self)
         RefreshLedgerUI(self)

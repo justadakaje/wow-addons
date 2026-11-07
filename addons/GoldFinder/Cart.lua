@@ -236,6 +236,7 @@ local function CreateCartFrameOnce()
     f:SetSize(560, 420)
     f:SetPoint("CENTER", UIParent, "CENTER", 40, -20)
     f:SetFrameStrata("DIALOG")
+    f:SetToplevel(true)
     f:EnableMouse(true)
     f:SetMovable(true)
     f:RegisterForDrag("LeftButton")
@@ -249,6 +250,14 @@ local function CreateCartFrameOnce()
         tile = true, tileSize = 32, edgeSize = 32,
         insets = { left = 8, right = 8, top = 8, bottom = 8 }
     })
+    if f.SetBackdropColor then
+        f:SetBackdropColor(0, 0, 0, 1)
+    end
+
+    local solidBg = f:CreateTexture(nil, "BACKGROUND", nil, -8)
+    solidBg:SetPoint("TOPLEFT", 6, -6)
+    solidBg:SetPoint("BOTTOMRIGHT", -6, 6)
+    solidBg:SetColorTexture(0.08, 0.08, 0.10, 0.98)
 
     tinsert(UISpecialFrames, "GoldFinderCartFrame")
 

@@ -421,6 +421,7 @@ local function BuildPanel()
             f:SetSize(320, 140)
             f:SetPoint("CENTER", UIParent, "CENTER", 0, 80)
             f:SetFrameStrata("DIALOG")
+            f:SetToplevel(true)
             f:EnableMouse(true)
             f:SetMovable(true)
             f:RegisterForDrag("LeftButton")
@@ -434,6 +435,14 @@ local function BuildPanel()
                 tile = true, tileSize = 32, edgeSize = 32,
                 insets = { left = 8, right = 8, top = 8, bottom = 8 }
             })
+            if f.SetBackdropColor then
+                f:SetBackdropColor(0, 0, 0, 1)
+            end
+
+            local solidBg = f:CreateTexture(nil, "BACKGROUND", nil, -8)
+            solidBg:SetPoint("TOPLEFT", 6, -6)
+            solidBg:SetPoint("BOTTOMRIGHT", -6, 6)
+            solidBg:SetColorTexture(0.08, 0.08, 0.10, 0.98)
 
             local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
             title:SetPoint("TOP", 0, -16)
