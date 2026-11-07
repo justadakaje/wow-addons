@@ -723,6 +723,14 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         else val = not ns.IsFactionShareEnabled() end
         ns.SetFactionShareEnabled(val)
         ns.Good("Cross-faction market sharing %s on %s.", val and "enabled" or "disabled", ns.GetActiveRealm())
+    elseif cmd == "minimap" or cmd == "icon" then
+        arg = arg and arg:lower() or ""
+        local val
+        if arg == "on" or arg == "1" or arg == "true" then val = true
+        elseif arg == "off" or arg == "0" or arg == "false" then val = false
+        else val = not (ns.IsMinimapButtonShown and ns.IsMinimapButtonShown()) end
+        if ns.SetMinimapButtonShown then ns.SetMinimapButtonShown(val) end
+        ns.Good("Minimap coin button %s.", val and "enabled" or "disabled")
     elseif cmd == "sync" or cmd == "realms" then
         local realm = ns.GetActiveRealm()
         local faction = ns.GetActiveFaction()
@@ -913,6 +921,7 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         ns.Print("  - Sell tab market helper: %s", (ns.IsSellHelperEnabled and ns.IsSellHelperEnabled()) and "on" or "off")
         ns.Print("  - Min sighting confidence: %s", (ns.GetMinConfidence and ns.GetMinConfidence():upper()) or "ANY")
         ns.Print("  - Cross-faction sharing: %s (Realm: %s)", ns.IsFactionShareEnabled() and "on" or "off", ns.GetActiveRealm())
+        ns.Print("  - Minimap button: %s", (ns.IsMinimapButtonShown and ns.IsMinimapButtonShown()) and "on" or "off")
         local minProfit = ns.GetMinProfit()
         local minProfitStr = (minProfit > 0) and ns.Money(minProfit) or "none (0c)"
         ns.Print("  - Min profit floor: %s", minProfitStr)
@@ -925,6 +934,7 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         ns.Print("  /gf minconf <any|med|high> - filter deals by sighting confidence rating")
         ns.Print("  /gf factionshare [on|off] - toggle cross-faction market sharing")
         ns.Print("  /gf sync             - view database realm and faction sharing status")
+        ns.Print("  /gf minimap [on|off] - toggle minimap coin icon")
         ns.Print("  /gf sort             - toggle sort: profit vs discount")
         ns.Print("  /gf sound [on|off]   - toggle audio chime on deal find")
         ns.Print("  /gf chat [on|off]    - toggle chat summary on deal find")

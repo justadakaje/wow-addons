@@ -225,6 +225,7 @@ local function Finish(c, totalRows)
     end
 
     if ns.RefreshPanel then ns.RefreshPanel() end
+    if ns.UpdateBrokerText then ns.UpdateBrokerText() end
 end
 
 ---------------------------------------------------------------------------
@@ -391,4 +392,5 @@ events:SetScript("OnEvent", function(_, event, payload)
         ArmSettle()
     end
     if ns.RefreshPanel then ns.RefreshPanel() end
+    if ns.UpdateBrokerText then ns.UpdateBrokerText() end
 end)

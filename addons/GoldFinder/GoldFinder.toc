@@ -21,11 +21,15 @@
 # Vendored third-party libraries. See libs/README.md for versions and
 # licenses. LibStub first, then LibAHTab, which registers through it.
 libs\LibStub\LibStub.lua
+libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
+libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
 libs\LibAHTab\LibAHTab.xml
 
 Core.lua
 Scan.lua
 Deals.lua
 Tooltip.lua
+Broker.lua
 SellHelper.lua
 Tab.lua
