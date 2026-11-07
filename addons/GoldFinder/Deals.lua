@@ -314,9 +314,106 @@ function ns.FindUndercuts()
     return undercuts
 end
 
+function ns.FindShoppingDeals()
+    local deals = {}
+    local list = ns.GetShoppingList and ns.GetShoppingList()
+    if not list then return deals end
+
+    for itemID, req in pairs(list) do
+        local targetQty = req.target or req.targetQty or 0
+        if targetQty > 0 then
+            local acquired = ns.GetItemInventoryCount and ns.GetItemInventoryCount(itemID) or 0
+            local remaining = math.max(0, targetQty - acquired)
+            local currentPrice = ns.GetItemCurrentPrice and ns.GetItemCurrentPrice(itemID)
+            local typical = (ns.GetItemTypicalPrice and ns.GetItemTypicalPrice(itemID)) or currentPrice or 0
+            local maxPrice = req.maxUnitPrice
+            local name = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID)) or ("Item %d"):format(itemID)
+
+            local unitCost = currentPrice or maxPrice or typical or 0
+            local totalCost = remaining * unitCost
+
+            local below = 0
+            if typical and typical > 0 and currentPrice and currentPrice > 0 then
+                below = (typical - currentPrice) / typical
+            end
+
+            local deal = {
+                isShopping      = true,
+                itemID          = itemID,
+                name            = name,
+                now             = currentPrice or 0,
+                typical         = maxPrice or typical or 0,
+                below           = below,
+                qty             = remaining,
+                target          = targetQty,
+                acquired        = acquired,
+                remaining       = remaining,
+                maxUnitPrice    = maxPrice,
+                totalCost       = totalCost,
+                netUnitProfit   = (typical > (currentPrice or 0)) and (typical - (currentPrice or 0)) or 0,
+                totalNetProfit  = remaining * ((typical > (currentPrice or 0)) and (typical - (currentPrice or 0)) or 0),
+                category        = "shopping",
+            }
+
+            if remaining == 0 then
+                deal.tier = {
+                    id       = "complete",
+                    label    = "Complete",
+                    tag      = "[GOAL MET]",
+                    hex      = "40ff40",
+                    colorStr = "|cff40ff40",
+                    r        = 0.25,
+                    g        = 1.0,
+                    b        = 0.25,
+                    bgAlpha  = 0.08,
+                }
+            elseif maxPrice and currentPrice and currentPrice > maxPrice then
+                deal.tier = {
+                    id       = "overbudget",
+                    label    = "Over Budget",
+                    tag      = "[OVER CAP]",
+                    hex      = "ff8844",
+                    colorStr = "|cffff8844",
+                    r        = 1.0,
+                    g        = 0.53,
+                    b        = 0.27,
+                    bgAlpha  = 0.08,
+                }
+            else
+                deal.tier = {
+                    id       = "shopping",
+                    label    = "Target",
+                    tag      = "[GOAL]",
+                    hex      = "00ccff",
+                    colorStr = "|cff00ccff",
+                    r        = 0.0,
+                    g        = 0.8,
+                    b        = 1.0,
+                    bgAlpha  = 0.10,
+                }
+            end
+
+            deals[#deals + 1] = deal
+        end
+    end
+
+    table.sort(deals, function(a, b)
+        if (a.remaining > 0) ~= (b.remaining > 0) then
+            return a.remaining > 0
+        end
+        return (a.remaining or 0) > (b.remaining or 0)
+    end)
+
+    return deals
+end
+
 function ns.FindDeals()
     if ns.GetActiveCategory and ns.GetActiveCategory() == "undercuts" then
         return ns.FindUndercuts(), { items = 0, judged = 0, needMore = 0, stale = 0, fewestMissing = nil }
+    end
+    if ns.GetActiveCategory and ns.GetActiveCategory() == "shopping" then
+        local sDeals = ns.FindShoppingDeals()
+        return sDeals, { items = #sDeals, judged = #sDeals, needMore = 0, stale = 0, fewestMissing = nil }
     end
     local status = { items = 0, judged = 0, needMore = 0, stale = 0, fewestMissing = nil }
     local deals = {}
@@ -367,6 +464,7 @@ function ns.FindDeals()
                         history        = h,
                         category       = ns.GetItemCategory and ns.GetItemCategory(itemID) or "other",
                         isWatched      = ns.IsWatched and ns.IsWatched(itemID) or false,
+                        isShoppingGoal = (ns.GetShoppingItem and ns.GetShoppingItem(itemID) ~= nil),
                     }
                     deals[#deals].tier = ns.GetDealTier(deals[#deals])
                     end

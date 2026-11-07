@@ -362,6 +362,7 @@ boot:SetScript("OnEvent", function(self, _, name)
     if db.settings.minProfit == nil then db.settings.minProfit = 0 end
     if db.settings.maxQuickBuySpend == nil then db.settings.maxQuickBuySpend = 500000 end
     if type(db.watchlist) ~= "table" then db.watchlist = {} end
+    if type(db.shoppingLists) ~= "table" then db.shoppingLists = {} end
 
     ns.db = db
 end)
@@ -378,7 +379,7 @@ end
 function ns.SetActiveCategory(cat)
     cat = cat and cat:lower() or "all"
     if cat == "crafts" then cat = "conversions" end
-    local valid = { all = true, herbs = true, mining = true, cloth = true, leather = true, conversions = true, undercuts = true, watchlist = true }
+    local valid = { all = true, herbs = true, mining = true, cloth = true, leather = true, conversions = true, undercuts = true, shopping = true, watchlist = true }
     ns.activeCategory = valid[cat] and cat or "all"
 end
 
@@ -410,6 +411,49 @@ function ns.GetWatchlistCount()
         for _ in pairs(ns.db.watchlist) do count = count + 1 end
     end
     return count
+end
+
+---------------------------------------------------------------------------
+-- Shopping Lists & Material Quota Tracking (#22)
+
+function ns.GetShoppingList()
+    return (ns.db and ns.db.shoppingLists) or {}
+end
+
+function ns.GetShoppingItem(itemID)
+    if not itemID or not ns.db or not ns.db.shoppingLists then return nil end
+    return ns.db.shoppingLists[itemID]
+end
+
+function ns.SetShoppingItem(itemID, targetQty, maxUnitPrice)
+    if not ns.db or not itemID then return end
+    ns.db.shoppingLists = ns.db.shoppingLists or {}
+    targetQty = tonumber(targetQty) or 0
+    if targetQty <= 0 then
+        ns.db.shoppingLists[itemID] = nil
+    else
+        ns.db.shoppingLists[itemID] = {
+            target = targetQty,
+            targetQty = targetQty,
+            maxUnitPrice = maxUnitPrice and maxUnitPrice > 0 and maxUnitPrice or nil,
+        }
+    end
+end
+
+function ns.RemoveShoppingItem(itemID)
+    if ns.db and ns.db.shoppingLists and itemID then
+        ns.db.shoppingLists[itemID] = nil
+    end
+end
+
+function ns.GetItemInventoryCount(itemID)
+    if not itemID then return 0 end
+    if C_Item and C_Item.GetItemCount then
+        return C_Item.GetItemCount(itemID, true, false, true, true) or 0
+    elseif GetItemCount then
+        return GetItemCount(itemID, true) or 0
+    end
+    return 0
 end
 
 ---------------------------------------------------------------------------
@@ -565,14 +609,69 @@ SlashCmdList["GOLDFINDER"] = function(msg)
                 ns.Print("  - %s (ID: %d)", name, id)
             end
         end
+    elseif cmd == "buy" then
+        local itemID = tonumber(arg:match("item:(%d+)"))
+        local rest = arg
+        if itemID then
+            rest = rest:gsub("|c%x+|Hitem:%d+:[^|]+|h%[[^%]]+%]|h|r", "")
+        else
+            local idStr
+            idStr, rest = rest:match("^(%d+)%s*(.*)$")
+            itemID = tonumber(idStr)
+        end
+        local qtyStr, maxStr = rest and rest:match("^%s*(%d+)%s*(.*)$")
+        local qty = tonumber(qtyStr)
+        if itemID and qty and qty > 0 then
+            local maxPrice = (maxStr and maxStr ~= "") and ns.ParseMoneyString(maxStr) or nil
+            ns.SetShoppingItem(itemID, qty, maxPrice)
+            local name = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID)) or ("Item " .. itemID)
+            local acquired = ns.GetItemInventoryCount(itemID)
+            if maxPrice and maxPrice > 0 then
+                ns.Good("Added %s to shopping list: target %d (have %d), max price %s.", name, qty, acquired, ns.Money(maxPrice))
+            else
+                ns.Good("Added %s to shopping list: target %d (have %d, no price cap).", name, qty, acquired)
+            end
+            if ns.RefreshPanel then ns.RefreshPanel() end
+        else
+            ns.Warn("Usage: /gf buy <itemID or item link> <targetQty> [maxUnitPrice]")
+            ns.Print("Examples: /gf buy [Thorium Ore] 200 50s  OR  /gf buy 10620 100")
+        end
+    elseif cmd == "unbuy" or cmd == "removebuy" then
+        local itemID = tonumber(arg:match("item:(%d+)")) or tonumber(arg:match("^(%d+)"))
+        if itemID then
+            local name = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID)) or ("Item " .. itemID)
+            ns.RemoveShoppingItem(itemID)
+            ns.Good("Removed %s from shopping list.", name)
+            if ns.RefreshPanel then ns.RefreshPanel() end
+        else
+            ns.Warn("Usage: /gf unbuy <itemID or item link>")
+        end
+    elseif cmd == "shopping" or cmd == "buylist" then
+        local list = ns.GetShoppingList()
+        local count = 0
+        for _ in pairs(list) do count = count + 1 end
+        ns.Print("Shopping List (%d item%s):", count, count == 1 and "" or "s")
+        if count == 0 then
+            ns.Print("  No active shopping targets. Add one with: /gf buy <link> <qty> [maxPrice]")
+        else
+            for id, req in pairs(list) do
+                local name = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(id)) or ("Item " .. id)
+                local target = req.target or req.targetQty or 0
+                local acquired = ns.GetItemInventoryCount(id)
+                local remaining = math.max(0, target - acquired)
+                local maxStr = req.maxUnitPrice and (" (max: " .. ns.Money(req.maxUnitPrice) .. ")") or ""
+                local statusStr = (remaining == 0) and "|cff40ff40[COMPLETE]|r" or ("|cffffd100%d/%d|r (%d remaining)"):format(acquired, target, remaining)
+                ns.Print("  - %s: %s%s", name, statusStr, maxStr)
+            end
+        end
     elseif cmd == "cat" or cmd == "category" then
         arg = arg and arg:lower() or ""
-        if arg == "all" or arg == "herbs" or arg == "mining" or arg == "cloth" or arg == "leather" or arg == "conversions" or arg == "crafts" or arg == "undercuts" or arg == "watchlist" then
+        if arg == "all" or arg == "herbs" or arg == "mining" or arg == "cloth" or arg == "leather" or arg == "conversions" or arg == "crafts" or arg == "undercuts" or arg == "shopping" or arg == "watchlist" then
             ns.SetActiveCategory(arg)
             ns.Good("Active category filter set to: %s", arg:upper())
             if ns.RefreshPanel then ns.RefreshPanel() end
         else
-            ns.Warn("Usage: /gf cat <all|herbs|mining|cloth|leather|watchlist>")
+            ns.Warn("Usage: /gf cat <all|herbs|mining|cloth|leather|conversions|undercuts|shopping|watchlist>")
         end
     elseif cmd == "preset" then
         arg = arg and arg:lower() or ""
@@ -624,9 +723,12 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         ns.Print("  /gf prune [days]     - prune items not seen in [days] (default 30)")
         ns.Print("  /gf resetitem <link> - clear price history for a specific item")
         ns.Print("  /gf preset <snipe|standard|volume> - apply preset trading profile")
-        ns.Print("  /gf cat <all|herbs|mining|cloth|leather|crafts|watchlist> - switch active category")
+        ns.Print("  /gf cat <all|herbs|mining|cloth|leather|crafts|undercuts|shopping|watchlist> - switch active category")
         ns.Print("  /gf watch <link|id>   - add item to watchlist")
         ns.Print("  /gf unwatch <link|id> - remove item from watchlist")
         ns.Print("  /gf watchlist         - view all starred watchlist items")
+        ns.Print("  /gf buy <link|id> <qty> [max] - set quota target and optional max unit price")
+        ns.Print("  /gf unbuy <link|id>   - remove material from shopping list")
+        ns.Print("  /gf shopping          - view active shopping list fulfillment progress")
     end
 end

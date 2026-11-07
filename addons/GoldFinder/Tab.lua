@@ -285,14 +285,15 @@ local function BuildPanel()
     ui.searchBox = search
 
     local CATEGORIES = {
-        { id = "all",       label = "All",       width = 48 },
-        { id = "herbs",     label = "Herbs",     width = 58 },
-        { id = "mining",    label = "Mining",    width = 62 },
-        { id = "cloth",     label = "Cloth",     width = 56 },
-        { id = "leather",   label = "Leather",   width = 66 },
-        { id = "conversions", label = "Crafts",    width = 58 },
-        { id = "undercuts",   label = "Undercuts", width = 76 },
-        { id = "watchlist",   label = "Watchlist", width = 88, isWatchlist = true },
+        { id = "all",         label = "All",       width = 44 },
+        { id = "herbs",       label = "Herbs",     width = 54 },
+        { id = "mining",      label = "Mining",    width = 58 },
+        { id = "cloth",       label = "Cloth",     width = 52 },
+        { id = "leather",     label = "Leather",   width = 62 },
+        { id = "conversions", label = "Crafts",    width = 56 },
+        { id = "undercuts",   label = "Undercuts", width = 74 },
+        { id = "shopping",    label = "Shopping",  width = 68 },
+        { id = "watchlist",   label = "Watchlist", width = 84, isWatchlist = true },
     }
     local categoryButtons = {}
 
@@ -323,7 +324,7 @@ local function BuildPanel()
 
     local filterBar = CreateFrame("Frame", nil, panel)
     filterBar:SetPoint("TOPLEFT", ui.sub, "BOTTOMLEFT", 0, -6)
-    filterBar:SetSize(520, 24)
+    filterBar:SetSize(620, 24)
     ui.filterBar = filterBar
 
     local prevBtn = nil
@@ -629,6 +630,25 @@ ShowRowTip = function(row)
         return
     end
 
+    if d.isShopping then
+        tip:AddLine("Shopping Target Quota", 0, 0.8, 1)
+        tip:AddDoubleLine("Target Quota", tostring(d.target), 1, 0.82, 0, 1, 1, 1)
+        tip:AddDoubleLine("In Bags / Bank", tostring(d.acquired), 1, 0.82, 0, 1, 1, 1)
+        local pctFulfilled = d.target > 0 and math.floor((d.acquired / d.target) * 100) or 100
+        local remColor = (d.remaining == 0) and {0.25, 1, 0.25} or {1, 0.82, 0}
+        tip:AddDoubleLine("Remaining Needed", ("%d (%d%% fulfilled)"):format(d.remaining, pctFulfilled), 1, 0.82, 0, remColor[1], remColor[2], remColor[3])
+        tip:AddLine(" ")
+        tip:AddDoubleLine("Lowest AH Price", d.now > 0 and Money(d.now) or "None listed", 1, 0.82, 0, 1, 1, 1)
+        tip:AddDoubleLine("Max Willing to Pay", d.maxUnitPrice and Money(d.maxUnitPrice) or "No cap set", 1, 0.82, 0, 1, 1, 1)
+        tip:AddDoubleLine("Est. Gold to Complete", Money(d.totalCost), 1, 0.82, 0, 0.25, 1, 0.25)
+        tip:AddLine(" ")
+        tip:AddLine("Left-Click: open item in Buy view.", 0.4, 0.8, 1, true)
+        tip:AddLine("Shift-Click: direct Quick-Buy batch.", 0.4, 0.8, 1, true)
+        tip:AddLine("Type /gf unbuy <item> to remove from shopping list.", 0.6, 0.6, 0.6, true)
+        tip:Show()
+        return
+    end
+
     if d.isConversion then
         tip:AddLine("Crafting Conversion Arbitrage", 0.4, 0.8, 1)
         tip:AddDoubleLine("Total Reagent Cost", Money(d.now), 1, 0.82, 0, 1, 1, 1)
@@ -754,8 +774,17 @@ function ns.RefreshPanel()
     local hasDeals = #deals > 0
 
     local isProfit = ns.GetSortBy() == "profit"
-    ui.header.cells.profit:SetText(isProfit and "|cffffd100Est. Profit ▼|r" or "Est. Profit")
-    ui.header.cells.below:SetText(isProfit and "Below" or "|cffffd100Below ▼|r")
+    if activeCat == "shopping" then
+        ui.header.cells.typical:SetText("Max Price")
+        ui.header.cells.below:SetText("Remaining")
+        ui.header.cells.qty:SetText("Needed")
+        ui.header.cells.profit:SetText("Est. Cost")
+    else
+        ui.header.cells.typical:SetText("Typical")
+        ui.header.cells.below:SetText(isProfit and "Below" or "|cffffd100Below ▼|r")
+        ui.header.cells.qty:SetText("Listed")
+        ui.header.cells.profit:SetText(isProfit and "|cffffd100Est. Profit ▼|r" or "Est. Profit")
+    end
 
     ui.title:SetShown(hasDeals)
     ui.sub:SetShown(hasDeals)
@@ -770,6 +799,8 @@ function ns.RefreshPanel()
         catDisplayName = "Crafts"
     elseif activeCat == "undercuts" then
         catDisplayName = "Undercuts"
+    elseif activeCat == "shopping" then
+        catDisplayName = "Shopping"
     elseif isCategoryFiltered then
         catDisplayName = activeCat:sub(1,1):upper() .. activeCat:sub(2)
     end
@@ -811,6 +842,9 @@ function ns.RefreshPanel()
         elseif activeCat == "undercuts" then
             ui.emptyTitle:SetText("No undercut auctions")
             ui.emptySub:SetText("None of your active auctions have been undercut by competitors.")
+        elseif activeCat == "shopping" then
+            ui.emptyTitle:SetText("Shopping list is empty")
+            ui.emptySub:SetText("Track target materials with: /gf buy <link|itemID> <targetQty> [maxUnitPrice]")
         elseif isCategoryFiltered then
             ui.emptyTitle:SetText(("No %s deals found"):format(catDisplayName))
             ui.emptySub:SetText(("No %s materials currently meet the discount threshold."):format(catDisplayName:lower()))
@@ -843,16 +877,26 @@ function ns.RefreshPanel()
                     row.star.icon:SetAlpha(0.3)
                 end
             end
-            row.cells.name:SetText(tagPrefix .. ItemName(d))
-            row.cells.now:SetText(Money(d.now))
-            row.cells.typical:SetText(Money(d.typical))
-            local color = tier and tier.colorStr or "|cff40ff40"
-            row.cells.below:SetText(("%s%d%%|r"):format(color, math.floor(d.below * 100 + 0.5)))
-            row.cells.qty:SetText(tostring(d.qty))
-            if d.totalNetProfit and d.totalNetProfit > 0 then
-                row.cells.profit:SetText(color .. "+" .. Money(d.totalNetProfit) .. "|r")
+            if d.isShopping then
+                local progStr = ("|cff00ccff[%d/%d]|r "):format(d.acquired, d.target)
+                row.cells.name:SetText(tagPrefix .. progStr .. ItemName(d))
+                row.cells.now:SetText(d.now > 0 and Money(d.now) or "|cff888888None|r")
+                row.cells.typical:SetText(d.maxUnitPrice and Money(d.maxUnitPrice) or "|cff888888No cap|r")
+                row.cells.below:SetText(d.remaining > 0 and ("|cffffd100%d left|r"):format(d.remaining) or "|cff40ff40Done|r")
+                row.cells.qty:SetText(tostring(d.remaining))
+                row.cells.profit:SetText(d.totalCost > 0 and Money(d.totalCost) or "|cff40ff400c|r")
             else
-                row.cells.profit:SetText("|cff8888880c|r")
+                row.cells.name:SetText(tagPrefix .. ItemName(d))
+                row.cells.now:SetText(Money(d.now))
+                row.cells.typical:SetText(Money(d.typical))
+                local color = tier and tier.colorStr or "|cff40ff40"
+                row.cells.below:SetText(("%s%d%%|r"):format(color, math.floor(d.below * 100 + 0.5)))
+                row.cells.qty:SetText(tostring(d.qty))
+                if d.totalNetProfit and d.totalNetProfit > 0 then
+                    row.cells.profit:SetText(color .. "+" .. Money(d.totalNetProfit) .. "|r")
+                else
+                    row.cells.profit:SetText("|cff8888880c|r")
+                end
             end
             row.deal = d
             row:Show()
@@ -894,9 +938,10 @@ qbEvents:RegisterEvent("COMMODITY_PURCHASE_SUCCEEDED")
 qbEvents:RegisterEvent("COMMODITY_PURCHASED")
 qbEvents:RegisterEvent("OWNED_AUCTIONS_UPDATED")
 qbEvents:RegisterEvent("AUCTION_CANCELED")
+qbEvents:RegisterEvent("BAG_UPDATE_DELAYED")
 qbEvents:RegisterEvent("AUCTION_HOUSE_CLOSED")
 qbEvents:SetScript("OnEvent", function(self, event, arg1, arg2)
-    if event == "OWNED_AUCTIONS_UPDATED" or event == "AUCTION_CANCELED" then
+    if event == "OWNED_AUCTIONS_UPDATED" or event == "AUCTION_CANCELED" or event == "BAG_UPDATE_DELAYED" then
         if ns.RefreshPanel then ns.RefreshPanel() end
         return
     end
