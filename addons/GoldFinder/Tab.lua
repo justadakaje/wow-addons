@@ -282,6 +282,7 @@ local function BuildPanel()
         { id = "mining",    label = "Mining",    width = 62 },
         { id = "cloth",     label = "Cloth",     width = 56 },
         { id = "leather",   label = "Leather",   width = 66 },
+        { id = "conversions", label = "Crafts",  width = 58 },
         { id = "watchlist", label = "Watchlist", width = 88, isWatchlist = true },
     }
     local categoryButtons = {}
@@ -606,6 +607,29 @@ ShowRowTip = function(row)
     local tip = GameTooltip
     tip:SetOwner(row, "ANCHOR_RIGHT")
     tip:AddLine(ItemName(d), 1, 1, 1)
+
+    if d.isConversion then
+        tip:AddLine("Crafting Conversion Arbitrage", 0.4, 0.8, 1)
+        tip:AddDoubleLine("Total Reagent Cost", Money(d.now), 1, 0.82, 0, 1, 1, 1)
+        tip:AddDoubleLine("Net Output Value", Money(d.typical), 1, 0.82, 0, 1, 1, 1)
+        tip:AddDoubleLine("Return on Investment (ROI)", ("+%d%%"):format(math.floor((d.roi or 0) * 100 + 0.5)), 1, 0.82, 0, 0.25, 1, 0.25)
+        tip:AddLine(" ")
+        tip:AddLine("Required Reagents:", 1, 0.82, 0)
+        if d.reagents then
+            for _, r in ipairs(d.reagents) do
+                local rName = C_Item.GetItemNameByID(r.itemID) or ("Item " .. r.itemID)
+                tip:AddDoubleLine(("  %dx %s"):format(r.qty, rName), Money(r.totalCost), 0.8, 0.8, 0.8, 1, 1, 1)
+            end
+        end
+        tip:AddLine(" ")
+        tip:AddLine("Profitability (after 5% AH cut):", 1, 0.82, 0)
+        local totalNetStr = "+" .. Money(d.totalNetProfit or 0)
+        tip:AddDoubleLine("Est. net craft profit", totalNetStr, 0.8, 0.8, 0.8, 0.25, 1, 0.25)
+        tip:AddLine(" ")
+        tip:AddLine("Left-Click: open crafted item in Buy view.", 0.4, 0.8, 1, true)
+        tip:Show()
+        return
+    end
     local tier = d.tier or (ns.GetDealTier and ns.GetDealTier(d))
     if tier then
         tip:AddDoubleLine("Deal tier", tier.colorStr .. tier.label .. "|r", 1, 0.82, 0, tier.r, tier.g, tier.b)
@@ -721,6 +745,8 @@ function ns.RefreshPanel()
     local catDisplayName
     if activeCat == "watchlist" then
         catDisplayName = "Watchlist"
+    elseif activeCat == "conversions" then
+        catDisplayName = "Crafts"
     elseif isCategoryFiltered then
         catDisplayName = activeCat:sub(1,1):upper() .. activeCat:sub(2)
     end

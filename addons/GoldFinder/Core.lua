@@ -377,7 +377,8 @@ end
 
 function ns.SetActiveCategory(cat)
     cat = cat and cat:lower() or "all"
-    local valid = { all = true, herbs = true, mining = true, cloth = true, leather = true, watchlist = true }
+    if cat == "crafts" then cat = "conversions" end
+    local valid = { all = true, herbs = true, mining = true, cloth = true, leather = true, conversions = true, watchlist = true }
     ns.activeCategory = valid[cat] and cat or "all"
 end
 
@@ -566,7 +567,7 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         end
     elseif cmd == "cat" or cmd == "category" then
         arg = arg and arg:lower() or ""
-        if arg == "all" or arg == "herbs" or arg == "mining" or arg == "cloth" or arg == "leather" or arg == "watchlist" then
+        if arg == "all" or arg == "herbs" or arg == "mining" or arg == "cloth" or arg == "leather" or arg == "conversions" or arg == "crafts" or arg == "watchlist" then
             ns.SetActiveCategory(arg)
             ns.Good("Active category filter set to: %s", arg:upper())
             if ns.RefreshPanel then ns.RefreshPanel() end
@@ -623,7 +624,7 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         ns.Print("  /gf prune [days]     - prune items not seen in [days] (default 30)")
         ns.Print("  /gf resetitem <link> - clear price history for a specific item")
         ns.Print("  /gf preset <snipe|standard|volume> - apply preset trading profile")
-        ns.Print("  /gf cat <all|herbs|mining|cloth|leather|watchlist> - switch active category")
+        ns.Print("  /gf cat <all|herbs|mining|cloth|leather|crafts|watchlist> - switch active category")
         ns.Print("  /gf watch <link|id>   - add item to watchlist")
         ns.Print("  /gf unwatch <link|id> - remove item from watchlist")
         ns.Print("  /gf watchlist         - view all starred watchlist items")
