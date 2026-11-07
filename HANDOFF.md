@@ -822,4 +822,5 @@ Populated across GitHub Issues #36 through #53:
 * **#51:** Interactive first-run tour & onboarding walkthrough (`/gf tour`).
 * **#52:** Full multi-language localization engine (enUS, deDE, frFR, esES, zhCN, koKR).
 * **#53:** Memory profiling, GC tuning & benchmark certification (< 5MB working set).
+* **#54:** Info & About dashboard (`/gf info`) with metadata, copyable Discord/GitHub links, translator credits, and options shortcut.
 
