@@ -495,6 +495,7 @@ boot:SetScript("OnEvent", function(self, _, name)
     if type(db.watchlist) ~= "table" then db.watchlist = {} end
     if type(db.shoppingLists) ~= "table" then db.shoppingLists = {} end
     if type(db.blacklist) ~= "table" then db.blacklist = {} end
+    if type(db.customCategories) ~= "table" then db.customCategories = {} end
     if type(db.realms) ~= "table" then db.realms = {} end
 
     -- Active realm and faction partition binding
@@ -579,7 +580,13 @@ function ns.SetActiveCategory(cat)
     cat = cat and cat:lower() or "all"
     if cat == "crafts" then cat = "conversions" end
     local valid = { all = true, herbs = true, mining = true, cloth = true, leather = true, conversions = true, undercuts = true, shopping = true, watchlist = true }
-    ns.activeCategory = valid[cat] and cat or "all"
+    if valid[cat] then
+        ns.activeCategory = cat
+    elseif ns.GetCustomCategory and ns.GetCustomCategory(cat) then
+        ns.activeCategory = cat
+    else
+        ns.activeCategory = "all"
+    end
 end
 
 function ns.IsWatched(itemID)
@@ -685,6 +692,100 @@ function ns.GetItemInventoryCount(itemID)
         return GetItemCount(itemID, true) or 0
     end
     return 0
+end
+
+---------------------------------------------------------------------------
+-- Custom Categories & Material Groups (#39)
+
+function ns.GetCustomCategories()
+    return (ns.db and ns.db.customCategories) or {}
+end
+
+function ns.GetCustomCategory(catID)
+    if not catID or not ns.db or not ns.db.customCategories then return nil end
+    return ns.db.customCategories[catID]
+end
+
+function ns.FindCustomCategory(query)
+    if not query or query == "" or not ns.db or not ns.db.customCategories then return nil end
+    local q = query:lower():match("^%s*(.-)%s*$")
+    if ns.db.customCategories[q] then
+        return q, ns.db.customCategories[q]
+    end
+    for id, cat in pairs(ns.db.customCategories) do
+        if id:lower() == q or (cat.label and cat.label:lower() == q) then
+            return id, cat
+        end
+    end
+    return nil
+end
+
+local function SlugifyCategory(name)
+    if not name or name == "" then return "group" end
+    local slug = name:lower():gsub("%s+", "_"):gsub("[^%w_]", "")
+    if slug == "" then slug = "group" end
+    return slug
+end
+
+function ns.CreateCustomCategory(label)
+    label = label and label:match("^%s*(.-)%s*$")
+    if not label or label == "" or not ns.db then return nil end
+    ns.db.customCategories = ns.db.customCategories or {}
+
+    local baseSlug = SlugifyCategory(label)
+    local slug = baseSlug
+    local counter = 1
+    while ns.db.customCategories[slug] do
+        counter = counter + 1
+        slug = ("%s_%d"):format(baseSlug, counter)
+    end
+
+    local cat = {
+        id = slug,
+        label = label,
+        items = {},
+    }
+    ns.db.customCategories[slug] = cat
+    if ns.RebuildCategoryButtons then ns.RebuildCategoryButtons() end
+    return slug, cat
+end
+
+function ns.DeleteCustomCategory(catID)
+    if not catID or not ns.db or not ns.db.customCategories then return false end
+    if not ns.db.customCategories[catID] then return false end
+    local label = ns.db.customCategories[catID].label or catID
+    ns.db.customCategories[catID] = nil
+    if ns.GetActiveCategory and ns.GetActiveCategory() == catID then
+        ns.SetActiveCategory("all")
+    end
+    if ns.RebuildCategoryButtons then ns.RebuildCategoryButtons() end
+    if ns.RefreshPanel then ns.RefreshPanel() end
+    return true, label
+end
+
+function ns.AddCustomCategoryItem(catID, itemID)
+    if not catID or not itemID or not ns.db then return false end
+    local id, cat = ns.FindCustomCategory(catID)
+    if not cat then return false end
+    cat.items = cat.items or {}
+    cat.items[itemID] = true
+    if ns.RefreshPanel then ns.RefreshPanel() end
+    return true, cat
+end
+
+function ns.RemoveCustomCategoryItem(catID, itemID)
+    if not catID or not itemID or not ns.db then return false end
+    local id, cat = ns.FindCustomCategory(catID)
+    if not cat or not cat.items then return false end
+    cat.items[itemID] = nil
+    if ns.RefreshPanel then ns.RefreshPanel() end
+    return true, cat
+end
+
+function ns.IsItemInCustomCategory(catID, itemID)
+    if not catID or not itemID or not ns.db then return false end
+    local id, cat = ns.FindCustomCategory(catID)
+    return (cat and cat.items and cat.items[itemID] == true) or false
 end
 
 ---------------------------------------------------------------------------
@@ -1021,13 +1122,106 @@ SlashCmdList["GOLDFINDER"] = function(msg)
             end
         end
     elseif cmd == "cat" or cmd == "category" then
-        arg = arg and arg:lower() or ""
+        arg = arg and arg:lower():match("^%s*(.-)%s*$") or ""
         if arg == "all" or arg == "herbs" or arg == "mining" or arg == "cloth" or arg == "leather" or arg == "conversions" or arg == "crafts" or arg == "undercuts" or arg == "shopping" or arg == "watchlist" then
             ns.SetActiveCategory(arg)
             ns.Good("Active category filter set to: %s", arg:upper())
             if ns.RefreshPanel then ns.RefreshPanel() end
         else
-            ns.Warn("Usage: /gf cat <all|herbs|mining|cloth|leather|conversions|undercuts|shopping|watchlist>")
+            local id, customCat = ns.FindCustomCategory(arg)
+            if id and customCat then
+                ns.SetActiveCategory(id)
+                ns.Good("Active category filter set to: %s", customCat.label)
+                if ns.RefreshPanel then ns.RefreshPanel() end
+            else
+                ns.Warn("Usage: /gf cat <all|herbs|mining|cloth|leather|crafts|undercuts|shopping|watchlist|<group>>")
+            end
+        end
+    elseif cmd == "group" or cmd == "groups" then
+        arg = arg and arg:match("^%s*(.-)%s*$") or ""
+        local subCmd, subArg = arg:match("^(%S+)%s*(.*)$")
+        subCmd = subCmd and subCmd:lower() or ""
+
+        if subCmd == "create" or subCmd == "new" or subCmd == "addgroup" then
+            if subArg and subArg ~= "" then
+                local id, cat = ns.CreateCustomCategory(subArg)
+                if cat then
+                    ns.Good("Created custom material group: %s (ID: %s).", cat.label, id)
+                    ns.SetActiveCategory(id)
+                    if ns.RefreshPanel then ns.RefreshPanel() end
+                else
+                    ns.Bad("Failed to create category '%s'.", subArg)
+                end
+            else
+                ns.Warn("Usage: /gf group create <name> (e.g. /gf group create Flask Reagents)")
+            end
+        elseif subCmd == "delete" or subCmd == "removegroup" or subCmd == "del" then
+            if subArg and subArg ~= "" then
+                local id, cat = ns.FindCustomCategory(subArg)
+                if id and ns.DeleteCustomCategory(id) then
+                    ns.Good("Deleted custom material group '%s'.", cat.label or id)
+                else
+                    ns.Warn("Custom group '%s' not found.", subArg)
+                end
+            else
+                ns.Warn("Usage: /gf group delete <name or id>")
+            end
+        elseif subCmd == "add" or subCmd == "additem" then
+            local grpName, itemPart = subArg:match("^(%S+)%s+(.*)$")
+            if subArg:sub(1, 1) == '"' then
+                grpName, itemPart = subArg:match('^"([^"]+)"%s+(.*)$')
+            end
+            local itemID = itemPart and (tonumber(itemPart:match("item:(%d+)")) or tonumber(itemPart:match("^(%d+)")))
+            local id, cat = ns.FindCustomCategory(grpName)
+            if id and itemID then
+                ns.AddCustomCategoryItem(id, itemID)
+                local itemName = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID)) or ("Item %d"):format(itemID)
+                ns.Good("Added %s to group '%s'.", itemName, cat.label or id)
+            elseif not id then
+                ns.Warn("Group '%s' not found. Create it with: /gf group create %s", grpName or subArg, grpName or subArg)
+            else
+                ns.Warn("Usage: /gf group add <group> <link or itemID>")
+            end
+        elseif subCmd == "remove" or subCmd == "delitem" or subCmd == "removeitem" then
+            local grpName, itemPart = subArg:match("^(%S+)%s+(.*)$")
+            if subArg:sub(1, 1) == '"' then
+                grpName, itemPart = subArg:match('^"([^"]+)"%s+(.*)$')
+            end
+            local itemID = itemPart and (tonumber(itemPart:match("item:(%d+)")) or tonumber(itemPart:match("^(%d+)")))
+            local id, cat = ns.FindCustomCategory(grpName)
+            if id and itemID then
+                ns.RemoveCustomCategoryItem(id, itemID)
+                local itemName = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID)) or ("Item %d"):format(itemID)
+                ns.Good("Removed %s from group '%s'.", itemName, cat.label or id)
+            elseif not id then
+                ns.Warn("Group '%s' not found.", grpName or subArg)
+            else
+                ns.Warn("Usage: /gf group remove <group> <link or itemID>")
+            end
+        else
+            local cats = ns.GetCustomCategories()
+            local count = 0
+            for _ in pairs(cats) do count = count + 1 end
+            ns.Print("Custom Material Groups (%d):", count)
+            if count == 0 then
+                ns.Print("  No custom groups defined. Create one with: /gf group create <name>")
+            else
+                for id, cat in pairs(cats) do
+                    local itemCount = 0
+                    local itemNames = {}
+                    if cat.items then
+                        for iId in pairs(cat.items) do
+                            itemCount = itemCount + 1
+                            local iName = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(iId)) or ("Item " .. iId)
+                            if #itemNames < 5 then itemNames[#itemNames + 1] = iName end
+                        end
+                    end
+                    local preview = #itemNames > 0 and table.concat(itemNames, ", ") or "empty"
+                    if itemCount > #itemNames then preview = preview .. ", ..." end
+                    ns.Print("  - %s (ID: %s, %d items): %s", cat.label or id, id, itemCount, preview)
+                end
+            end
+            ns.Print("Commands: /gf group create <name> | delete <name> | add <grp> <item> | remove <grp> <item>")
         end
     elseif cmd == "preset" then
         arg = arg and arg:lower() or ""

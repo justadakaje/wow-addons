@@ -605,6 +605,25 @@ local function CreateConfigFrameOnce()
     )
     controls.sellHelperCb:SetPoint("TOPLEFT", 330, -424)
 
+    -- k) Button: Create Custom Material Group (#39)
+    local newGroupBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    newGroupBtn:SetSize(210, 22)
+    newGroupBtn:SetPoint("TOPLEFT", 330, -454)
+    newGroupBtn:SetText("+ New Material Group")
+    newGroupBtn:SetScript("OnClick", function()
+        if ns.ShowCreateGroupDialog then
+            ns.ShowCreateGroupDialog()
+        end
+    end)
+    newGroupBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("Create Material Group", 1, 0.82, 0)
+        GameTooltip:AddLine("Define a custom category tab to track custom sets of crafting reagents or arbitrage items.", 1, 1, 1, true)
+        GameTooltip:AddLine("You can also manage groups via: /gf groups", 0.7, 0.7, 0.7)
+        GameTooltip:Show()
+    end)
+    newGroupBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
     -----------------------------------------------------------------------
     -- Section 4: Action Buttons at Bottom
     -----------------------------------------------------------------------
