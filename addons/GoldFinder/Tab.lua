@@ -147,6 +147,10 @@ local function MakeRow(anchor, font, clickable)
                     else
                         ns.Bad("Failed to cancel auction: %s", tostring(err))
                     end
+                elseif IsAltKeyDown() then
+                    if ns.AddToCart then
+                        ns.AddToCart(self.deal, self.deal.qty or 1)
+                    end
                 elseif IsShiftKeyDown() then
                     QuickBuy(self.deal)
                 else
@@ -321,7 +325,7 @@ local function BuildPanel()
 
     -- Search box in header to filter deals in real time (#24)
     local search = CreateFrame("EditBox", nil, panel, "SearchBoxTemplate")
-    search:SetSize(170, 22)
+    search:SetSize(140, 22)
     search:SetPoint("TOPRIGHT", optBtn, "TOPLEFT", -8, 0)
     search:SetAutoFocus(false)
     search.Instructions:SetText("Search deals...")
@@ -336,6 +340,78 @@ local function BuildPanel()
         self:ClearFocus()
     end)
     ui.searchBox = search
+
+    -- Cart button in header (#47)
+    local cartBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+    cartBtn:SetSize(72, 22)
+    cartBtn:SetPoint("TOPRIGHT", search, "TOPLEFT", -8, 0)
+    cartBtn:SetText("Cart (0)")
+    cartBtn:SetScript("OnClick", function()
+        if ns.ToggleCart then ns.ToggleCart() end
+    end)
+    cartBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("Staging Cart", 1, 0.82, 0)
+        local n, items, cost, profit = ns.GetCartTotals and ns.GetCartTotals() or 0, 0, 0, 0
+        GameTooltip:AddLine(("Staged lots: %d (%d items)"):format(n or 0, items or 0), 1, 1, 1)
+        if cost and cost > 0 then
+            GameTooltip:AddDoubleLine("Total Cost:", ns.Money(cost), 0.8, 0.8, 0.8, 1, 1, 1)
+            GameTooltip:AddDoubleLine("Est. Flip Profit:", "+" .. ns.Money(profit or 0), 0.8, 0.8, 0.8, 0.25, 1, 0.25)
+        end
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine("Click: open staging cart window.", 0.4, 0.8, 1)
+        GameTooltip:AddLine("Alt-Click any deal row to stage items into cart.", 0.6, 0.6, 0.6)
+        GameTooltip:Show()
+    end)
+    cartBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    ui.cartButton = cartBtn
+
+    -- Snipe Mode toggle button in header (#44)
+    local snipeBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+    snipeBtn:SetSize(86, 22)
+    snipeBtn:SetPoint("TOPRIGHT", cartBtn, "TOPLEFT", -8, 0)
+    snipeBtn:SetText("Snipe: OFF")
+    snipeBtn:SetScript("OnClick", function()
+        if ns.SetSnipeMode then
+            ns.SetSnipeMode(not ns.IsSnipeMode())
+        end
+    end)
+    snipeBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("Live Snipe Engine", 1, 0.82, 0)
+        GameTooltip:AddLine("Actively watches for ultra-deep discounts and high-profit mega flips.", 1, 1, 1, true)
+        GameTooltip:AddLine("Triggers loud raid warning alarm on qualifying deals.", 1, 1, 1, true)
+        GameTooltip:AddLine(" ")
+        local status = ns.IsSnipeMode and ns.IsSnipeMode() and "|cff40ff40ACTIVE|r" or "|cff888888OFF|r"
+        GameTooltip:AddDoubleLine("Status:", status, 0.8, 0.8, 0.8, 1, 1, 1)
+        local thresh = ns.GetSnipeThreshold and ns.GetSnipeThreshold() or 1000000
+        GameTooltip:AddDoubleLine("Alarm Threshold:", ns.Money(thresh) .. " net profit", 0.8, 0.8, 0.8, 1, 0.82, 0)
+        GameTooltip:AddLine("Click to toggle Snipe Mode.", 0.4, 0.8, 1)
+        GameTooltip:Show()
+    end)
+    snipeBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    ui.snipeButton = snipeBtn
+
+    function ns.UpdateCartButton()
+        if ui.cartButton and ns.GetCartTotals then
+            local entriesCount = ns.GetCartTotals()
+            if entriesCount and entriesCount > 0 then
+                ui.cartButton:SetText(("Cart (%d)"):format(entriesCount))
+            else
+                ui.cartButton:SetText("Cart (0)")
+            end
+        end
+    end
+
+    function ns.UpdateSnipeButton()
+        if ui.snipeButton and ns.IsSnipeMode then
+            if ns.IsSnipeMode() then
+                ui.snipeButton:SetText("|cff40ff40● Snipe: ON|r")
+            else
+                ui.snipeButton:SetText("Snipe: OFF")
+            end
+        end
+    end
 
     local createGroupDialog = nil
     local function ShowCreateGroupDialog()
@@ -1016,6 +1092,7 @@ ShowRowTip = function(row)
     tip:AddLine(" ")
     tip:AddDoubleLine("Watchlist:", ns.IsWatched(d.itemID) and "|cffffd100Starred|r" or "|cff888888Not starred|r", 1, 0.82, 0, 1, 1, 1)
     tip:AddLine("Left-Click: open in Buy. Shift-Click: direct Quick-Buy commodity.", 0.4, 0.8, 1, true)
+    tip:AddLine("Alt-Click: Stage deal into Multi-Item Cart.", 0.25, 1, 0.5, true)
     tip:AddLine("Right-Click or click star: toggle Watchlist.", 0.4, 0.8, 1, true)
     tip:AddLine("Alt+Right-Click: Blacklist/ignore item from deals.", 0.8, 0.45, 0.45, true)
     if ns.GetCustomCategory and ns.GetCustomCategory(ns.GetActiveCategory()) then
@@ -1037,6 +1114,8 @@ function ns.RefreshPanel()
     local title, sub = ns.DealStatus(allDeals, status)
 
     if ui.UpdateCategoryButtons then ui.UpdateCategoryButtons() end
+    if ns.UpdateCartButton then ns.UpdateCartButton() end
+    if ns.UpdateSnipeButton then ns.UpdateSnipeButton() end
 
     -- 1. Filter by category (#12, #39)
     local activeCat = ns.GetActiveCategory()
@@ -1222,7 +1301,11 @@ function ns.RefreshPanel()
                 row.cells.qty:SetText(tostring(d.remaining))
                 row.cells.profit:SetText(d.totalCost > 0 and Money(d.totalCost) or "|cff40ff400c|r")
             else
-                row.cells.name:SetText(tagPrefix .. ItemName(d))
+                local restockTag = ""
+                if d.isRestockNeeded then
+                    restockTag = "|cffff9900[LOW]|r "
+                end
+                row.cells.name:SetText(tagPrefix .. restockTag .. ItemName(d))
                 row.cells.now:SetText(Money(d.now))
                 row.cells.typical:SetText(Money(d.typical))
                 local color = tier and tier.colorStr or "|cff40ff40"

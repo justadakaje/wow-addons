@@ -4,6 +4,15 @@ All notable changes to GoldFinder. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-11-07
+
+### Added
+
+- **Live Snipe Mode & High-Value Deal Alarm ([#44](https://github.com/justadakaje/wow-addons/issues/44)):** Added live background Snipe Mode with a dedicated `[ Snipe: OFF / ON ]` header toggle and `/gf snipe [on|off]`. Automatically watches incoming auction scans for "Mega Snipes" (discounts >= 70% or estimated net profit >= 100g, customizable via `/gf snipethreshold <amt>`), immediately triggering high-urgency audio alarms (`SOUNDKIT.RAID_WARNING`), on-screen RaidWarning banners, and Epic Purple chat notices.
+- **Inventory Restock & Stockout Safety Level Warnings ([#45](https://github.com/justadakaje/wow-addons/issues/45)):** Added material safety stock tracking via `GoldFinderDB.restock`. Automatically counts current bag and bank stock via `C_Item.GetItemCount()`. Displays `[LOW]` restock tags directly on deal rows, low stock alerts in broker tooltips, safety stock targets on item tooltips, and management via `/gf restock <link|id> <minQty>`, `/gf unrestock`, and `/gf restock`.
+- **Fixed Vendor Reagent Cost Integration ([#46](https://github.com/justadakaje/wow-addons/issues/46)):** Integrated a curated database (`Vendors.lua`) of unlimited-stock NPC trade reagents (Coal, Weak/Strong Flux, Threads, Vials, Spices, Flour). Injects exact vendor purchase costs into multi-step crafting conversions, flags overpriced AH listings on tooltips (`[OVERPRICED NPC ITEM: Buy from Vendor for X]`), and automatically suppresses overpriced vendor reagents from false deal alerts.
+- **Multi-Item Quick-Buy Staging Cart ([#47](https://github.com/justadakaje/wow-addons/issues/47)):** Added a multi-deal batch purchase staging cart (`Cart.lua`). Alt-Click any deal row to stage materials into the cart. Includes a dedicated `[ Cart (N) ]` header button, interactive staging cart modal with live total cost and estimated flip profit KPIs, and sequential throttled `[ Buy All Items ]` execution protected by quick-buy spend cap limits.
+
 ## [0.7.0] - 2026-11-07
 
 ### Added

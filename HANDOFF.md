@@ -807,11 +807,11 @@ Populated across GitHub Issues #36 through #53:
 * **#42 (Completed):** Inventory cost basis tooltip overlay on bags & bank items with average unit acquisition price and live unrealized net margins against market baselines (`Tooltip.lua`).
 * **#43 (Completed):** Expired auction re-listing evaluator & relist advisor with HOLD, RELIST, and WAIT guidance based on competitor price swings and purchase cost basis (`Mail.lua`).
 
-### Sprint 5: Live Snipe Engine & Goal Automation (Target: v0.8.0)
-* **#44:** Live snipe mode & high-value audio alarm (> 70% discount / > 100g profit).
-* **#45:** Inventory restock & stockout safety level warnings.
-* **#46:** Fixed vendor reagent cost integration (Coal, Flux, Thread, Vials).
-* **#47:** Multi-item quick-buy staging cart.
+### Sprint 5: Live Snipe Engine & Goal Automation (v0.8.0) — ✅ COMPLETED
+* **#44 (Completed):** Live snipe mode & high-value audio alarm (`SOUNDKIT.RAID_WARNING`) on >= 70% discount or >= 100g profit (`Scan.lua`, `Tab.lua`, `Core.lua`).
+* **#45 (Completed):** Inventory restock & stockout safety level warnings (`GoldFinderDB.restock`) with bag+bank counting, `[LOW]` deal row tags, and broker alerts (`Core.lua`, `Tab.lua`, `Tooltip.lua`, `Broker.lua`).
+* **#46 (Completed):** Fixed vendor reagent cost integration (`Vendors.lua`) for Coal, Weak/Strong Flux, Threads, and Vials, with overpriced AH warnings and conversion recipe cost injection (`Vendors.lua`, `Deals.lua`, `Tooltip.lua`).
+* **#47 (Completed):** Multi-item quick-buy staging cart (`Cart.lua`) with Alt-Click deal staging, batch purchase execution, spend cap limits, and interactive cart modal (`Cart.lua`, `Tab.lua`, `Config.lua`).
 
 ### Sprint 6: Data Portability, Profiles & Cross-Realm Compaction (Target: v0.9.0)
 * **#48:** Base64 string profile import / export (`/gf profile export/import`).

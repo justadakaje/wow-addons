@@ -218,9 +218,10 @@ function ns.GetDealTier(deal)
     if not deal then return nil end
     local below = deal.below or 0
     local profit = deal.totalNetProfit or 0
+    local snipeThresh = ns.GetSnipeThreshold and ns.GetSnipeThreshold() or 1000000
 
-    -- Mega Snipe: >= 50% discount OR >= 50 gold (500,000 copper) net profit
-    if below >= 0.50 or profit >= 500000 then
+    -- Mega Snipe: >= 70% discount OR >= snipeThresh net profit OR (>= 50% and >= 50g)
+    if below >= 0.70 or profit >= snipeThresh or (below >= 0.50 and profit >= 500000) then
         return {
             id = "mega",
             label = "Mega Snipe",
@@ -331,7 +332,7 @@ function ns.FindConversionDeals()
             local reagentSummary = {}
 
             for _, r in ipairs(conv.reagents) do
-                local rCost = r.fixedPrice or ns.GetItemCurrentPrice(r.itemID) or ns.GetItemTypicalPrice(r.itemID)
+                local rCost = r.fixedPrice or (ns.GetVendorPrice and ns.GetVendorPrice(r.itemID)) or ns.GetItemCurrentPrice(r.itemID) or ns.GetItemTypicalPrice(r.itemID)
                 if not rCost or rCost <= 0 then
                     hasAllReagents = false
                     break
@@ -592,7 +593,8 @@ function ns.FindDeals()
                 local prior = {}
                 for i = 1, n - 1 do prior[i] = h[i].min end
                 local typical = ns.CalculateBaseline(prior)
-                if typical > 0 and current.min <= ratio * typical then
+                local isOverpricedVendor = ns.IsOverpricedVendorListing and ns.IsOverpricedVendorListing(itemID, current.min)
+                if typical > 0 and current.min <= ratio * typical and not isOverpricedVendor then
                     local conf = ns.GetConfidenceScore(h)
                     local minConf = ns.GetMinConfidence and ns.GetMinConfidence() or "any"
                     local passConf = true
@@ -604,22 +606,29 @@ function ns.FindDeals()
                         local netUnit = math.floor(typical * 0.95 - current.min)
                         local totalNet = math.max(0, math.floor(netUnit * (current.qty or 1)))
                         if totalNet >= minProfit then
+                            local restockTarget = ns.GetRestockLevel and ns.GetRestockLevel(itemID)
+                            local restockCurrent = restockTarget and (C_Item and C_Item.GetItemCount and C_Item.GetItemCount(itemID, true) or (GetItemCount and GetItemCount(itemID, true) or 0)) or 0
+                            local isRestockNeeded = restockTarget and (restockCurrent < restockTarget) or false
+
                             deals[#deals + 1] = {
-                                itemID         = itemID,
-                                itemKey        = rec.itemKey,  -- nil for items not seen since v0.0.6
-                                name           = rec.name,
-                                now            = current.min,
-                                typical        = typical,
-                                below          = 1 - current.min / typical,
-                                qty            = current.qty or 0,
-                                netUnitProfit  = netUnit,
-                                totalNetProfit = totalNet,
-                                trend          = CalculateTrend(h),
-                                history        = h,
-                                category       = ns.GetItemCategory and ns.GetItemCategory(itemID) or "other",
-                                isWatched      = ns.IsWatched and ns.IsWatched(itemID) or false,
-                                isShoppingGoal = (ns.GetShoppingItem and ns.GetShoppingItem(itemID) ~= nil),
-                                confidence     = conf,
+                                itemID          = itemID,
+                                itemKey         = rec.itemKey,  -- nil for items not seen since v0.0.6
+                                name            = rec.name,
+                                now             = current.min,
+                                typical         = typical,
+                                below           = 1 - current.min / typical,
+                                qty             = current.qty or 0,
+                                netUnitProfit   = netUnit,
+                                totalNetProfit  = totalNet,
+                                trend           = CalculateTrend(h),
+                                history         = h,
+                                category        = ns.GetItemCategory and ns.GetItemCategory(itemID) or "other",
+                                isWatched       = ns.IsWatched and ns.IsWatched(itemID) or false,
+                                isShoppingGoal  = (ns.GetShoppingItem and ns.GetShoppingItem(itemID) ~= nil),
+                                isRestockNeeded = isRestockNeeded,
+                                restockTarget   = restockTarget,
+                                restockCurrent  = restockCurrent,
+                                confidence      = conf,
                             }
                             deals[#deals].tier = ns.GetDealTier(deals[#deals])
                         end

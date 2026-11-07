@@ -206,15 +206,20 @@ local function Finish(c, totalRows)
     -- Trigger deal alerts if qualifying deals are detected
     local deals = ns.FindDeals and ns.FindDeals()
     if deals and #deals > 0 then
-        if ns.PlayDealSound then
+        local top = deals[1]
+        local tier = top.tier or (ns.GetDealTier and ns.GetDealTier(top))
+        local isMegaSnipe = (tier and tier.id == "mega") or (ns.IsSnipeMode and ns.IsSnipeMode())
+
+        if isMegaSnipe and ns.PlaySnipeAlarm then
+            ns.PlaySnipeAlarm(top)
+        elseif ns.PlayDealSound then
             ns.PlayDealSound()
         end
+
         if ns.IsChatAlertEnabled and ns.IsChatAlertEnabled() then
-            local top = deals[1]
             local topName = top.name or (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(top.itemID)) or ("Item " .. top.itemID)
             local pct = math.floor(top.below * 100 + 0.5)
             local profitStr = top.totalNetProfit and top.totalNetProfit > 0 and (", est. net +" .. ns.Money(top.totalNetProfit)) or ""
-            local tier = top.tier or (ns.GetDealTier and ns.GetDealTier(top))
             local tierPrefix = (tier and tier.id == "mega") and "|cffa335ee[MEGA SNIPE]|r "
                             or ((tier and tier.id == "great") and "|cff0070dd[GREAT DEAL]|r " or "")
             ns.Good("%sFound %d deal(s)! Top deal: %s (%d%% off%s)", tierPrefix, #deals, topName, pct, profitStr)

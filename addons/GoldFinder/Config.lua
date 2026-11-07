@@ -691,6 +691,25 @@ local function CreateConfigFrameOnce()
     end)
     openLedgerBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
+    -- o) Button: Open Staging Cart (#47)
+    local openCartBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    openCartBtn:SetSize(230, 24)
+    openCartBtn:SetPoint("TOPLEFT", 330, -514)
+    openCartBtn:SetText("Open Staging Cart")
+    openCartBtn:SetScript("OnClick", function()
+        if ns.OpenCart then
+            ns.OpenCart()
+        end
+    end)
+    openCartBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("Staging Quick-Buy Cart", 1, 0.82, 0)
+        GameTooltip:AddLine("Open the batch staging cart to review staged items and execute multi-deal purchases.", 1, 1, 1, true)
+        GameTooltip:AddLine("You can also open this with: /gf cart", 0.7, 0.7, 0.7)
+        GameTooltip:Show()
+    end)
+    openCartBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
     -----------------------------------------------------------------------
     -- Section 4: Action Buttons at Bottom
     -----------------------------------------------------------------------

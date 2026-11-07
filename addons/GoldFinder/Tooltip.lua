@@ -67,6 +67,27 @@ local function AddPriceLines(tip, itemID)
         end
     end
 
+    -- Fixed vendor reagent integration (#46)
+    local vInfo = ns.GetVendorReagent and ns.GetVendorReagent(itemID)
+    if vInfo then
+        tip:AddDoubleLine("GoldFinder Vendor Price:", ns.Money(vInfo.vendorPrice), 1, 0.82, 0, 0.25, 1, 0.25)
+        local curPrice = (rec and rec.history and #rec.history > 0 and rec.history[#rec.history].min) or typical
+        if curPrice and curPrice > vInfo.vendorPrice then
+            local markup = math.floor(((curPrice - vInfo.vendorPrice) / vInfo.vendorPrice) * 100 + 0.5)
+            tip:AddLine(("|cffff4040[OVERPRICED: Buy from NPC for %s (+%d%% AH markup)]|r"):format(ns.Money(vInfo.vendorPrice), markup), 1, 0.25, 0.25, true)
+        end
+    end
+
+    -- Inventory restock safety target (#45)
+    local restockTarget = ns.GetRestockLevel and ns.GetRestockLevel(itemID)
+    if restockTarget and restockTarget > 0 then
+        local currentStock = (C_Item and C_Item.GetItemCount and C_Item.GetItemCount(itemID, true)) or (GetItemCount and GetItemCount(itemID, true) or 0)
+        local isLow = currentStock < restockTarget
+        local color = isLow and "|cffff4040" or "|cff40ff40"
+        local statusTag = isLow and (" (Shortage: %d)"):format(restockTarget - currentStock) or " (Healthy)"
+        tip:AddDoubleLine("GoldFinder Safety Stock:", ("%s%d / %d target%s|r"):format(color, currentStock, restockTarget, statusTag), 1, 0.82, 0, 1, 1, 1)
+    end
+
     tip:Show()
 end
 

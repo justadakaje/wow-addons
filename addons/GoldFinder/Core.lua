@@ -297,6 +297,110 @@ function ns.SetMailCollector(val)
     end
 end
 
+---------------------------------------------------------------------------
+-- Restock Safety Levels (#45)
+
+function ns.GetRestockLevel(itemID)
+    if not itemID or not ns.db or not ns.db.restock then return nil end
+    return ns.db.restock[itemID]
+end
+
+function ns.SetRestockLevel(itemID, minQty)
+    if not itemID or not ns.db then return end
+    ns.db.restock = ns.db.restock or {}
+    minQty = tonumber(minQty) or 0
+    if minQty <= 0 then
+        ns.db.restock[itemID] = nil
+    else
+        ns.db.restock[itemID] = minQty
+    end
+end
+
+function ns.ClearRestockLevel(itemID)
+    if itemID and ns.db and ns.db.restock then
+        ns.db.restock[itemID] = nil
+    end
+end
+
+function ns.GetLowStockItems()
+    local lowItems = {}
+    if not ns.db or not ns.db.restock then return lowItems end
+    for itemID, minQty in pairs(ns.db.restock) do
+        local count = 0
+        if C_Item and C_Item.GetItemCount then
+            count = C_Item.GetItemCount(itemID, true) or 0
+        elseif GetItemCount then
+            count = GetItemCount(itemID, true) or 0
+        end
+        if count < minQty then
+            local name = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID)) or ("Item " .. itemID)
+            lowItems[#lowItems + 1] = {
+                itemID = itemID,
+                name = name,
+                current = count,
+                target = minQty,
+                shortage = minQty - count,
+            }
+        end
+    end
+    table.sort(lowItems, function(a, b) return a.shortage > b.shortage end)
+    return lowItems
+end
+
+---------------------------------------------------------------------------
+-- Live Snipe Mode & High-Value Snipe Alarm (#44)
+
+ns.isSnipeActive = false
+
+function ns.IsSnipeMode()
+    return ns.isSnipeActive == true
+end
+
+function ns.SetSnipeMode(enabled)
+    ns.isSnipeActive = (enabled == true)
+    if ns.isSnipeActive then
+        ns.Good("Live Snipe Mode ACTIVATED. Standing watch for deep discounts and mega flips.")
+        if PlaySound then PlaySound(8959) end
+    else
+        ns.Print("Live Snipe Mode deactivated.")
+    end
+    if ns.UpdateSnipeButton then ns.UpdateSnipeButton() end
+    if ns.RefreshPanel then ns.RefreshPanel() end
+end
+
+function ns.GetSnipeThreshold()
+    local s = ns.db and ns.db.settings
+    return (s and s.snipeThreshold) or 1000000 -- 100g default
+end
+
+function ns.SetSnipeThreshold(copper)
+    copper = math.max(0, math.floor(copper or 0))
+    if ns.db then
+        ns.db.settings = ns.db.settings or {}
+        ns.db.settings.snipeThreshold = copper
+    end
+end
+
+function ns.PlaySnipeAlarm(deal)
+    -- High priority audio alarm (Raid Warning)
+    if PlaySound then
+        PlaySound(8959)
+    end
+
+    if deal then
+        local name = deal.name or (deal.itemID and C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(deal.itemID)) or "Mega Snipe"
+        local profit = deal.totalNetProfit or 0
+        local pct = math.floor((deal.below or 0) * 100 + 0.5)
+
+        if RaidNotice_AddMessage and RaidWarningFrame and ChatTypeInfo and ChatTypeInfo["RAID_WARNING"] then
+            RaidNotice_AddMessage(RaidWarningFrame, ("MEGA SNIPE: %s (-%d%%, +%s)"):format(name, pct, ns.Money(profit)), ChatTypeInfo["RAID_WARNING"])
+        end
+
+        ns.Good("|cffa335ee[MEGA SNIPE DETECTED]|r %s is listed at %s (%d%% below typical, est. profit: +%s)!",
+            deal.link or name, ns.Money(deal.now or deal.lowestNow or 0), pct, ns.Money(profit))
+    end
+end
+
 
 ---------------------------------------------------------------------------
 -- Database maintenance & export
@@ -520,11 +624,13 @@ boot:SetScript("OnEvent", function(self, _, name)
     if db.settings.costBasisTooltip == nil then db.settings.costBasisTooltip = true end
     if db.settings.mailCollector == nil then db.settings.mailCollector = true end
     if db.settings.factionShare == nil then db.settings.factionShare = true end
+    if db.settings.snipeThreshold == nil then db.settings.snipeThreshold = 1000000 end
     if type(db.watchlist) ~= "table" then db.watchlist = {} end
     if type(db.shoppingLists) ~= "table" then db.shoppingLists = {} end
     if type(db.blacklist) ~= "table" then db.blacklist = {} end
     if type(db.customCategories) ~= "table" then db.customCategories = {} end
     if type(db.costBasis) ~= "table" then db.costBasis = {} end
+    if type(db.restock) ~= "table" then db.restock = {} end
     if type(db.ledger) ~= "table" then
         db.ledger = {
             records = {},
@@ -1450,6 +1556,94 @@ SlashCmdList["GOLDFINDER"] = function(msg)
             end
             ns.Print("Usage: /gf cost <link or itemID>")
         end
+    elseif cmd == "snipe" then
+        arg = arg and arg:lower() or ""
+        if arg == "on" or arg == "1" or arg == "enable" then
+            ns.SetSnipeMode(true)
+        elseif arg == "off" or arg == "0" or arg == "disable" then
+            ns.SetSnipeMode(false)
+        else
+            ns.SetSnipeMode(not ns.IsSnipeMode())
+        end
+    elseif cmd == "snipethreshold" then
+        local amt = ns.ParseMoneyString(arg)
+        if amt then
+            ns.SetSnipeThreshold(amt)
+            ns.Good("Snipe alarm profit threshold set to %s.", ns.Money(amt))
+        else
+            ns.Warn("Usage: /gf snipethreshold <amount> (e.g. 50g, 100g). Current: %s", ns.Money(ns.GetSnipeThreshold()))
+        end
+    elseif cmd == "restock" then
+        local itemPart, qtyPart = arg:match("^(%S+)%s+(%S+)$")
+        if itemPart and qtyPart then
+            local itemID = tonumber(itemPart:match("item:(%d+)")) or tonumber(itemPart:match("^(%d+)"))
+            local minQty = tonumber(qtyPart)
+            if itemID and minQty and minQty > 0 then
+                ns.SetRestockLevel(itemID, minQty)
+                local name = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID)) or ("Item " .. itemID)
+                ns.Good("Set safety restock level for %s to %d units.", name, minQty)
+            else
+                ns.Warn("Usage: /gf restock <link or itemID> <minStockQty>")
+            end
+        else
+            local low = ns.GetLowStockItems()
+            local allRestock = ns.db and ns.db.restock or {}
+            local totalTracked = 0
+            for _ in pairs(allRestock) do totalTracked = totalTracked + 1 end
+            ns.Print("Inventory Restock Status (%d tracked, %d below threshold):", totalTracked, #low)
+            if #low > 0 then
+                for _, it in ipairs(low) do
+                    ns.Print("  - |cffff4040[LOW STOCK]|r %s: %d in bags/bank (Target: %d, Shortage: %d)", it.name, it.current, it.target, it.shortage)
+                end
+            elseif totalTracked > 0 then
+                ns.Good("  All %d tracked materials meet or exceed minimum safety stock levels.", totalTracked)
+            else
+                ns.Print("  No restock levels configured. Set one with: /gf restock <link> <minQty>")
+            end
+        end
+    elseif cmd == "unrestock" then
+        local itemID = tonumber(arg:match("item:(%d+)")) or tonumber(arg:match("^(%d+)"))
+        if itemID then
+            ns.ClearRestockLevel(itemID)
+            local name = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID)) or ("Item " .. itemID)
+            ns.Good("Cleared restock threshold for %s.", name)
+        else
+            ns.Warn("Usage: /gf unrestock <link or itemID>")
+        end
+    elseif cmd == "cart" then
+        arg = arg and arg:lower() or ""
+        if arg == "buy" then
+            ns.ExecuteCartPurchase()
+        elseif arg == "clear" then
+            ns.ClearCart()
+        else
+            ns.ToggleCart()
+        end
+    elseif cmd == "vendor" then
+        local itemID = tonumber(arg:match("item:(%d+)")) or tonumber(arg:match("^(%d+)"))
+        if itemID then
+            local info = ns.GetVendorReagent(itemID)
+            local name = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID)) or ("Item " .. itemID)
+            if info then
+                local cur = ns.GetItemCurrentPrice(itemID)
+                ns.Print("%s is an NPC trade reagent:", name)
+                ns.Print("  - NPC Vendor Buy Price: %s", ns.Money(info.vendorPrice))
+                if cur and cur > info.vendorPrice then
+                    local markup = math.floor(((cur - info.vendorPrice) / info.vendorPrice) * 100 + 0.5)
+                    ns.Bad("  - Current AH Price: %s (+%d%% markup over vendor!)", ns.Money(cur), markup)
+                elseif cur then
+                    ns.Good("  - Current AH Price: %s", ns.Money(cur))
+                end
+            else
+                ns.Print("%s is not a standard NPC vendor reagent.", name)
+            end
+        else
+            ns.Print("GoldFinder Fixed Vendor Reagents Catalog:")
+            for id, info in pairs(ns.VENDOR_REAGENTS) do
+                ns.Print("  - %s: %s (NPC buy price)", info.name, ns.Money(info.vendorPrice))
+            end
+            ns.Print("Usage: /gf vendor <link or itemID>")
+        end
     else
         local ratio = ns.GetDealRatio()
         local pct = math.floor((1 - ratio) * 100 + 0.5)
@@ -1497,6 +1691,13 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         ns.Print("  /gf watchlist         - view all starred watchlist items")
         ns.Print("  /gf buy <link|id> <qty> [max] - set quota target and optional max unit price")
         ns.Print("  /gf unbuy <link|id>   - remove material from shopping list")
+        ns.Print("  /gf snipe [on|off]   - toggle live AH snipe mode")
+        ns.Print("  /gf snipethreshold <amt> - set profit threshold for high-urgency snipe alarm")
+        ns.Print("  /gf restock <link> <minQty> - set minimum stock safety restock level")
+        ns.Print("  /gf unrestock <link> - remove material from restock tracker")
+        ns.Print("  /gf restock          - view current material inventory stock levels")
+        ns.Print("  /gf cart [buy|clear] - open staging cart or execute batch buy")
+        ns.Print("  /gf vendor [link]    - inspect trade NPC reagent prices")
         ns.Print("  /gf shopping          - view active shopping list fulfillment progress")
     end
 end

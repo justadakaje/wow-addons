@@ -13,7 +13,7 @@ local dataObj = nil
 
 function ns.ShowBrokerTooltip(tip)
     local allDeals, status = (ns.FindDeals and ns.FindDeals()) or {}
-    tip:AddDoubleLine("|cffffd100GoldFinder|r", "v" .. (ns.version or "0.7.0"), 1, 0.82, 0, 0.7, 0.7, 0.7)
+    tip:AddDoubleLine("|cffffd100GoldFinder|r", "v" .. (ns.version or "0.8.0"), 1, 0.82, 0, 0.7, 0.7, 0.7)
     tip:AddLine(" ")
 
     local numDeals = #allDeals
@@ -37,6 +37,23 @@ function ns.ShowBrokerTooltip(tip)
         end
     else
         tip:AddLine("No deals currently meeting discount threshold.", 0.7, 0.7, 0.7, true)
+    end
+
+    -- Restock alert status (#45)
+    local lowStock = ns.GetLowStockItems and ns.GetLowStockItems()
+    if lowStock and #lowStock > 0 then
+        tip:AddLine(" ")
+        tip:AddDoubleLine("Restock Alert:", ("|cffff4040%d material(s) low|r"):format(#lowStock), 1, 0.82, 0, 1, 0.25, 0.25)
+        for i = 1, math.min(3, #lowStock) do
+            local it = lowStock[i]
+            tip:AddDoubleLine(("  %s"):format(it.name), ("%d / %d"):format(it.current, it.target), 0.8, 0.8, 0.8, 1, 0.4, 0.4)
+        end
+    end
+
+    -- Snipe Engine status (#44)
+    if ns.IsSnipeMode and ns.IsSnipeMode() then
+        tip:AddLine(" ")
+        tip:AddDoubleLine("Live Snipe Engine:", "|cff40ff40● ACTIVE|r", 1, 0.82, 0, 0.25, 1, 0.25)
     end
 
     -- Scan freshness status
