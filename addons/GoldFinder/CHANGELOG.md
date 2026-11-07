@@ -4,6 +4,22 @@ All notable changes to GoldFinder. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-11-07
+
+### Added
+
+- **Mailbox One-Click Deal Collector & Cost Tracking ([#40](https://github.com/justadakaje/wow-addons/issues/40)):** Adds a native `[ Collect Deals (N) ]` button to the `MailFrame` header. Automatically processes buyer invoice item deliveries and seller sale payouts sequentially with `C_Mail.IsCommandPending()` safety pacing. Ingests purchase cost basis into `GoldFinderDB.costBasis` upon pickup.
+- **Realized Profit & Loss (P&L) Goblin Ledger ([#41](https://github.com/justadakaje/wow-addons/issues/41)):** Complete financial accounting dashboard accessible via `/gf ledger`, `/gf pnl`, or the GoldFinder Options panel. Displays 4 KPI metric cards (Lifetime Net Profit, Average Flip ROI %, Total Flips, Total Gross Revenue), top 3 all-time flips banner, a 12-row scrollable recent flips transaction table with hover breakdowns (gross sold price, Blizzard 5% AH cut, net revenue, acquisition cost basis, realized net profit, ROI %), and a one-click [Export CSV] action.
+- **Inventory Cost Basis Tooltip Overlay ([#42](https://github.com/justadakaje/wow-addons/issues/42)):** Displays average unit cost basis (`GoldFinder Cost Basis: <price> (<qty>x bought)`) and live unrealized net margins against typical market baselines (`Unrealized Margin: +<profit> (<roi>%)`) directly on bag, bank, and inventory item tooltips. Configurable via Options panel and `/gf cost <link|id>`.
+- **Expired Auction Relist Advisor ([#43](https://github.com/justadakaje/wow-addons/issues/43)):** Evaluates returned and expired auctions upon mailbox inspection. Classifies items into actionable guidance: `[HOLD - BELOW COST]` when current market drops below cost basis, `[RELIST - HEALTHY MARKET]` when price has recovered, and `[WAIT - UNDERCUT WAVE]` during temporary competitor dumps. Displays recommendations in chat during collection and overlays advice directly on mailbox item tooltips.
+
+## [0.6.0] - 2026-11-07
+
+### Added
+
+- **Alternative Valuation Engine ([#38](https://github.com/justadakaje/wow-addons/issues/38)):** Added configurable valuation models to calculate typical market baselines: Standard Median, Trimmed Mean (10% outlier trim), and 7-Day Exponential Moving Average (EMA). Switchable via Options panel dropdown or `/gf valuation <median|trimmed|ema>`.
+- **Custom Category Builder & Group Editor ([#39](https://github.com/justadakaje/wow-addons/issues/39)):** Dynamic multi-line wrapping category bar in the GoldFinder AH tab, in-game `[+ Group]` modal dialog, Shift+Right-Click item assignment from deal rows, right-click group deletion with confirmation, and slash commands `/gf group create|delete|add|remove|list`.
+
 ## [0.5.0] - 2026-11-07
 
 ### Added

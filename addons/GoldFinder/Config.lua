@@ -206,6 +206,20 @@ local function RefreshControls()
         controls.sellHelperCb:SetChecked(sEnabled == true)
     end
 
+    -- k) Mailbox collector checkbox (#40)
+    if controls.mailCollectorCb then
+        local mc = ns.IsMailCollectorEnabled and ns.IsMailCollectorEnabled()
+        if mc == nil then mc = true end
+        controls.mailCollectorCb:SetChecked(mc == true)
+    end
+
+    -- l) Cost basis tooltip checkbox (#42)
+    if controls.costBasisCb then
+        local cb = ns.IsCostBasisTooltipEnabled and ns.IsCostBasisTooltipEnabled()
+        if cb == nil then cb = true end
+        controls.costBasisCb:SetChecked(cb == true)
+    end
+
     isRefreshing = false
 end
 
@@ -226,6 +240,12 @@ local function ResetDefaults()
     end
     if ns.SetSellHelperEnabled then
         ns.SetSellHelperEnabled(true)
+    end
+    if ns.SetMailCollector then
+        ns.SetMailCollector(true)
+    end
+    if ns.SetCostBasisTooltip then
+        ns.SetCostBasisTooltip(true)
     end
 
     -- Also synchronize ns.db convenience keys if present
@@ -254,7 +274,7 @@ local function CreateConfigFrameOnce()
 
     local template = BackdropTemplateMixin and "BackdropTemplate" or nil
     local f = CreateFrame("Frame", "GoldFinderConfigFrame", UIParent, template)
-    f:SetSize(620, 590)
+    f:SetSize(620, 630)
     f:SetPoint("CENTER", UIParent, "CENTER", 0, 20)
     f:SetFrameStrata("DIALOG")
     f:EnableMouse(true)
@@ -623,6 +643,53 @@ local function CreateConfigFrameOnce()
         GameTooltip:Show()
     end)
     newGroupBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+    -- l) Checkbox: Mailbox Deal Collector (#40)
+    controls.mailCollectorCb = CreateCheckbox(
+        f,
+        "Enable Mailbox Deal Collector",
+        "Mailbox Deal Collector",
+        "When enabled, places a one-click 'Collect Deals' button on the Mailbox to automatically pick up won auction materials and sales payments while logging cost basis.",
+        function(_, checked)
+            if ns.SetMailCollector then
+                ns.SetMailCollector(checked)
+            end
+        end
+    )
+    controls.mailCollectorCb:SetPoint("TOPLEFT", 28, -482)
+
+    -- m) Checkbox: Cost Basis on Tooltips (#42)
+    controls.costBasisCb = CreateCheckbox(
+        f,
+        "Show Cost Basis on Item Tooltips",
+        "Cost Basis Tooltip Overlay",
+        "When enabled, displays your average purchase cost basis and unrealized profit margin on bag, bank, and inventory item tooltips.",
+        function(_, checked)
+            if ns.SetCostBasisTooltip then
+                ns.SetCostBasisTooltip(checked)
+            end
+        end
+    )
+    controls.costBasisCb:SetPoint("TOPLEFT", 330, -482)
+
+    -- n) Button: Open Goblin Ledger (#41)
+    local openLedgerBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    openLedgerBtn:SetSize(230, 24)
+    openLedgerBtn:SetPoint("TOPLEFT", 28, -514)
+    openLedgerBtn:SetText("Open Goblin P&L Ledger")
+    openLedgerBtn:SetScript("OnClick", function()
+        if ns.OpenLedger then
+            ns.OpenLedger()
+        end
+    end)
+    openLedgerBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("Goblin Realized P&L Ledger", 1, 0.82, 0)
+        GameTooltip:AddLine("Open the complete financial accounting dashboard to view realized profits, completed flips, ROI, and top profitable items.", 1, 1, 1, true)
+        GameTooltip:AddLine("You can also open this with: /gf ledger", 0.7, 0.7, 0.7)
+        GameTooltip:Show()
+    end)
+    openLedgerBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     -----------------------------------------------------------------------
     -- Section 4: Action Buttons at Bottom

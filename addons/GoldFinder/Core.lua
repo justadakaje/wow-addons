@@ -271,6 +271,32 @@ function ns.SetValuationModel(model)
     return model, ns.VALUATION_MODELS[model]
 end
 
+function ns.IsCostBasisTooltipEnabled()
+    local s = ns.db and ns.db.settings
+    if s and s.costBasisTooltip ~= nil then return s.costBasisTooltip end
+    return true
+end
+
+function ns.SetCostBasisTooltip(val)
+    if ns.db then
+        ns.db.settings = ns.db.settings or {}
+        ns.db.settings.costBasisTooltip = val
+    end
+end
+
+function ns.IsMailCollectorEnabled()
+    local s = ns.db and ns.db.settings
+    if s and s.mailCollector ~= nil then return s.mailCollector end
+    return true
+end
+
+function ns.SetMailCollector(val)
+    if ns.db then
+        ns.db.settings = ns.db.settings or {}
+        ns.db.settings.mailCollector = val
+    end
+end
+
 
 ---------------------------------------------------------------------------
 -- Database maintenance & export
@@ -491,11 +517,20 @@ boot:SetScript("OnEvent", function(self, _, name)
     if db.settings.maxQuickBuySpend == nil then db.settings.maxQuickBuySpend = 500000 end
     if db.settings.minConfidence == nil then db.settings.minConfidence = "any" end
     if db.settings.valuationModel == nil then db.settings.valuationModel = "median" end
+    if db.settings.costBasisTooltip == nil then db.settings.costBasisTooltip = true end
+    if db.settings.mailCollector == nil then db.settings.mailCollector = true end
     if db.settings.factionShare == nil then db.settings.factionShare = true end
     if type(db.watchlist) ~= "table" then db.watchlist = {} end
     if type(db.shoppingLists) ~= "table" then db.shoppingLists = {} end
     if type(db.blacklist) ~= "table" then db.blacklist = {} end
     if type(db.customCategories) ~= "table" then db.customCategories = {} end
+    if type(db.costBasis) ~= "table" then db.costBasis = {} end
+    if type(db.ledger) ~= "table" then
+        db.ledger = {
+            records = {},
+            lifetime = { totalGross = 0, totalCut = 0, totalNet = 0, totalCost = 0, totalProfit = 0, count = 0 },
+        }
+    end
     if type(db.realms) ~= "table" then db.realms = {} end
 
     -- Active realm and faction partition binding
@@ -786,6 +821,131 @@ function ns.IsItemInCustomCategory(catID, itemID)
     if not catID or not itemID or not ns.db then return false end
     local id, cat = ns.FindCustomCategory(catID)
     return (cat and cat.items and cat.items[itemID] == true) or false
+end
+
+---------------------------------------------------------------------------
+-- Cost Basis Tracking (#40, #42)
+
+function ns.GetCostBasis(itemID)
+    if not itemID or not ns.db or not ns.db.costBasis then return nil end
+    return ns.db.costBasis[itemID]
+end
+
+function ns.RecordPurchase(itemID, qty, totalCost, unitCost)
+    if not itemID or not qty or qty <= 0 or not ns.db then return nil end
+    ns.db.costBasis = ns.db.costBasis or {}
+    totalCost = totalCost or (unitCost and (unitCost * qty)) or 0
+
+    local rec = ns.db.costBasis[itemID]
+    if not rec then
+        rec = {
+            totalQty = 0,
+            totalCost = 0,
+            avgUnitCost = 0,
+            lastPurchase = 0,
+            history = {},
+        }
+        ns.db.costBasis[itemID] = rec
+    end
+
+    rec.totalQty = rec.totalQty + qty
+    rec.totalCost = rec.totalCost + totalCost
+    if rec.totalQty > 0 then
+        rec.avgUnitCost = math.floor(rec.totalCost / rec.totalQty)
+    end
+    rec.lastPurchase = GetServerTime()
+
+    rec.history = rec.history or {}
+    rec.history[#rec.history + 1] = {
+        t = rec.lastPurchase,
+        qty = qty,
+        unitCost = (qty > 0) and math.floor(totalCost / qty) or 0,
+        total = totalCost,
+    }
+    if #rec.history > 20 then
+        table.remove(rec.history, 1)
+    end
+
+    return rec
+end
+
+function ns.ClearCostBasis(itemID)
+    if not ns.db or not ns.db.costBasis then return end
+    if itemID then
+        ns.db.costBasis[itemID] = nil
+    else
+        ns.db.costBasis = {}
+    end
+end
+
+---------------------------------------------------------------------------
+-- Goblin Realized P&L Ledger (#41)
+
+function ns.GetLedger()
+    if not ns.db then return { records = {}, lifetime = {} } end
+    ns.db.ledger = ns.db.ledger or { records = {}, lifetime = { totalGross = 0, totalCut = 0, totalNet = 0, totalCost = 0, totalProfit = 0, count = 0 } }
+    return ns.db.ledger
+end
+
+function ns.RecordSale(itemID, itemName, qty, gross, ahCut, purchaseCost)
+    if not ns.db then return nil end
+    local ledger = ns.GetLedger()
+    qty = math.max(1, qty or 1)
+    gross = gross or 0
+    ahCut = ahCut or math.floor(gross * 0.05)
+    local net = math.max(0, gross - ahCut)
+
+    -- If purchase cost was not passed, evaluate from cost basis
+    if not purchaseCost or purchaseCost <= 0 then
+        local cb = ns.GetCostBasis(itemID)
+        if cb and cb.avgUnitCost and cb.avgUnitCost > 0 then
+            purchaseCost = cb.avgUnitCost * qty
+        else
+            purchaseCost = 0
+        end
+    end
+
+    local profit = net - purchaseCost
+    local roi = (purchaseCost > 0) and ((profit / purchaseCost) * 100) or 0
+
+    local record = {
+        t = GetServerTime(),
+        itemID = itemID,
+        name = itemName or (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID)) or ("Item " .. (itemID or 0)),
+        qty = qty,
+        gross = gross,
+        ahCut = ahCut,
+        net = net,
+        cost = purchaseCost,
+        profit = profit,
+        roi = roi,
+    }
+
+    ledger.records = ledger.records or {}
+    ledger.records[#ledger.records + 1] = record
+    if #ledger.records > 200 then
+        table.remove(ledger.records, 1)
+    end
+
+    -- Update lifetime totals
+    ledger.lifetime = ledger.lifetime or { totalGross = 0, totalCut = 0, totalNet = 0, totalCost = 0, totalProfit = 0, count = 0 }
+    local lt = ledger.lifetime
+    lt.totalGross = (lt.totalGross or 0) + gross
+    lt.totalCut = (lt.totalCut or 0) + ahCut
+    lt.totalNet = (lt.totalNet or 0) + net
+    lt.totalCost = (lt.totalCost or 0) + purchaseCost
+    lt.totalProfit = (lt.totalProfit or 0) + profit
+    lt.count = (lt.count or 0) + 1
+
+    return record
+end
+
+function ns.ResetLedger()
+    if not ns.db then return end
+    ns.db.ledger = {
+        records = {},
+        lifetime = { totalGross = 0, totalCut = 0, totalNet = 0, totalCost = 0, totalProfit = 0, count = 0 },
+    }
 end
 
 ---------------------------------------------------------------------------
@@ -1244,6 +1404,52 @@ SlashCmdList["GOLDFINDER"] = function(msg)
             ns.Warn("Usage: /gf preset <snipe | standard | volume>")
         end
         if ns.RefreshPanel then ns.RefreshPanel() end
+    elseif cmd == "ledger" or cmd == "pnl" then
+        if ns.OpenLedger then
+            ns.OpenLedger()
+        else
+            local ledger = ns.GetLedger()
+            local lt = ledger.lifetime or {}
+            ns.Print("GoldFinder Goblin Ledger (Realized P&L):")
+            ns.Print("  - Completed Flips: %d", lt.count or 0)
+            ns.Print("  - Total Revenue: %s", ns.Money(lt.totalGross or 0))
+            ns.Print("  - AH Fees Paid: %s", ns.Money(lt.totalCut or 0))
+            ns.Print("  - Total Cost Basis: %s", ns.Money(lt.totalCost or 0))
+            local profit = lt.totalProfit or 0
+            local profitStr = (profit >= 0 and "|cff40ff40+" or "|cffff4040") .. ns.Money(profit) .. "|r"
+            local roi = (lt.totalCost and lt.totalCost > 0) and ((profit / lt.totalCost) * 100) or 0
+            ns.Print("  - Realized Net Profit: %s (ROI: %.1f%%)", profitStr, roi)
+        end
+    elseif cmd == "cost" or cmd == "basis" then
+        local itemID = tonumber(arg:match("item:(%d+)")) or tonumber(arg:match("^(%d+)"))
+        if itemID then
+            local cb = ns.GetCostBasis(itemID)
+            local name = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID)) or ("Item " .. itemID)
+            if cb and cb.totalQty > 0 then
+                ns.Print("Cost basis for %s:", name)
+                ns.Print("  - Average Unit Cost: %s", ns.Money(cb.avgUnitCost))
+                ns.Print("  - Total Acquired: %d units (Total spent: %s)", cb.totalQty, ns.Money(cb.totalCost))
+                local cur = ns.GetItemTypicalPrice(itemID)
+                if cur and cur > 0 then
+                    local margin = math.floor(cur * 0.95) - cb.avgUnitCost
+                    local roi = (margin / cb.avgUnitCost) * 100
+                    local marginStr = (margin >= 0 and "|cff40ff40+" or "|cffff4040") .. ns.Money(margin) .. "|r"
+                    ns.Print("  - Unrealized Margin vs Typical: %s (ROI: %.1f%%)", marginStr, roi)
+                end
+            else
+                ns.Warn("No purchase history recorded for %s.", name)
+            end
+        else
+            local cb = ns.db and ns.db.costBasis or {}
+            local count = 0
+            for _ in pairs(cb) do count = count + 1 end
+            ns.Print("Tracked Material Cost Basis (%d items):", count)
+            for id, data in pairs(cb) do
+                local name = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(id)) or ("Item " .. id)
+                ns.Print("  - %s: %s avg (%dx bought)", name, ns.Money(data.avgUnitCost), data.totalQty)
+            end
+            ns.Print("Usage: /gf cost <link or itemID>")
+        end
     else
         local ratio = ns.GetDealRatio()
         local pct = math.floor((1 - ratio) * 100 + 0.5)

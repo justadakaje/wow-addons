@@ -13,7 +13,7 @@ local dataObj = nil
 
 function ns.ShowBrokerTooltip(tip)
     local allDeals, status = (ns.FindDeals and ns.FindDeals()) or {}
-    tip:AddDoubleLine("|cffffd100GoldFinder|r", "v" .. (ns.version or "0.5.0"), 1, 0.82, 0, 0.7, 0.7, 0.7)
+    tip:AddDoubleLine("|cffffd100GoldFinder|r", "v" .. (ns.version or "0.7.0"), 1, 0.82, 0, 0.7, 0.7, 0.7)
     tip:AddLine(" ")
 
     local numDeals = #allDeals

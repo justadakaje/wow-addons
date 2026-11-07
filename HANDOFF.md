@@ -801,11 +801,11 @@ Populated across GitHub Issues #36 through #53:
 * **#38 (Completed):** Alternative valuation engine with Standard Median, Trimmed Mean (10% outlier trim), and 7-Day Exponential Moving Average (EMA) selectable via Settings UI and `/gf valuation <median|trimmed|ema>`.
 * **#39 (Completed):** Custom category builder & material group editor with dynamic category tab bar, wrapping layout, in-game creation modal, Shift+Right-Click item assignment, and `/gf group create|delete|add|remove|list`.
 
-### Sprint 4: Mailbox Procurement & Realized Margin Ledger (Target: v0.7.0)
-* **#40:** Mailbox one-click deal collector & cost tracking (`MAIL_INBOX_UPDATE`).
-* **#41:** Realized profit & loss (P&L) goblin ledger (`/gf ledger`).
-* **#42:** Inventory cost basis tooltip overlay on bags & bank items.
-* **#43:** Expired auction re-listing evaluator & relist advisor.
+### Sprint 4: Mailbox Procurement & Realized Margin Ledger (v0.7.0) — ✅ COMPLETED
+* **#40 (Completed):** Mailbox one-click deal collector & cost tracking (`MAIL_INBOX_UPDATE`) with command pending safety and auto-cost basis ingestion (`Mail.lua`).
+* **#41 (Completed):** Realized profit & loss (P&L) goblin ledger (`/gf ledger` / `/gf pnl`) standalone dashboard with 4 KPI summary cards, top 3 flips, 12-row scrollable table, and CSV export (`Ledger.lua`).
+* **#42 (Completed):** Inventory cost basis tooltip overlay on bags & bank items with average unit acquisition price and live unrealized net margins against market baselines (`Tooltip.lua`).
+* **#43 (Completed):** Expired auction re-listing evaluator & relist advisor with HOLD, RELIST, and WAIT guidance based on competitor price swings and purchase cost basis (`Mail.lua`).
 
 ### Sprint 5: Live Snipe Engine & Goal Automation (Target: v0.8.0)
 * **#44:** Live snipe mode & high-value audio alarm (> 70% discount / > 100g profit).
