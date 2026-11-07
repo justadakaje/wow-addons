@@ -475,6 +475,22 @@ local function BuildPanel()
     end)
     sortProfit:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
+    -- Tooltip on Typical column header explaining active valuation model (#38)
+    local tipTypical = CreateFrame("Frame", nil, ui.header)
+    tipTypical:SetPoint("LEFT", ui.header, "LEFT", 350, 0)
+    tipTypical:SetSize(110, ROW_HEIGHT)
+    tipTypical:EnableMouse(true)
+    tipTypical:SetScript("OnEnter", function(self)
+        local model = ns.GetValuationModel and ns.GetValuationModel() or "median"
+        local info = ns.VALUATION_MODELS and ns.VALUATION_MODELS[model]
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:SetText("Typical Price Baseline: " .. (info and info.name or "Median"), 1, 0.82, 0)
+        GameTooltip:AddLine(info and info.desc or "Statistical price baseline.", 1, 1, 1, true)
+        GameTooltip:AddLine("Configure via Options or /gf valuation <median|trimmed|ema>", 0.7, 0.7, 0.7)
+        GameTooltip:Show()
+    end)
+    tipTypical:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
     local anchor = ui.header
     for i = 1, MAX_ROWS do
         ui.rows[i] = MakeRow(anchor, "GameFontHighlight", true)

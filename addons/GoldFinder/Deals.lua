@@ -13,13 +13,86 @@ local ADDON, ns = ...
 
 local FRESH_SECONDS = 1800  -- a price older than this is not "right now"
 
+-- Statistical valuation baselines (#38)
 local function Median(values)
+    if not values or #values == 0 then return nil end
     local t = {}
     for i = 1, #values do t[i] = values[i] end
     table.sort(t)
     local n = #t
+    if n == 1 then return t[1] end
     if n % 2 == 1 then return t[(n + 1) / 2] end
-    return (t[n / 2] + t[n / 2 + 1]) / 2
+    return math.floor(((t[n / 2] + t[n / 2 + 1]) / 2) + 0.5)
+end
+ns.CalculateMedian = Median
+
+-- Trimmed Mean: discards top and bottom outlier listings (default 10% trim each side)
+-- and averages the remainder.
+local function TrimmedMean(values, trimPct)
+    if not values or #values == 0 then return nil end
+    local n = #values
+    if n <= 2 then return Median(values) end
+
+    local t = {}
+    for i = 1, n do t[i] = values[i] end
+    table.sort(t)
+
+    trimPct = trimPct or 0.10
+    local trimCount = math.floor(n * trimPct)
+    if n >= 5 and trimCount < 1 then
+        trimCount = 1
+    end
+
+    if trimCount >= 1 and (2 * trimCount) < n then
+        local sum = 0
+        local count = 0
+        for i = 1 + trimCount, n - trimCount do
+            sum = sum + t[i]
+            count = count + 1
+        end
+        if count > 0 then
+            return math.floor((sum / count) + 0.5)
+        end
+    end
+
+    local sum = 0
+    for i = 1, n do sum = sum + t[i] end
+    return math.floor((sum / n) + 0.5)
+end
+ns.CalculateTrimmedMean = TrimmedMean
+
+-- 7-Day Exponential Moving Average (EMA):
+-- Applies exponential weighting to chronological scans, weighting recent market
+-- movements higher. Multiplier alpha = 2 / (period + 1), defaulting to 7-period (alpha = 0.25).
+local function CalculateEMA(values, period)
+    if not values or #values == 0 then return nil end
+    local n = #values
+    if n == 1 then return values[1] end
+
+    period = period or 7
+    local effectivePeriod = math.min(period, n)
+    local alpha = 2 / (effectivePeriod + 1)
+
+    local ema = values[1]
+    for i = 2, n do
+        ema = (values[i] * alpha) + (ema * (1 - alpha))
+    end
+    return math.floor(ema + 0.5)
+end
+ns.CalculateEMA = CalculateEMA
+
+-- Unified baseline calculation dispatcher (#38)
+function ns.CalculateBaseline(values, model)
+    if not values or #values == 0 then return nil end
+    model = model or (ns.GetValuationModel and ns.GetValuationModel()) or "median"
+
+    if model == "trimmed" then
+        return TrimmedMean(values, 0.10)
+    elseif model == "ema" then
+        return CalculateEMA(values, 7)
+    else
+        return Median(values)
+    end
 end
 
 -- Evaluates whether an item's prices have been trending up, steady, or down
@@ -225,7 +298,7 @@ function ns.GetItemTypicalPrice(itemID)
     if #h == 1 then return h[1].min end
     local prior = {}
     for i = 1, #h - 1 do prior[i] = h[i].min end
-    return Median(prior)
+    return ns.CalculateBaseline(prior)
 end
 
 function ns.GetItemCurrentPrice(itemID)
@@ -518,7 +591,7 @@ function ns.FindDeals()
                 status.judged = status.judged + 1
                 local prior = {}
                 for i = 1, n - 1 do prior[i] = h[i].min end
-                local typical = Median(prior)
+                local typical = ns.CalculateBaseline(prior)
                 if typical > 0 and current.min <= ratio * typical then
                     local conf = ns.GetConfidenceScore(h)
                     local minConf = ns.GetMinConfidence and ns.GetMinConfidence() or "any"
