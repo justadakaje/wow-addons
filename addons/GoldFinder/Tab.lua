@@ -1027,6 +1027,7 @@ local function CreateTabOnce()
     if not ok then
         ns.Bad("The GoldFinder tab could not be added: %s", tostring(err))
     end
+    if ns.InitSellHelper then ns.InitSellHelper() end
 end
 
 local function CheckOverlap()

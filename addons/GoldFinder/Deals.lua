@@ -65,6 +65,7 @@ local function CalculateTrend(history)
         }
     end
 end
+ns.CalculateTrend = CalculateTrend
 
 -- Returns deals (sorted by active sort setting) and a status table that
 -- explains everything that was not a deal, so the panel can say why.

@@ -565,6 +565,14 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         else val = not ns.IsTooltipEnabled() end
         ns.SetTooltipEnabled(val)
         ns.Good("Item tooltip price integration %s.", val and "enabled" or "disabled")
+    elseif cmd == "sellhelper" or cmd == "helper" then
+        arg = arg and arg:lower() or ""
+        local val
+        if arg == "on" or arg == "1" or arg == "true" then val = true
+        elseif arg == "off" or arg == "0" or arg == "false" then val = false
+        else val = not (ns.IsSellHelperEnabled and ns.IsSellHelperEnabled()) end
+        if ns.SetSellHelperEnabled then ns.SetSellHelperEnabled(val) end
+        ns.Good("Sell tab market helper %s.", val and "enabled" or "disabled")
     elseif cmd == "export" then
         ns.ShowExportDialog()
     elseif cmd == "prune" then
@@ -704,6 +712,7 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         ns.Print("  - Audio chime: %s", ns.IsSoundAlertEnabled() and "on" or "off")
         ns.Print("  - Chat notification: %s", ns.IsChatAlertEnabled() and "on" or "off")
         ns.Print("  - Item tooltip pricing: %s", ns.IsTooltipEnabled() and "on" or "off")
+        ns.Print("  - Sell tab market helper: %s", (ns.IsSellHelperEnabled and ns.IsSellHelperEnabled()) and "on" or "off")
         local minProfit = ns.GetMinProfit()
         local minProfitStr = (minProfit > 0) and ns.Money(minProfit) or "none (0c)"
         ns.Print("  - Min profit floor: %s", minProfitStr)
@@ -719,6 +728,7 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         ns.Print("  /gf minprofit <amt>  - set minimum net profit filter (e.g. 5g, 50s, 0)")
         ns.Print("  /gf maxspend <amt>   - set Quick-Buy spend cap (e.g. 50g, 100g, 0)")
         ns.Print("  /gf tooltip [on|off] - toggle item tooltip market pricing")
+        ns.Print("  /gf helper [on|off]  - toggle Blizzard Sell tab market helper card")
         ns.Print("  /gf export           - open CSV data export window")
         ns.Print("  /gf prune [days]     - prune items not seen in [days] (default 30)")
         ns.Print("  /gf resetitem <link> - clear price history for a specific item")

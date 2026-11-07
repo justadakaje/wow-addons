@@ -4,6 +4,12 @@ All notable changes to GoldFinder. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-11-07
+
+### Added
+
+- **Selling & Relisting Price Helper on Blizzard Sell Tab ([#33](https://github.com/justadakaje/wow-addons/issues/33)):** Automatically overlays a GoldFinder Market Card when dropping items into Blizzard's `ItemSellFrame` and `CommoditiesSellFrame`. Displays typical median price, current lowest market price, historical trend (Rising / Falling / Steady), market health warnings (e.g. crashed market relisting alerts), and one-click quick-fill buttons (`[-1c Cut]`, `[Match]`, `[Typical]`). Configurable via `/gf helper [on|off]`.
+
 ## [0.4.0] - 2026-11-07
 
 ### Added
