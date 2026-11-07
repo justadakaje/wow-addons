@@ -30,17 +30,32 @@ local function ApplyPrice(sellFrame, copper)
     copper = math.floor(copper)
     local applied = false
 
-    if sellFrame.PriceInput and sellFrame.PriceInput.SetAmount then
-        local ok = pcall(sellFrame.PriceInput.SetAmount, sellFrame.PriceInput, copper)
-        if ok then applied = true end
+    if sellFrame.PriceInput then
+        if sellFrame.PriceInput.SetAmount then
+            local ok = pcall(sellFrame.PriceInput.SetAmount, sellFrame.PriceInput, copper)
+            if ok then applied = true end
+        end
+        if not applied and sellFrame.PriceInput.MoneyInputFrame and sellFrame.PriceInput.MoneyInputFrame.SetAmount then
+            local ok = pcall(sellFrame.PriceInput.MoneyInputFrame.SetAmount, sellFrame.PriceInput.MoneyInputFrame, copper)
+            if ok then applied = true end
+        end
     end
-    if sellFrame.Buyout and sellFrame.Buyout.MoneyInputFrame and sellFrame.Buyout.MoneyInputFrame.SetAmount then
+    if not applied and sellFrame.Buyout and sellFrame.Buyout.MoneyInputFrame and sellFrame.Buyout.MoneyInputFrame.SetAmount then
         local ok = pcall(sellFrame.Buyout.MoneyInputFrame.SetAmount, sellFrame.Buyout.MoneyInputFrame, copper)
         if ok then applied = true end
     end
-    if sellFrame.SetUnitPrice then
+    if not applied and sellFrame.SetUnitPrice then
         local ok = pcall(sellFrame.SetUnitPrice, sellFrame, copper)
         if ok then applied = true end
+    end
+    if not applied and type(MoneyInputFrame_SetAmount) == "function" then
+        if sellFrame.PriceInput then
+            pcall(MoneyInputFrame_SetAmount, sellFrame.PriceInput, copper)
+            applied = true
+        elseif sellFrame.Buyout and sellFrame.Buyout.MoneyInputFrame then
+            pcall(MoneyInputFrame_SetAmount, sellFrame.Buyout.MoneyInputFrame, copper)
+            applied = true
+        end
     end
 
     if applied then
@@ -69,6 +84,14 @@ local function CreateHelperCard()
         card:SetBackdropColor(0.08, 0.08, 0.10, 0.94)
         card:SetBackdropBorderColor(0.85, 0.70, 0.20, 1.0)
     end
+
+    -- Close button
+    local closeBtn = CreateFrame("Button", nil, card, "UIPanelCloseButton")
+    closeBtn:SetSize(22, 22)
+    closeBtn:SetPoint("TOPRIGHT", -2, -2)
+    closeBtn:SetScript("OnClick", function()
+        card:Hide()
+    end)
 
     -- Header
     local title = card:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -180,6 +203,29 @@ local function UpdateCardData(sellFrame, itemID)
     local typical = ns.GetItemTypicalPrice and ns.GetItemTypicalPrice(itemID)
     local lowest = ns.GetItemCurrentPrice and ns.GetItemCurrentPrice(itemID)
 
+    -- Live query from Blizzard's search buffer if scan database doesn't have it yet!
+    if (not lowest or lowest <= 0) and C_AuctionHouse then
+        if C_AuctionHouse.GetNumCommoditySearchResults and C_AuctionHouse.GetCommoditySearchResultInfo then
+            local num = C_AuctionHouse.GetNumCommoditySearchResults(itemID)
+            if num and num > 0 then
+                local first = C_AuctionHouse.GetCommoditySearchResultInfo(itemID, 1)
+                if first and first.unitPrice and first.unitPrice > 0 then
+                    lowest = first.unitPrice
+                end
+            end
+        end
+        if (not lowest or lowest <= 0) and C_AuctionHouse.GetNumItemSearchResults and C_AuctionHouse.GetItemSearchResultInfo and C_AuctionHouse.MakeItemKey then
+            local key = C_AuctionHouse.MakeItemKey(itemID)
+            local num = key and C_AuctionHouse.GetNumItemSearchResults(key)
+            if num and num > 0 then
+                local first = C_AuctionHouse.GetItemSearchResultInfo(key, 1)
+                if first and first.buyoutAmount and first.buyoutAmount > 0 then
+                    lowest = first.buyoutAmount
+                end
+            end
+        end
+    end
+
     if typical and typical > 0 then
         card.typVal:SetText(ns.Money(typical))
         card.suggestedTypical = typical
@@ -234,17 +280,18 @@ local function UpdateCardData(sellFrame, itemID)
         card.advice:SetText("|cff888888Insufficient scan data to determine market health.|r")
     end
 
-    -- Position relative to sellFrame
-    card:SetParent(sellFrame)
+    -- Position docked neatly to the RIGHT of the entire AuctionHouseFrame outside the window,
+    -- NEVER overlaying or obscuring the price list!
+    local parent = AuctionHouseFrame or sellFrame
+    card:SetParent(parent)
     card:ClearAllPoints()
 
-    -- Place to the right of sell frame if room allows, otherwise to the left
-    local left, right = sellFrame:GetLeft() or 0, sellFrame:GetRight() or 0
+    local right = parent:GetRight() or 0
     local screenWidth = UIParent:GetWidth()
     if right + 290 < screenWidth then
-        card:SetPoint("TOPLEFT", sellFrame, "TOPRIGHT", 8, -10)
+        card:SetPoint("TOPLEFT", parent, "TOPRIGHT", 6, -10)
     else
-        card:SetPoint("TOPRIGHT", sellFrame, "TOPLEFT", -8, -10)
+        card:SetPoint("TOPRIGHT", parent, "TOPLEFT", -6, -10)
     end
 
     card:Show()
@@ -322,7 +369,9 @@ end
 
 -- Refresh market card when search results update for the listed item
 local sellEvents = CreateFrame("Frame")
+sellEvents:RegisterEvent("COMMODITY_SEARCH_RESULTS_RECEIVED")
 sellEvents:RegisterEvent("COMMODITY_SEARCH_RESULTS_UPDATED")
+sellEvents:RegisterEvent("ITEM_SEARCH_RESULTS_ADDED")
 sellEvents:RegisterEvent("ITEM_SEARCH_RESULTS_UPDATED")
 sellEvents:SetScript("OnEvent", function(_, _, itemID)
     if currentItemID and currentSellFrame and helperCard and helperCard:IsShown() then

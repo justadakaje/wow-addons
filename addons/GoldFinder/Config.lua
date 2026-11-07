@@ -62,16 +62,24 @@ local function CreateSlider(parent, label, minVal, maxVal, step, formatFunc, too
 
     local title = slider.Text or _G[name .. "Text"]
     if not title then
-        title = slider:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        title:SetPoint("BOTTOMLEFT", slider, "TOPLEFT", 0, 4)
+        title = slider:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
         slider.Text = title
     end
-    title:SetFontObject("GameFontNormal")
+    title:ClearAllPoints()
+    title:SetPoint("BOTTOMLEFT", slider, "TOPLEFT", 0, 4)
+    title:SetFontObject("GameFontNormalSmall")
+    title:SetJustifyH("LEFT")
     title:SetText(label)
 
-    local valText = slider:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    local valText = slider.valText
+    if not valText then
+        valText = slider:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        slider.valText = valText
+    end
+    valText:ClearAllPoints()
     valText:SetPoint("BOTTOMRIGHT", slider, "TOPRIGHT", 0, 4)
-    slider.valText = valText
+    valText:SetFontObject("GameFontHighlightSmall")
+    valText:SetJustifyH("RIGHT")
 
     local lowText = slider.Low or _G[name .. "Low"]
     local highText = slider.High or _G[name .. "High"]
@@ -184,6 +192,13 @@ local function RefreshControls()
     local mShown = (ns.IsMinimapButtonShown and ns.IsMinimapButtonShown())
     controls.minimapCb:SetChecked(mShown == true)
 
+    -- j) Sell helper checkbox
+    if controls.sellHelperCb then
+        local sEnabled = ns.IsSellHelperEnabled and ns.IsSellHelperEnabled()
+        if sEnabled == nil then sEnabled = true end
+        controls.sellHelperCb:SetChecked(sEnabled == true)
+    end
+
     isRefreshing = false
 end
 
@@ -200,6 +215,9 @@ local function ResetDefaults()
     ns.SetFactionShareEnabled(true)
     if ns.SetMinimapButtonShown then
         ns.SetMinimapButtonShown(true)
+    end
+    if ns.SetSellHelperEnabled then
+        ns.SetSellHelperEnabled(true)
     end
 
     -- Also synchronize ns.db convenience keys if present
@@ -532,6 +550,20 @@ local function CreateConfigFrameOnce()
         end
     )
     controls.minimapCb:SetPoint("TOPLEFT", 28, -444)
+
+    -- j) Checkbox: Show Selling Tab Price Helper
+    controls.sellHelperCb = CreateCheckbox(
+        f,
+        "Enable Sell Tab Price Helper",
+        "Selling Price Helper",
+        "When enabled, docks market pricing suggestions and quick undercut buttons alongside the Auction House Sell tab.",
+        function(_, checked)
+            if ns.SetSellHelperEnabled then
+                ns.SetSellHelperEnabled(checked)
+            end
+        end
+    )
+    controls.sellHelperCb:SetPoint("TOPLEFT", 330, -414)
 
     -----------------------------------------------------------------------
     -- Section 4: Action Buttons at Bottom

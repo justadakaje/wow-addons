@@ -71,7 +71,9 @@ local function InitBroker()
         text = "GoldFinder",
         icon = "Interface\\ICONS\\INV_Misc_Coin_01",
         OnEnter = function(self)
-            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetOwner(self, "ANCHOR_NONE")
+            GameTooltip:ClearAllPoints()
+            GameTooltip:SetPoint("TOPRIGHT", self, "BOTTOMLEFT", -4, -4)
             GameTooltip:ClearLines()
             ns.ShowBrokerTooltip(GameTooltip)
             GameTooltip:Show()
