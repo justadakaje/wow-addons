@@ -138,7 +138,15 @@ local function MakeRow(anchor, font, clickable)
         row:SetScript("OnMouseUp", function(self, button)
             if not self.deal then return end
             if button == "LeftButton" then
-                if IsShiftKeyDown() then
+                if self.deal.isUndercut then
+                    local name = (ItemName and ItemName(self.deal)) or self.deal.name or ("Item %d"):format(self.deal.itemID)
+                    local ok, err = pcall(C_AuctionHouse.CancelAuction, self.deal.auctionID)
+                    if ok then
+                        ns.Good("Cancelling undercut auction for %s...", name)
+                    else
+                        ns.Bad("Failed to cancel auction: %s", tostring(err))
+                    end
+                elseif IsShiftKeyDown() then
                     QuickBuy(self.deal)
                 else
                     OpenInBuy(self.deal)
@@ -282,8 +290,9 @@ local function BuildPanel()
         { id = "mining",    label = "Mining",    width = 62 },
         { id = "cloth",     label = "Cloth",     width = 56 },
         { id = "leather",   label = "Leather",   width = 66 },
-        { id = "conversions", label = "Crafts",  width = 58 },
-        { id = "watchlist", label = "Watchlist", width = 88, isWatchlist = true },
+        { id = "conversions", label = "Crafts",    width = 58 },
+        { id = "undercuts",   label = "Undercuts", width = 76 },
+        { id = "watchlist",   label = "Watchlist", width = 88, isWatchlist = true },
     }
     local categoryButtons = {}
 
@@ -608,6 +617,18 @@ ShowRowTip = function(row)
     tip:SetOwner(row, "ANCHOR_RIGHT")
     tip:AddLine(ItemName(d), 1, 1, 1)
 
+    if d.isUndercut then
+        tip:AddLine("Active Auction: Undercut Alert", 1, 0.25, 0.25)
+        tip:AddDoubleLine("Your listed price", Money(d.typical), 1, 0.82, 0, 1, 1, 1)
+        tip:AddDoubleLine("Lowest competitor price", Money(d.now), 1, 0.82, 0, 1, 0.25, 0.25)
+        tip:AddDoubleLine("Undercut by", ("%s (%d%%)"):format(Money(d.typical - d.now), math.floor(d.below * 100 + 0.5)), 1, 0.82, 0, 1, 0.4, 0.4)
+        tip:AddDoubleLine("Listed quantity", tostring(d.qty), 1, 0.82, 0, 1, 1, 1)
+        tip:AddLine(" ")
+        tip:AddLine("Click: cancel auction to relist at current market price.", 0.25, 1, 0.25, true)
+        tip:Show()
+        return
+    end
+
     if d.isConversion then
         tip:AddLine("Crafting Conversion Arbitrage", 0.4, 0.8, 1)
         tip:AddDoubleLine("Total Reagent Cost", Money(d.now), 1, 0.82, 0, 1, 1, 1)
@@ -747,6 +768,8 @@ function ns.RefreshPanel()
         catDisplayName = "Watchlist"
     elseif activeCat == "conversions" then
         catDisplayName = "Crafts"
+    elseif activeCat == "undercuts" then
+        catDisplayName = "Undercuts"
     elseif isCategoryFiltered then
         catDisplayName = activeCat:sub(1,1):upper() .. activeCat:sub(2)
     end
@@ -785,6 +808,9 @@ function ns.RefreshPanel()
         elseif activeCat == "watchlist" then
             ui.emptyTitle:SetText("Watchlist is empty")
             ui.emptySub:SetText("Click the star next to any deal row (or Right-Click a deal) to add it to your watchlist.")
+        elseif activeCat == "undercuts" then
+            ui.emptyTitle:SetText("No undercut auctions")
+            ui.emptySub:SetText("None of your active auctions have been undercut by competitors.")
         elseif isCategoryFiltered then
             ui.emptyTitle:SetText(("No %s deals found"):format(catDisplayName))
             ui.emptySub:SetText(("No %s materials currently meet the discount threshold."):format(catDisplayName:lower()))
@@ -866,8 +892,15 @@ qbEvents:RegisterEvent("COMMODITY_PRICE_UNAVAILABLE")
 qbEvents:RegisterEvent("COMMODITY_PURCHASE_FAILED")
 qbEvents:RegisterEvent("COMMODITY_PURCHASE_SUCCEEDED")
 qbEvents:RegisterEvent("COMMODITY_PURCHASED")
+qbEvents:RegisterEvent("OWNED_AUCTIONS_UPDATED")
+qbEvents:RegisterEvent("AUCTION_CANCELED")
 qbEvents:RegisterEvent("AUCTION_HOUSE_CLOSED")
 qbEvents:SetScript("OnEvent", function(self, event, arg1, arg2)
+    if event == "OWNED_AUCTIONS_UPDATED" or event == "AUCTION_CANCELED" then
+        if ns.RefreshPanel then ns.RefreshPanel() end
+        return
+    end
+
     local pb = ns.pendingQuickBuy
     if event == "AUCTION_HOUSE_CLOSED" then
         ns.pendingQuickBuy = nil

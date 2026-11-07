@@ -247,7 +247,77 @@ function ns.FindConversionDeals()
     return deals
 end
 
+function ns.FindUndercuts()
+    local undercuts = {}
+    if not C_AuctionHouse or not C_AuctionHouse.GetOwnedAuctions then return undercuts end
+
+    local owned = C_AuctionHouse.GetOwnedAuctions()
+    if type(owned) ~= "table" or #owned == 0 then
+        local num = C_AuctionHouse.GetNumOwnedAuctions and C_AuctionHouse.GetNumOwnedAuctions() or 0
+        if num > 0 and C_AuctionHouse.GetOwnedAuctionInfo then
+            owned = {}
+            for i = 1, num do
+                local info = C_AuctionHouse.GetOwnedAuctionInfo(i)
+                if info then owned[#owned + 1] = info end
+            end
+        end
+    end
+
+    if type(owned) ~= "table" then return undercuts end
+
+    for _, a in ipairs(owned) do
+        local itemID = a.itemKey and a.itemKey.itemID
+        local buyout = a.buyoutAmount or 0
+        local qty = math.max(1, a.quantity or 1)
+        if itemID and buyout > 0 then
+            local myUnitPrice = math.floor(buyout / qty)
+            local currentLowest = ns.GetItemCurrentPrice(itemID)
+            if currentLowest and currentLowest < myUnitPrice then
+                local diff = myUnitPrice - currentLowest
+                local pct = diff / myUnitPrice
+                local deal = {
+                    isUndercut      = true,
+                    auctionID       = a.auctionID,
+                    itemID          = itemID,
+                    itemKey         = a.itemKey,
+                    name            = a.itemLink or (C_Item.GetItemNameByID(itemID) or ("Item " .. itemID)),
+                    now             = currentLowest,
+                    typical         = myUnitPrice,
+                    below           = pct,
+                    qty             = a.quantity,
+                    netUnitProfit   = 0,
+                    totalNetProfit  = diff * qty,
+                    timeLeft        = a.timeLeft,
+                    timeLeftSeconds = a.timeLeftSeconds,
+                    category        = "undercuts",
+                }
+                deal.tier = {
+                    id       = "undercut",
+                    label    = "Undercut",
+                    tag      = "[UNDERCUT]",
+                    hex      = "ff4444",
+                    colorStr = "|cffff4444",
+                    r        = 1.0,
+                    g        = 0.25,
+                    b        = 0.25,
+                    bgAlpha  = 0.12,
+                }
+                undercuts[#undercuts + 1] = deal
+            end
+        end
+    end
+
+    table.sort(undercuts, function(x, y)
+        return (x.totalNetProfit or 0) > (y.totalNetProfit or 0)
+    end)
+
+    return undercuts
+end
+
 function ns.FindDeals()
+    if ns.GetActiveCategory and ns.GetActiveCategory() == "undercuts" then
+        return ns.FindUndercuts(), { items = 0, judged = 0, needMore = 0, stale = 0, fewestMissing = nil }
+    end
     local status = { items = 0, judged = 0, needMore = 0, stale = 0, fewestMissing = nil }
     local deals = {}
     local db = ns.db
