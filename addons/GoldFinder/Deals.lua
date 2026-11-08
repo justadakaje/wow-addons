@@ -11,6 +11,7 @@
 
 local ADDON, ns = ...
 
+local L = ns.L or setmetatable({}, { __index = function(_, k) return k end })
 local FRESH_SECONDS = 1800  -- a price older than this is not "right now"
 
 -- Statistical valuation baselines (#38)
@@ -355,7 +356,7 @@ function ns.FindConversionDeals()
                         isConversion   = true,
                         conversion     = conv,
                         itemID         = conv.output.itemID,
-                        name           = conv.name,
+                        name           = (L and L[conv.name]) or conv.name,
                         now            = totalCost,
                         typical        = totalOutValue,
                         below          = math.min(0.95, math.max(0.05, roi / (1 + roi))),
@@ -613,7 +614,7 @@ function ns.FindDeals()
                             deals[#deals + 1] = {
                                 itemID          = itemID,
                                 itemKey         = rec.itemKey,  -- nil for items not seen since v0.0.6
-                                name            = rec.name,
+                                name            = ((C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID)) or (GetItemInfo and GetItemInfo(itemID)) or rec.name),
                                 now             = current.min,
                                 typical         = typical,
                                 below           = 1 - current.min / typical,
@@ -668,28 +669,28 @@ function ns.DealStatus(deals, status)
     local ratio = ns.GetDealRatio()
     local pct = math.floor((1 - ratio) * 100 + 0.5)
     local sortBy = ns.GetSortBy()
-    local sortDesc = (sortBy == "profit") and "by estimated net profit" or "by discount"
+    local sortDesc = (sortBy == "profit") and (L["by estimated net profit"] or "by estimated net profit") or (L["by discount"] or "by discount")
 
     if status.items == 0 then
-        return "No prices recorded yet",
-            "Run a Full Scan at the auction house. GoldFinder records the results automatically."
+        return L["No prices recorded yet"],
+            L["Run a Full Scan at the auction house. GoldFinder records the results automatically."]
     end
     if #deals > 0 then
-        return ("%d underpriced %s (%s)"):format(#deals, Plural(#deals, "material", "materials"), sortDesc),
-            ("Listed at least %d%% below typical price."):format(pct)
+        return (L["%d underpriced %s (%s)"]):format(#deals, Plural(#deals, L["material"], L["materials"]), sortDesc),
+            (L["Listed at least %d%% below typical price."]):format(pct)
     end
     if status.judged > 0 then
-        return "No underpriced materials right now",
+        return L["No underpriced materials right now"],
             ("%d %s checked. None is %d%% or more below its typical price."):format(
-                status.judged, Plural(status.judged, "material", "materials"), pct)
+                status.judged, Plural(status.judged, L["material"], L["materials"]), pct)
     end
     if status.needMore > 0 then
-        return "Building price history",
+        return L["Building price history"],
             ("%d materials tracked. Deals can show after %d more Full %s, at least 10 minutes apart."):format(
-                status.items, status.fewestMissing, Plural(status.fewestMissing, "Scan", "Scans"))
+                status.items, status.fewestMissing, Plural(status.fewestMissing, L["Scan"], L["Scans"]))
     end
-    return "No recent prices",
-        "Run a Full Scan to check what is listed now."
+    return L["No recent prices"],
+        L["Run a Full Scan to check what is listed now."]
 end
 
 -- Detail rows for the tooltip, same shape as ns.ScanStatus().lines.

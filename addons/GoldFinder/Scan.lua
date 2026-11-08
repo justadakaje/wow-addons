@@ -295,7 +295,8 @@ local function ProcessSnapshot()
                   _, _, _, _, _, _, itemID, hasAllInfo = C_AuctionHouse.GetReplicateItemInfo(idx)
             if not hasAllInfo then c.noInfo = c.noInfo + 1 end
             local unit = (buyout and count and count > 0) and buyout / count or nil
-            AddRow(c, idx, itemID, unit, count, name)
+            local localName = (itemID and C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID)) or (itemID and GetItemInfo and GetItemInfo(itemID)) or name
+            AddRow(c, idx, itemID, unit, count, localName)
         end
         i = stop + 1
         if i <= total - 1 then

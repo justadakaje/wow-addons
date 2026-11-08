@@ -4,6 +4,16 @@ All notable changes to GoldFinder. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2026-11-08
+
+### Fixed
+
+- **German Client Localization & Authoritative Item Name Resolution ([#56](https://github.com/justadakaje/wow-addons/issues/56)):** Resolved an issue where item names in deal rows, search queries, cart, and ledger displayed in English instead of German (`deDE`). Item names now query the authoritative localized client DBC via `C_Item.GetItemNameByID(itemID)` / `GetItemInfo(itemID)` across deal generation, search matching, price helper, and transaction history.
+- **Bi-Lingual & Numeric Search Matching:** The deal search box now matches across localized German item names (e.g., "Kupfer", "Leinen"), English fallback names ("Copper", "Linen"), and exact numeric `itemID`s simultaneously.
+- **Dynamic Category Pill Sizing:** Category filter buttons now automatically adapt their width (`GetStringWidth() + 16`) to fit longer localized category text (such as "Herstellung" and "Unterboten") without text truncation or clipping.
+- **Crafting Recipe Localization:** Smelting, cloth bolt creation, and transmute arbitrage deals now display localized recipe names dynamically via `Localization.lua`.
+- **UI Localization Across All Surfaces:** Full German translations applied across table column headers, Deal Status summaries, Empty State notices, Sell Tab Price Helper, and the Goblin P&L Ledger.
+
 ## [1.0.1] - 2026-11-08
 
 ### Fixed

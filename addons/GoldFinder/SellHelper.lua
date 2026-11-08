@@ -5,6 +5,8 @@
 
 local ADDON, ns = ...
 
+local L = ns.L or setmetatable({}, { __index = function(_, k) return k end })
+
 local helperCard = nil
 local currentSellFrame = nil
 local currentItemID = nil
@@ -96,7 +98,7 @@ local function CreateHelperCard()
     -- Header
     local title = card:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     title:SetPoint("TOPLEFT", 16, -12)
-    title:SetText("|cffffd100GoldFinder Price Helper|r")
+    title:SetText("|cffffd100" .. L["GoldFinder Price Helper"] .. "|r")
 
     -- Item name
     local itemName = card:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -111,7 +113,7 @@ local function CreateHelperCard()
     typLabel:SetPoint("TOPLEFT", itemName, "BOTTOMLEFT", 0, -8)
     typLabel:SetSize(115, 14)
     typLabel:SetJustifyH("LEFT")
-    typLabel:SetText("Typical (Median):")
+    typLabel:SetText(L["Typical (Median):"])
 
     local typVal = card:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     typVal:SetJustifyH("LEFT")
@@ -123,7 +125,7 @@ local function CreateHelperCard()
     lowLabel:SetPoint("TOPLEFT", typLabel, "BOTTOMLEFT", 0, -5)
     lowLabel:SetSize(115, 14)
     lowLabel:SetJustifyH("LEFT")
-    lowLabel:SetText("Lowest AH Now:")
+    lowLabel:SetText(L["Lowest AH Now:"])
 
     local lowVal = card:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     lowVal:SetJustifyH("LEFT")
@@ -135,7 +137,7 @@ local function CreateHelperCard()
     trendLabel:SetPoint("TOPLEFT", lowLabel, "BOTTOMLEFT", 0, -5)
     trendLabel:SetSize(115, 14)
     trendLabel:SetJustifyH("LEFT")
-    trendLabel:SetText("Market Trend:")
+    trendLabel:SetText(L["Market Trend:"])
 
     local trendVal = card:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     trendVal:SetJustifyH("LEFT")
@@ -154,7 +156,7 @@ local function CreateHelperCard()
     local btnUndercut = CreateFrame("Button", nil, card, "UIPanelButtonTemplate")
     btnUndercut:SetSize(88, 22)
     btnUndercut:SetPoint("BOTTOMLEFT", 16, 12)
-    btnUndercut:SetText("-1c Cut")
+    btnUndercut:SetText(L["-1c Cut"])
     btnUndercut:SetScript("OnClick", function()
         if card.suggestedUndercut and currentSellFrame then
             ApplyPrice(currentSellFrame, card.suggestedUndercut)
@@ -165,7 +167,7 @@ local function CreateHelperCard()
     local btnMatch = CreateFrame("Button", nil, card, "UIPanelButtonTemplate")
     btnMatch:SetSize(88, 22)
     btnMatch:SetPoint("LEFT", btnUndercut, "RIGHT", 12, 0)
-    btnMatch:SetText("Match")
+    btnMatch:SetText(L["Match"])
     btnMatch:SetScript("OnClick", function()
         if card.suggestedMatch and currentSellFrame then
             ApplyPrice(currentSellFrame, card.suggestedMatch)
@@ -176,7 +178,7 @@ local function CreateHelperCard()
     local btnTypical = CreateFrame("Button", nil, card, "UIPanelButtonTemplate")
     btnTypical:SetSize(88, 22)
     btnTypical:SetPoint("LEFT", btnMatch, "RIGHT", 12, 0)
-    btnTypical:SetText("Typical")
+    btnTypical:SetText(L["Typical"])
     btnTypical:SetScript("OnClick", function()
         if card.suggestedTypical and currentSellFrame then
             ApplyPrice(currentSellFrame, card.suggestedTypical)
@@ -203,7 +205,7 @@ local function UpdateCardData(sellFrame, itemID)
     currentSellFrame = sellFrame
     currentItemID = itemID
 
-    local name = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID)) or ("Item " .. itemID)
+    local name = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID)) or (GetItemInfo and GetItemInfo(itemID)) or ("Item " .. itemID)
     card.itemName:SetText(name)
 
     local typical = ns.GetItemTypicalPrice and ns.GetItemTypicalPrice(itemID)
@@ -237,7 +239,7 @@ local function UpdateCardData(sellFrame, itemID)
         card.suggestedTypical = typical
         card.btnTypical:Enable()
     else
-        card.typVal:SetText("|cff888888No history|r")
+        card.typVal:SetText("|cff888888" .. L["No history"] .. "|r")
         card.suggestedTypical = nil
         card.btnTypical:Disable()
     end
@@ -249,7 +251,7 @@ local function UpdateCardData(sellFrame, itemID)
         card.btnMatch:Enable()
         card.btnUndercut:Enable()
     else
-        card.lowVal:SetText("|cff888888No listings|r")
+        card.lowVal:SetText("|cff888888" .. L["No listings"] .. "|r")
         card.suggestedMatch = typical
         card.suggestedUndercut = typical and math.max(1, typical - 1) or nil
         if typical then
@@ -269,21 +271,22 @@ local function UpdateCardData(sellFrame, itemID)
 
     if trend then
         local color = ("|cff%02x%02x%02x"):format(math.floor(trend.r * 255), math.floor(trend.g * 255), math.floor(trend.b * 255))
-        card.trendVal:SetText(color .. trend.label .. "|r")
+        local tLabel = (L and L[trend.label]) or trend.label
+        card.trendVal:SetText(color .. tLabel .. "|r")
     else
-        card.trendVal:SetText("|cff888888Steady / Unknown|r")
+        card.trendVal:SetText("|cff888888" .. L["Steady / Unknown"] .. "|r")
     end
 
     -- Market evaluation advice
     if typical and lowest and lowest < math.floor(typical * 0.70) then
         local discount = math.floor((1 - lowest / typical) * 100 + 0.5)
-        card.advice:SetText(("|cffff5555Caution: Market crashed (%d%% below typical). Consider holding inventory until prices recover.|r"):format(discount))
+        card.advice:SetText(("|cffff5555" .. L["Caution: Market crashed (%d%% below typical). Consider holding inventory until prices recover."] .. "|r"):format(discount))
     elseif typical and lowest and lowest >= typical then
-        card.advice:SetText("|cff55ff55Healthy market: Listings are at or above historical median. Post competitively to sell fast.|r")
+        card.advice:SetText("|cff55ff55" .. L["Healthy market: Listings are at or above historical median. Post competitively to sell fast."] .. "|r")
     elseif typical and lowest then
-        card.advice:SetText("|cffffd100Competitive market: Undercut lowest by 1 copper to capture the next sale.|r")
+        card.advice:SetText("|cffffd100" .. L["Competitive market: Undercut lowest by 1 copper to capture the next sale."] .. "|r")
     else
-        card.advice:SetText("|cff888888Insufficient scan data to determine market health.|r")
+        card.advice:SetText("|cff888888" .. L["Insufficient scan data to determine market health."] .. "|r")
     end
 
     -- Dock neatly to the RIGHT of the entire AuctionHouseFrame (or sellFrame fallback)

@@ -5,6 +5,8 @@
 
 local ADDON, ns = ...
 
+local L = ns.L or setmetatable({}, { __index = function(_, k) return k end })
+
 local ledgerFrame = nil
 local ROWS_COUNT = 12
 local ROW_HEIGHT = 20
@@ -23,8 +25,12 @@ local function GetTopProfitableItems(records)
     for _, r in ipairs(records) do
         local id = r.itemID or r.name
         if not itemTotals[id] then
+            local locName = (r.itemID and C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(r.itemID))
+                or (r.itemID and GetItemInfo and GetItemInfo(r.itemID))
+                or r.name
+                or ("Item " .. tostring(id))
             itemTotals[id] = {
-                name = r.name or ("Item " .. tostring(id)),
+                name = locName,
                 profit = 0,
                 cost = 0,
                 qty = 0,
@@ -105,9 +111,9 @@ local function RefreshLedgerUI(f)
             local pColor = item.profit >= 0 and "|cff40ff40+" or "|cffff4040"
             parts[#parts + 1] = ("#%d %s (%s%s|r)"):format(i, item.name, pColor, ns.Money(item.profit))
         end
-        f.topFlipsText:SetText("|cffffd100Top Flips:|r " .. table.concat(parts, "  |cff666666•|r  "))
+        f.topFlipsText:SetText(("|cffffd100%s:|r "):format(L["Top Flips"]) .. table.concat(parts, "  |cff666666•|r  "))
     else
-        f.topFlipsText:SetText("|cffffd100Top Flips:|r No completed auction flips recorded yet.")
+        f.topFlipsText:SetText(("|cffffd100%s:|r %s"):format(L["Top Flips"], L["No completed auction flips recorded yet."]))
     end
 
     -- 3. Populate Recent Transactions Table (newest first)
@@ -119,8 +125,12 @@ local function RefreshLedgerUI(f)
 
         if r then
             row.rec = r
+            local itemName = (r.itemID and C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(r.itemID))
+                or (r.itemID and GetItemInfo and GetItemInfo(r.itemID))
+                or r.name
+                or L["Item"]
             row.cells.date:SetText(FormatTime(r.t))
-            row.cells.item:SetText(("%s |cff888888x%d|r"):format(r.name or "Item", r.qty or 1))
+            row.cells.item:SetText(("%s |cff888888x%d|r"):format(itemName, r.qty or 1))
             row.cells.gross:SetText(ns.Money(r.gross or 0))
             row.cells.cost:SetText(ns.Money(r.cost or 0))
 
@@ -188,11 +198,11 @@ local function CreateLedgerFrameOnce()
 
     local titleText = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     titleText:SetPoint("TOP", headerTex, "TOP", 0, -14)
-    titleText:SetText("GoldFinder Goblin Ledger")
+    titleText:SetText(L["GoldFinder Goblin Ledger"])
 
     local subText = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     subText:SetPoint("TOP", 0, -30)
-    subText:SetText("Realized flip margins, true acquisition cost basis, and net ROI.")
+    subText:SetText(L["Realized flip margins, true acquisition cost basis, and net ROI."])
 
     local closeBtn = CreateFrame("Button", nil, f, "UIPanelCloseButton")
     closeBtn:SetPoint("TOPRIGHT", -6, -6)
@@ -228,16 +238,16 @@ local function CreateLedgerFrameOnce()
         return card, val
     end
 
-    local c1, v1 = MakeCard(24, "LIFETIME NET PROFIT")
+    local c1, v1 = MakeCard(24, L["LIFETIME NET PROFIT"])
     f.kpiProfitVal = v1
 
-    local c2, v2 = MakeCard(192, "AVERAGE FLIP ROI")
+    local c2, v2 = MakeCard(192, L["AVERAGE FLIP ROI"])
     f.kpiRoiVal = v2
 
-    local c3, v3 = MakeCard(360, "TOTAL FLIPS")
+    local c3, v3 = MakeCard(360, L["TOTAL FLIPS"])
     f.kpiFlipsVal = v3
 
-    local c4, v4 = MakeCard(528, "TOTAL REVENUE (GROSS)")
+    local c4, v4 = MakeCard(528, L["TOTAL REVENUE (GROSS)"])
     f.kpiRevenueVal = v4
 
     -- Top Flips summary line
@@ -245,7 +255,7 @@ local function CreateLedgerFrameOnce()
     topFlips:SetPoint("TOPLEFT", 26, -114)
     topFlips:SetPoint("RIGHT", f, "RIGHT", -26, 0)
     topFlips:SetJustifyH("LEFT")
-    topFlips:SetText("|cffffd100Top Flips:|r Loading...")
+    topFlips:SetText(("|cffffd100%s:|r Loading..."):format(L["Top Flips"]))
     f.topFlipsText = topFlips
 
     -----------------------------------------------------------------------
@@ -256,12 +266,12 @@ local function CreateLedgerFrameOnce()
     tableHeader:SetPoint("TOPLEFT", 26, -136)
 
     local cols = {
-        { key = "date",   title = "Date/Time",   w = 90,  x = 0,   j = "LEFT" },
-        { key = "item",   title = "Material",    w = 210, x = 95,  j = "LEFT" },
-        { key = "gross",  title = "Sold Price",  w = 95,  x = 310, j = "RIGHT" },
-        { key = "cost",   title = "Cost Basis",  w = 95,  x = 410, j = "RIGHT" },
-        { key = "profit", title = "Realized Net",w = 100, x = 510, j = "RIGHT" },
-        { key = "roi",    title = "ROI",         w = 50,  x = 615, j = "RIGHT" },
+        { key = "date",   title = L["Date/Time"],   w = 90,  x = 0,   j = "LEFT" },
+        { key = "item",   title = L["Material"],    w = 210, x = 95,  j = "LEFT" },
+        { key = "gross",  title = L["Sold Price"],  w = 95,  x = 310, j = "RIGHT" },
+        { key = "cost",   title = L["Cost Basis"],  w = 95,  x = 410, j = "RIGHT" },
+        { key = "profit", title = L["Realized Net"],w = 100, x = 510, j = "RIGHT" },
+        { key = "roi",    title = L["ROI"],         w = 50,  x = 615, j = "RIGHT" },
     }
 
     for _, c in ipairs(cols) do
@@ -302,19 +312,23 @@ local function CreateLedgerFrameOnce()
             self.hl:Show()
             if self.rec then
                 local r = self.rec
+                local itemName = (r.itemID and C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(r.itemID))
+                    or (r.itemID and GetItemInfo and GetItemInfo(r.itemID))
+                    or r.name
+                    or L["Transaction Detail"]
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                GameTooltip:SetText(r.name or "Transaction Detail", 1, 0.82, 0)
-                GameTooltip:AddDoubleLine("Quantity Sold:", tostring(r.qty or 1), 1, 1, 1, 1, 1, 1)
-                GameTooltip:AddDoubleLine("Gross Sold Price:", ns.Money(r.gross or 0), 1, 1, 1, 1, 1, 1)
-                GameTooltip:AddDoubleLine("Blizzard AH Cut (5%):", "-" .. ns.Money(r.ahCut or 0), 1, 1, 1, 1, 0.4, 0.4)
-                GameTooltip:AddDoubleLine("Net Revenue:", ns.Money(r.net or 0), 1, 1, 1, 1, 1, 1)
-                GameTooltip:AddDoubleLine("Acquisition Cost Basis:", ns.Money(r.cost or 0), 1, 1, 1, 1, 1, 1)
+                GameTooltip:SetText(itemName, 1, 0.82, 0)
+                GameTooltip:AddDoubleLine(L["Quantity Sold:"], tostring(r.qty or 1), 1, 1, 1, 1, 1, 1)
+                GameTooltip:AddDoubleLine(L["Gross Sold Price:"], ns.Money(r.gross or 0), 1, 1, 1, 1, 1, 1)
+                GameTooltip:AddDoubleLine(L["Blizzard AH Cut (5%):"], "-" .. ns.Money(r.ahCut or 0), 1, 1, 1, 1, 0.4, 0.4)
+                GameTooltip:AddDoubleLine(L["Net Revenue:"], ns.Money(r.net or 0), 1, 1, 1, 1, 1, 1)
+                GameTooltip:AddDoubleLine(L["Acquisition Cost Basis:"], ns.Money(r.cost or 0), 1, 1, 1, 1, 1, 1)
                 local p = r.profit or 0
                 local pColor = p >= 0 and "|cff40ff40" or "|cffff4040"
-                GameTooltip:AddDoubleLine("Realized Net Profit:", pColor .. ns.Money(p) .. "|r", 1, 1, 1, 1, 1, 1)
-                GameTooltip:AddDoubleLine("Return on Investment (ROI):", ("%+.1f%%"):format(r.roi or 0), 1, 1, 1, 0.25, 1, 0.25)
+                GameTooltip:AddDoubleLine(L["Realized Net Profit:"], pColor .. ns.Money(p) .. "|r", 1, 1, 1, 1, 1, 1)
+                GameTooltip:AddDoubleLine(L["Return on Investment (ROI):"], ("%+.1f%%"):format(r.roi or 0), 1, 1, 1, 0.25, 1, 0.25)
                 GameTooltip:AddLine(" ")
-                GameTooltip:AddLine("Transaction recorded from mailbox auction sale.", 0.6, 0.6, 0.6)
+                GameTooltip:AddLine(L["Transaction recorded from mailbox auction sale."], 0.6, 0.6, 0.6)
                 GameTooltip:Show()
             end
         end)
@@ -330,7 +344,7 @@ local function CreateLedgerFrameOnce()
     -- Empty state notice
     local emptyNotice = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     emptyNotice:SetPoint("CENTER", f, "CENTER", 0, -50)
-    emptyNotice:SetText("No completed sales recorded yet.\nCollect won auction sales from your mailbox to populate the ledger.")
+    emptyNotice:SetText(L["No completed sales recorded yet.\nCollect won auction sales from your mailbox to populate the ledger."])
     emptyNotice:SetJustifyH("CENTER")
     f.emptyNotice = emptyNotice
 
@@ -340,12 +354,12 @@ local function CreateLedgerFrameOnce()
     local exportBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     exportBtn:SetSize(110, 24)
     exportBtn:SetPoint("BOTTOMLEFT", 26, 18)
-    exportBtn:SetText("Export CSV")
+    exportBtn:SetText(L["Export CSV"])
     exportBtn:SetScript("OnClick", ShowLedgerExport)
     exportBtn:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText("Export Ledger Data", 1, 0.82, 0)
-        GameTooltip:AddLine("Export all recorded flip transactions as CSV for Excel or Google Sheets.", 1, 1, 1, true)
+        GameTooltip:SetText(L["Export Ledger Data"], 1, 0.82, 0)
+        GameTooltip:AddLine(L["Export all recorded flip transactions as CSV for Excel or Google Sheets."], 1, 1, 1, true)
         GameTooltip:Show()
     end)
     exportBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -353,7 +367,7 @@ local function CreateLedgerFrameOnce()
     local resetBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     resetBtn:SetSize(110, 24)
     resetBtn:SetPoint("LEFT", exportBtn, "RIGHT", 10, 0)
-    resetBtn:SetText("Reset Ledger")
+    resetBtn:SetText(L["Reset Ledger"])
     resetBtn:SetScript("OnClick", function()
         if ns.ResetLedger then
             ns.ResetLedger()
@@ -363,8 +377,8 @@ local function CreateLedgerFrameOnce()
     end)
     resetBtn:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText("Reset Ledger History", 1, 0.82, 0)
-        GameTooltip:AddLine("Clears all recorded flip transactions and lifetime metrics.", 1, 1, 1, true)
+        GameTooltip:SetText(L["Reset Ledger History"], 1, 0.82, 0)
+        GameTooltip:AddLine(L["Clears all recorded flip transactions and lifetime metrics."], 1, 1, 1, true)
         GameTooltip:Show()
     end)
     resetBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -372,13 +386,13 @@ local function CreateLedgerFrameOnce()
     local bottomClose = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     bottomClose:SetSize(90, 24)
     bottomClose:SetPoint("BOTTOMRIGHT", -26, 18)
-    bottomClose:SetText("Close")
+    bottomClose:SetText(L["Close"])
     bottomClose:SetScript("OnClick", function() f:Hide() end)
 
     local optBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     optBtn:SetSize(90, 24)
     optBtn:SetPoint("RIGHT", bottomClose, "LEFT", -8, 0)
-    optBtn:SetText("Options")
+    optBtn:SetText(L["Options"])
     optBtn:SetScript("OnClick", function()
         f:Hide()
         if ns.OpenConfig then
@@ -387,8 +401,8 @@ local function CreateLedgerFrameOnce()
     end)
     optBtn:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText("GoldFinder Options", 1, 0.82, 0)
-        GameTooltip:AddLine("Return to the GoldFinder settings and configuration panel.", 1, 1, 1, true)
+        GameTooltip:SetText(L["GoldFinder Options"], 1, 0.82, 0)
+        GameTooltip:AddLine(L["Return to the GoldFinder settings and configuration panel."], 1, 1, 1, true)
         GameTooltip:Show()
     end)
     optBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)

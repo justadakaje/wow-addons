@@ -24,6 +24,8 @@
 
 local ADDON, ns = ...
 
+local L = ns.L or setmetatable({}, { __index = function(_, k) return k end })
+
 local TAB_ID     = "GoldFinder"
 local TAB_TEXT   = "GoldFinder"
 local TAB_HEADER = "GoldFinder"
@@ -62,36 +64,36 @@ end
 -- Returns tooltip lines (same shape as ns.ScanStatus().lines) and whether
 -- anything needs the player's attention.
 local function TabRowStatus()
-    local L, warn = {}, false
+    local tipLines, warn = {}, false
     local tabs = AuctionHouseFrame and AuctionHouseFrame.Tabs
 
     if type(tabs) ~= "table" then
-        L[#L + 1] = "The auction house tab list could not be read, so overlap cannot be checked."
+        tipLines[#tipLines + 1] = "The auction house tab list could not be read, so overlap cannot be checked."
     elseif #tabs == BLIZZARD_TABS then
-        L[#L + 1] = { "Blizzard tabs", tostring(#tabs) }
+        tipLines[#tipLines + 1] = { "Blizzard tabs", tostring(#tabs) }
     elseif #tabs > BLIZZARD_TABS then
-        L[#L + 1] = { "Blizzard tabs", tostring(#tabs) }
-        L[#L + 1] = ("%d tab(s) were added directly by another addon, outside the shared tab library."):format(#tabs - BLIZZARD_TABS)
+        tipLines[#tipLines + 1] = { "Blizzard tabs", tostring(#tabs) }
+        tipLines[#tipLines + 1] = ("%d tab(s) were added directly by another addon, outside the shared tab library."):format(#tabs - BLIZZARD_TABS)
     else
-        L[#L + 1] = { warn = ("The auction house reports %d tabs where %d were measured. Something has changed."):format(#tabs, BLIZZARD_TABS) }
+        tipLines[#tipLines + 1] = { warn = ("The auction house reports %d tabs where %d were measured. Something has changed."):format(#tabs, BLIZZARD_TABS) }
         warn = true
     end
 
     local st = SharedRow()
     if st and type(st.Tabs) == "table" then
-        L[#L + 1] = { "Other addon tabs", tostring(#st.Tabs - 1) }
+        tipLines[#tipLines + 1] = { "Other addon tabs", tostring(#st.Tabs - 1) }
     else
-        L[#L + 1] = "The number of other addon tabs could not be read."
+        tipLines[#tipLines + 1] = "The number of other addon tabs could not be read."
     end
 
     local overlapped = RowIsOverlapped()
     if overlapped == true then
-        L[#L + 1] = { warn = "A tab added outside the shared tab library is drawn under this row. Tabs may overlap." }
+        tipLines[#tipLines + 1] = { warn = "A tab added outside the shared tab library is drawn under this row. Tabs may overlap." }
         warn = true
     elseif overlapped == nil then
-        L[#L + 1] = "Whether any tabs overlap could not be determined."
+        tipLines[#tipLines + 1] = "Whether any tabs overlap could not be determined."
     end
-    return L, warn
+    return tipLines, warn
 end
 
 ---------------------------------------------------------------------------
@@ -99,12 +101,12 @@ end
 
 local MAX_ROWS, ROW_HEIGHT = 12, 20
 local COLUMNS = {
-    { key = "name",    x = 20,  w = 210, j = "LEFT",  title = "Material" },
-    { key = "now",     x = 235, w = 110, j = "RIGHT", title = "Lowest now" },
-    { key = "typical", x = 350, w = 110, j = "RIGHT", title = "Typical" },
-    { key = "below",   x = 465, w = 60,  j = "RIGHT", title = "Below" },
-    { key = "qty",     x = 530, w = 50,  j = "RIGHT", title = "Listed" },
-    { key = "profit",  x = 585, w = 145, j = "RIGHT", title = "Est. Profit" },
+    { key = "name",    x = 20,  w = 210, j = "LEFT",  title = L["Material"] },
+    { key = "now",     x = 235, w = 110, j = "RIGHT", title = L["Lowest now"] },
+    { key = "typical", x = 350, w = 110, j = "RIGHT", title = L["Typical"] },
+    { key = "below",   x = 465, w = 60,  j = "RIGHT", title = L["Below"] },
+    { key = "qty",     x = 530, w = 50,  j = "RIGHT", title = L["Listed"] },
+    { key = "profit",  x = 585, w = 145, j = "RIGHT", title = L["Est. Profit"] },
 }
 
 local ui = { rows = {} }
@@ -305,7 +307,7 @@ local function BuildPanel()
     local optBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
     optBtn:SetSize(68, 22)
     optBtn:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -10, -2)
-    optBtn:SetText("Options")
+    optBtn:SetText(L["Options"])
     optBtn:SetScript("OnClick", function()
         if ns.OpenConfig then
             ns.OpenConfig()
@@ -326,7 +328,7 @@ local function BuildPanel()
     search:SetSize(130, 22)
     search:SetPoint("TOPRIGHT", optBtn, "TOPLEFT", -8, 0)
     search:SetAutoFocus(false)
-    search.Instructions:SetText("Search deals...")
+    search.Instructions:SetText(L["Search deals..."])
     search:SetScript("OnTextChanged", function(self)
         SearchBoxTemplate_OnTextChanged(self)
         ns.RefreshPanel()
@@ -345,7 +347,7 @@ local function BuildPanel()
     local cartBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
     cartBtn:SetSize(68, 22)
     cartBtn:SetPoint("TOPRIGHT", optBtn, "BOTTOMRIGHT", 0, -4)
-    cartBtn:SetText("Cart (0)")
+    cartBtn:SetText(L["Cart (0)"])
     cartBtn:SetScript("OnClick", function()
         if ns.ToggleCart then ns.ToggleCart() end
     end)
@@ -369,7 +371,7 @@ local function BuildPanel()
     local snipeBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
     snipeBtn:SetSize(90, 22)
     snipeBtn:SetPoint("TOPRIGHT", cartBtn, "TOPLEFT", -8, 0)
-    snipeBtn:SetText("Snipe: OFF")
+    snipeBtn:SetText(L["Snipe: OFF"])
     snipeBtn:SetScript("OnClick", function()
         if ns.SetSnipeMode then
             ns.SetSnipeMode(not ns.IsSnipeMode())
@@ -397,9 +399,9 @@ local function BuildPanel()
         if ui.cartButton and ns.GetCartTotals then
             local entriesCount = ns.GetCartTotals()
             if entriesCount and entriesCount > 0 then
-                ui.cartButton:SetText(("Cart (%d)"):format(entriesCount))
+                ui.cartButton:SetText((L["Cart (%d)"]):format(entriesCount))
             else
-                ui.cartButton:SetText("Cart (0)")
+                ui.cartButton:SetText(L["Cart (0)"])
             end
         end
     end
@@ -407,9 +409,9 @@ local function BuildPanel()
     function ns.UpdateSnipeButton()
         if ui.snipeButton and ns.IsSnipeMode then
             if ns.IsSnipeMode() then
-                ui.snipeButton:SetText("|cff40ff40Snipe: ON|r")
+                ui.snipeButton:SetText("|cff40ff40" .. L["Snipe: ON"] .. "|r")
             else
-                ui.snipeButton:SetText("Snipe: OFF")
+                ui.snipeButton:SetText(L["Snipe: OFF"])
             end
         end
     end
@@ -506,15 +508,15 @@ local function BuildPanel()
     ns.ShowCreateGroupDialog = ShowCreateGroupDialog
 
     local CATEGORIES = {
-        { id = "all",         label = "All",       width = 44 },
-        { id = "herbs",       label = "Herbs",     width = 54 },
-        { id = "mining",      label = "Mining",    width = 58 },
-        { id = "cloth",       label = "Cloth",     width = 52 },
-        { id = "leather",     label = "Leather",   width = 62 },
-        { id = "conversions", label = "Crafts",    width = 56 },
-        { id = "undercuts",   label = "Undercuts", width = 74 },
-        { id = "shopping",    label = "Shopping",  width = 68 },
-        { id = "watchlist",   label = "Watchlist", width = 84, isWatchlist = true },
+        { id = "all",         label = L["All"],       width = 44 },
+        { id = "herbs",       label = L["Herbs"],     width = 54 },
+        { id = "mining",      label = L["Mining"],    width = 58 },
+        { id = "cloth",       label = L["Cloth"],     width = 52 },
+        { id = "leather",     label = L["Leather"],   width = 62 },
+        { id = "conversions", label = L["Crafts"],    width = 56 },
+        { id = "undercuts",   label = L["Undercuts"], width = 74 },
+        { id = "shopping",    label = L["Shopping"],  width = 68 },
+        { id = "watchlist",   label = L["Watchlist"], width = 84, isWatchlist = true },
     }
     local categoryButtons = {}
     local createGroupBtn = nil
@@ -685,7 +687,11 @@ local function BuildPanel()
             btn.catId = cat.id
             btn.baseLabel = cat.label
             btn.isCustom = cat.isCustom
-            btn:SetWidth(cat.width)
+            btn.label:SetText(cat.label)
+            local textW = (btn.label.GetStringWidth and btn.label:GetStringWidth() or 40) + 16
+            if cat.isWatchlist then textW = textW + 16 end
+            local btnW = math.max(cat.width or 44, math.ceil(textW))
+            btn:SetWidth(btnW)
 
             if cat.isWatchlist then
                 btn.starIcon:Show()
@@ -696,9 +702,8 @@ local function BuildPanel()
                 btn.label:ClearAllPoints()
                 btn.label:SetPoint("CENTER", btn, "CENTER", 0, 0)
             end
-            btn.label:SetText(cat.label)
 
-            if curX + cat.width > maxLineWidth and curX > 0 then
+            if curX + btnW > maxLineWidth and curX > 0 then
                 curX = 0
                 curY = curY - (rowHeight + 4)
             end
@@ -707,7 +712,7 @@ local function BuildPanel()
             btn:SetPoint("TOPLEFT", filterBar, "TOPLEFT", curX, curY)
             btn:Show()
 
-            curX = curX + cat.width + spacing
+            curX = curX + btnW + spacing
         end
 
         local plusW = 60
@@ -849,18 +854,31 @@ local Money = ns.Money
 -- ITEM_DATA_LOAD_RESULT handler below refreshes when a name arrives.
 ItemName = function(d)
     if not d then return "" end
-    if d.name then return d.name end
-    local name = C_Item.GetItemNameByID(d.itemID)
-    if name then
-        local rec = ns.db and ns.db.items[d.itemID]
-        if rec then rec.name = name end
-        return name
+    if d.isConversion then
+        return d.name or "Craft"
     end
-    if not requested[d.itemID] then
-        requested[d.itemID] = true
-        C_Item.RequestLoadItemDataByID(d.itemID)
+    if d.itemID then
+        -- Query authoritative client localized name (respects active locale like deDE)
+        local name = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(d.itemID))
+        if not name or name == "" then
+            if GetItemInfo then name = GetItemInfo(d.itemID) end
+        end
+        if name and name ~= "" then
+            if ns.db and ns.db.items and ns.db.items[d.itemID] then
+                ns.db.items[d.itemID].name = name
+            end
+            d.name = name
+            return name
+        end
+        if not requested[d.itemID] then
+            requested[d.itemID] = true
+            if C_Item and C_Item.RequestLoadItemDataByID then
+                C_Item.RequestLoadItemDataByID(d.itemID)
+            end
+        end
     end
-    return ("|cff999999Item %d (loading)|r"):format(d.itemID)
+    if d.name and d.name ~= "" then return d.name end
+    return ("|cff999999" .. (L["Item %d (loading)"]):format(d.itemID or 0) .. "|r")
 end
 ns.ItemName = ItemName
 
@@ -1170,10 +1188,21 @@ function ns.RefreshPanel()
 
     if isSearchFiltered then
         local qLower = query:lower()
+        local qNum = tonumber(query)
         deals = {}
         for _, d in ipairs(catDeals) do
-            local name = ItemName(d)
-            if name and name:lower():find(qLower, 1, true) then
+            local matched = false
+            if qNum and d.itemID == qNum then
+                matched = true
+            else
+                local name = ItemName(d)
+                if name and name:lower():find(qLower, 1, true) then
+                    matched = true
+                elseif d.name and d.name:lower():find(qLower, 1, true) then
+                    matched = true
+                end
+            end
+            if matched then
                 deals[#deals + 1] = d
             end
         end
@@ -1186,15 +1215,15 @@ function ns.RefreshPanel()
 
     local isProfit = ns.GetSortBy() == "profit"
     if activeCat == "shopping" then
-        ui.header.cells.typical:SetText("Max Price")
-        ui.header.cells.below:SetText("Remaining")
-        ui.header.cells.qty:SetText("Needed")
-        ui.header.cells.profit:SetText("Est. Cost")
+        ui.header.cells.typical:SetText(L["Max Price"])
+        ui.header.cells.below:SetText(L["Remaining"])
+        ui.header.cells.qty:SetText(L["Needed"])
+        ui.header.cells.profit:SetText(L["Est. Cost"])
     else
-        ui.header.cells.typical:SetText("Typical")
-        ui.header.cells.below:SetText(isProfit and "Below" or "|cffffd100Below |TInterface\\Buttons\\UI-SortArrow:10:9:0:-1:32:32:0:18:0:32|t|r")
-        ui.header.cells.qty:SetText("Listed")
-        ui.header.cells.profit:SetText(isProfit and "|cffffd100Est. Profit |TInterface\\Buttons\\UI-SortArrow:10:9:0:-1:32:32:0:18:0:32|t|r" or "Est. Profit")
+        ui.header.cells.typical:SetText(L["Typical"])
+        ui.header.cells.below:SetText(isProfit and L["Below"] or ("|cffffd100" .. L["Below"] .. " |TInterface\\Buttons\\UI-SortArrow:10:9:0:-1:32:32:0:18:0:32|t|r"))
+        ui.header.cells.qty:SetText(L["Listed"])
+        ui.header.cells.profit:SetText(isProfit and ("|cffffd100" .. L["Est. Profit"] .. " |TInterface\\Buttons\\UI-SortArrow:10:9:0:-1:32:32:0:18:0:32|t|r") or L["Est. Profit"])
     end
 
     ui.title:SetShown(hasDeals)
@@ -1205,16 +1234,18 @@ function ns.RefreshPanel()
 
     local catDisplayName
     if activeCat == "watchlist" then
-        catDisplayName = "Watchlist"
+        catDisplayName = L["Watchlist"]
     elseif activeCat == "conversions" then
-        catDisplayName = "Crafts"
+        catDisplayName = L["Crafts"]
     elseif activeCat == "undercuts" then
-        catDisplayName = "Undercuts"
+        catDisplayName = L["Undercuts"]
     elseif activeCat == "shopping" then
-        catDisplayName = "Shopping"
+        catDisplayName = L["Shopping"]
     elseif ns.GetCustomCategory and ns.GetCustomCategory(activeCat) then
         catDisplayName = ns.GetCustomCategory(activeCat).label or activeCat
     elseif isCategoryFiltered then
+        catDisplayName = L[activeCat:sub(1,1):upper() .. activeCat:sub(2)] or (activeCat:sub(1,1):upper() .. activeCat:sub(2))
+    else
         catDisplayName = activeCat:sub(1,1):upper() .. activeCat:sub(2)
     end
 
