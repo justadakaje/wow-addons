@@ -53,6 +53,8 @@ function ns.ShowInfoDialog()
             infoFrame:Hide()
             return
         else
+            infoFrame:SetFrameStrata("FULLSCREEN_DIALOG")
+            if infoFrame.SetFrameLevel then infoFrame:SetFrameLevel(200) end
             infoFrame:Show()
             infoFrame:Raise()
             if infoFrame.UpdateStats then infoFrame.UpdateStats() end
@@ -64,7 +66,8 @@ function ns.ShowInfoDialog()
     local f = CreateFrame("Frame", "GoldFinderInfoFrame", UIParent, template)
     f:SetSize(720, 480)
     f:SetPoint("CENTER", UIParent, "CENTER", 0, 20)
-    f:SetFrameStrata("DIALOG")
+    f:SetFrameStrata("FULLSCREEN_DIALOG")
+    if f.SetFrameLevel then f:SetFrameLevel(200) end
     f:SetToplevel(true)
     f:EnableMouse(true)
     f:SetMovable(true)

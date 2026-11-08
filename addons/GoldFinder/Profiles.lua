@@ -543,17 +543,14 @@ end)
 
 local profileDialog = nil
 
-function ns.ShowProfileDialog(mode)
-    if profileDialog then
-        profileDialog:Hide()
-    end
+local function CreateProfileDialogOnce()
+    if profileDialog then return profileDialog end
 
-    mode = mode or "export"
     local template = BackdropTemplateMixin and "BackdropTemplate" or nil
     local f = CreateFrame("Frame", "GoldFinderProfileDialog", UIParent, template)
     f:SetSize(520, 360)
     f:SetPoint("CENTER", UIParent, "CENTER", 0, 40)
-    f:SetFrameStrata("DIALOG")
+    f:SetFrameStrata("FULLSCREEN_DIALOG")
     f:SetToplevel(true)
     f:EnableMouse(true)
     f:SetMovable(true)
@@ -580,18 +577,14 @@ function ns.ShowProfileDialog(mode)
     -- Title
     local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     title:SetPoint("TOPLEFT", 20, -16)
-    title:SetText(mode == "export" and "|cffffd100Export GoldFinder Profile|r" or "|cffffd100Import GoldFinder Profile|r")
+    f.title = title
 
     -- Description
     local desc = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     desc:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -6)
     desc:SetPoint("RIGHT", f, "RIGHT", -20, 0)
     desc:SetJustifyH("LEFT")
-    if mode == "export" then
-        desc:SetText("Copy the encoded string below to share your thresholds, filters, watchlists, and custom groups with another character or account:")
-    else
-        desc:SetText("Paste an exported GoldFinder profile string (starts with 'GF1:') into the box below and click Apply:")
-    end
+    f.desc = desc
 
     -- Scrollable EditBox
     local scrollFrame = CreateFrame("ScrollFrame", "GoldFinderProfileScroll", f, "UIPanelScrollFrameTemplate")
@@ -607,24 +600,13 @@ function ns.ShowProfileDialog(mode)
     editBox:SetWidth(460)
     editBox:SetScript("OnEscapePressed", function() f:Hide() end)
     scrollFrame:SetScrollChild(editBox)
+    f.editBox = editBox
 
     -- Status feedback text
     local status = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     status:SetPoint("BOTTOMLEFT", 20, 24)
-    status:SetPoint("BOTTOMRIGHT", -160, 24)
     status:SetJustifyH("LEFT")
-
-    if mode == "export" then
-        local str = ns.ExportProfile() or ""
-        editBox:SetText(str)
-        editBox:HighlightText()
-        editBox:SetFocus()
-        status:SetText("|cff40ff40String copied to focus. Press Ctrl+C to copy.|r")
-    else
-        editBox:SetText("")
-        editBox:SetFocus()
-        status:SetText("|cff888888Paste profile string with Ctrl+V.|r")
-    end
+    f.status = status
 
     -- Bottom action buttons
     local closeBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
@@ -633,60 +615,94 @@ function ns.ShowProfileDialog(mode)
     closeBtn:SetText("Close")
     closeBtn:SetScript("OnClick", function() f:Hide() end)
 
-    if mode == "import" then
-        local applyBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-        applyBtn:SetSize(110, 24)
-        applyBtn:SetPoint("RIGHT", closeBtn, "LEFT", -8, 0)
-        applyBtn:SetText("Apply Profile")
-        applyBtn:SetScript("OnClick", function()
-            local text = editBox:GetText()
-            local ok, msg = ns.ImportProfile(text, false)
-            if ok then
-                status:SetText("|cff40ff40" .. msg .. "|r")
-                ns.Good("GoldFinder: " .. msg)
-                C_Timer.After(1.5, function() f:Hide() end)
-            else
-                status:SetText("|cffff4040Error: " .. tostring(msg) .. "|r")
-                ns.Bad("GoldFinder Profile Error: " .. tostring(msg))
-            end
-        end)
-        status:SetPoint("RIGHT", applyBtn, "LEFT", -10, 0)
-    else
-        local copyBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-        copyBtn:SetSize(110, 24)
-        copyBtn:SetPoint("RIGHT", closeBtn, "LEFT", -8, 0)
-        copyBtn:SetText("Copy String")
-        copyBtn:SetScript("OnClick", function()
-            editBox:HighlightText()
-            editBox:SetFocus()
-            local text = editBox:GetText() or ""
-            local copied = false
-            if type(CopyToClipboard) == "function" then
-                local ok = pcall(CopyToClipboard, text, true)
-                if ok then copied = true end
-            end
-            if copied then
-                status:SetText("|cff40ff40Copied to clipboard!|r")
-                ns.Good("GoldFinder: Profile string copied to OS clipboard!")
-            else
-                status:SetText("|cff40ff40Highlighted. Press Ctrl+C.|r")
-            end
-        end)
+    local applyBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    applyBtn:SetSize(110, 24)
+    applyBtn:SetPoint("RIGHT", closeBtn, "LEFT", -8, 0)
+    applyBtn:SetText("Apply Profile")
+    applyBtn:SetScript("OnClick", function()
+        local text = editBox:GetText()
+        local ok, msg = ns.ImportProfile(text, false)
+        if ok then
+            status:SetText("|cff40ff40" .. msg .. "|r")
+            ns.Good("GoldFinder: " .. msg)
+            C_Timer.After(1.5, function() f:Hide() end)
+        else
+            status:SetText("|cffff4040Error: " .. tostring(msg) .. "|r")
+            ns.Bad("GoldFinder Profile Error: " .. tostring(msg))
+        end
+    end)
+    f.applyBtn = applyBtn
 
-        local selectBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-        selectBtn:SetSize(90, 24)
-        selectBtn:SetPoint("RIGHT", copyBtn, "LEFT", -8, 0)
-        selectBtn:SetText("Select All")
-        selectBtn:SetScript("OnClick", function()
-            editBox:HighlightText()
-            editBox:SetFocus()
+    local copyBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    copyBtn:SetSize(110, 24)
+    copyBtn:SetPoint("RIGHT", closeBtn, "LEFT", -8, 0)
+    copyBtn:SetText("Copy String")
+    copyBtn:SetScript("OnClick", function()
+        editBox:HighlightText()
+        editBox:SetFocus()
+        local text = editBox:GetText() or ""
+        local copied = false
+        if type(CopyToClipboard) == "function" then
+            local ok = pcall(CopyToClipboard, text, true)
+            if ok then copied = true end
+        end
+        if copied then
+            status:SetText("|cff40ff40Copied to clipboard!|r")
+            ns.Good("GoldFinder: Profile string copied to OS clipboard!")
+        else
             status:SetText("|cff40ff40Highlighted. Press Ctrl+C.|r")
-        end)
+        end
+    end)
+    f.copyBtn = copyBtn
 
-        status:SetPoint("RIGHT", selectBtn, "LEFT", -10, 0)
-    end
+    local selectBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    selectBtn:SetSize(90, 24)
+    selectBtn:SetPoint("RIGHT", copyBtn, "LEFT", -8, 0)
+    selectBtn:SetText("Select All")
+    selectBtn:SetScript("OnClick", function()
+        editBox:HighlightText()
+        editBox:SetFocus()
+        status:SetText("|cff40ff40Highlighted. Press Ctrl+C.|r")
+    end)
+    f.selectBtn = selectBtn
 
     profileDialog = f
+    return profileDialog
+end
+
+function ns.ShowProfileDialog(mode)
+    local f = CreateProfileDialogOnce()
+    mode = mode or "export"
+
+    if mode == "export" then
+        f.title:SetText("|cffffd100Export GoldFinder Profile|r")
+        f.desc:SetText("Copy the encoded string below to share your thresholds, filters, watchlists, and custom groups with another character or account:")
+        f.applyBtn:Hide()
+        f.copyBtn:Show()
+        f.selectBtn:Show()
+        f.status:SetPoint("RIGHT", f.selectBtn, "LEFT", -10, 0)
+
+        local str = ns.ExportProfile() or ""
+        f.editBox:SetText(str)
+        f.editBox:HighlightText()
+        f.editBox:SetFocus()
+        f.status:SetText("|cff40ff40String copied to focus. Press Ctrl+C to copy.|r")
+    else
+        f.title:SetText("|cffffd100Import GoldFinder Profile|r")
+        f.desc:SetText("Paste an exported GoldFinder profile string (starts with 'GF1:') into the box below and click Apply:")
+        f.copyBtn:Hide()
+        f.selectBtn:Hide()
+        f.applyBtn:Show()
+        f.status:SetPoint("RIGHT", f.applyBtn, "LEFT", -10, 0)
+
+        f.editBox:SetText("")
+        f.editBox:SetFocus()
+        f.status:SetText("|cff888888Paste profile string with Ctrl+V.|r")
+    end
+
+    f:SetFrameStrata("FULLSCREEN_DIALOG")
+    if f.SetFrameLevel then f:SetFrameLevel(200) end
     f:Show()
+    f:Raise()
     return f
 end
