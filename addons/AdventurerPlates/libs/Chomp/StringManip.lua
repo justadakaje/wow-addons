@@ -63,7 +63,17 @@ function Chomp.RegionalUniqueNamesEnabled()
 	end
 end
 
+local function IsSecretOrRestricted(val)
+	if val == nil then return false end
+	if canaccessvalue and not canaccessvalue(val) then return true end
+	if issecretvalue and issecretvalue(val) then return true end
+	return false
+end
+
 function Chomp.NameMergedRealm(name, realm)
+	if IsSecretOrRestricted(name) or IsSecretOrRestricted(realm) then
+		return ""
+	end
 	if type(name) ~= "string" then
 		error("Chomp.NameMergedRealm: name: expected string, got " .. type(name), 2)
 	elseif name == "" then

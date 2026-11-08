@@ -249,6 +249,23 @@ end
 -- Hooks don't trigger if the hooked function errors, so there's no need to
 -- check parameters, if those parameters cause errors (which most don't now).
 
+local function IsSecretOrRestricted(val)
+	if val == nil then return false end
+	if canaccessvalue and not canaccessvalue(val) then return true end
+	if issecretvalue and issecretvalue(val) then return true end
+	return false
+end
+
+local function HasAnySecret(...)
+	if hasanysecretvalues and hasanysecretvalues(...) then return true end
+	local count = select("#", ...)
+	for i = 1, count do
+		local val = select(i, ...)
+		if IsSecretOrRestricted(val) then return true end
+	end
+	return false
+end
+
 local FILTER_PATTERN = ERR_CHAT_PLAYER_NOT_FOUND_S:format("(.+)")
 local lastFilteredLineID = nil
 
@@ -257,6 +274,9 @@ if not Internal.MessageFilterKeyCache then
 end
 
 function Internal:GenerateMessageFilterKey(target)
+	if IsSecretOrRestricted(target) then
+		return ""
+	end
 	local filterKey = target
 
 	if not Chomp.RegionalUniqueNamesEnabled() then
@@ -277,19 +297,31 @@ end
 
 setmetatable(Internal.MessageFilterKeyCache, {
 	__index = function(self, target)
-		local filterKey = Internal:GenerateMessageFilterKey(target)
+		if IsSecretOrRestricted(target) then
+			return ""
+		end
+		local ok, filterKey = pcall(Internal.GenerateMessageFilterKey, Internal, target)
+		if not ok or not filterKey then
+			return ""
+		end
 		self[target] = filterKey
 		return filterKey
 	end,
 })
 
 local function MessageEventFilter_SYSTEM (self, event, text, ...)
-	local name = text:match(FILTER_PATTERN)
-	if not name then
+	if HasAnySecret(text, ...) then
+		return false
+	end
+	local ok, name = pcall(function() return text:match(FILTER_PATTERN) end)
+	if not ok or not name or IsSecretOrRestricted(name) then
 		return false
 	end
 
 	local filterKey = Internal.MessageFilterKeyCache[name]
+	if not filterKey or filterKey == "" then
+		return false
+	end
 
 	if not Internal.Filter[filterKey] or Internal.Filter[filterKey] < GetTime() then
 		Internal.Filter[filterKey] = nil
@@ -307,16 +339,26 @@ local function MessageEventFilter_SYSTEM (self, event, text, ...)
 end
 
 local function HookSendAddonMessage(prefix, text, kind, target)
+	if HasAnySecret(prefix, text, kind, target) then
+		return
+	end
 	if kind == "WHISPER" and target then
 		local filterKey = Internal.MessageFilterKeyCache[target]
-		Internal.Filter[filterKey] = GetTime() + (select(3, GetNetStats()) * 0.001) + 5.000
+		if filterKey and filterKey ~= "" then
+			Internal.Filter[filterKey] = GetTime() + (select(3, GetNetStats()) * 0.001) + 5.000
+		end
 	end
 end
 
 local function HookSendAddonMessageLogged(prefix, text, kind, target)
+	if HasAnySecret(prefix, text, kind, target) then
+		return
+	end
 	if kind == "WHISPER" and target then
 		local filterKey = Internal.MessageFilterKeyCache[target]
-		Internal.Filter[filterKey] = GetTime() + (select(3, GetNetStats()) * 0.001) + 5.000
+		if filterKey and filterKey ~= "" then
+			Internal.Filter[filterKey] = GetTime() + (select(3, GetNetStats()) * 0.001) + 5.000
+		end
 	end
 end
 

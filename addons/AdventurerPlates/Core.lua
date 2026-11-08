@@ -39,12 +39,21 @@ function ns.Count(t)
     return n
 end
 
+local function IsSecretOrRestricted(val)
+    if val == nil then return false end
+    if canaccessvalue and not canaccessvalue(val) then return true end
+    if issecretvalue and issecretvalue(val) then return true end
+    return false
+end
+
 -- Describe any value compactly enough for a chat line.
 function ns.Describe(v)
+    if IsSecretOrRestricted(v) then return "<secret>" end
     local t = type(v)
     if t == "string" then return ("%q"):format(v) end
     if t == "table"  then return ("table(%d)"):format(ns.Count(v)) end
-    return tostring(v)
+    local ok, res = pcall(tostring, v)
+    return ok and res or "<secret>"
 end
 
 --------------------------------------------------------------------------

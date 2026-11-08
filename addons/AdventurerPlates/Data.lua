@@ -82,15 +82,23 @@ D.MAX_TAGS  = 6
 -- the plate key "Aeldorath Zephrai-ClassicBetaPvE2" on both builds, so plates
 -- saved on 69913 load again without moving any data. A 69913-shaped return
 -- (second value == realm) passes through unchanged.
+local function IsSecretOrRestricted(val)
+    if val == nil then return false end
+    if canaccessvalue and not canaccessvalue(val) then return true end
+    if issecretvalue and issecretvalue(val) then return true end
+    return false
+end
+
 function D.Name()
     local ok, name, second = pcall(UnitFullName, "player")
-    if not ok or not name then
+    if not ok or not name or IsSecretOrRestricted(name) then
         return nil, "The client did not return a character name."
     end
+    if IsSecretOrRestricted(second) then second = nil end
     if second == "" then second = nil end
 
     local okRealm, realm = pcall(GetNormalizedRealmName)
-    if not okRealm or realm == "" then realm = nil end
+    if not okRealm or realm == "" or IsSecretOrRestricted(realm) then realm = nil end
 
     if not realm then
         -- No independent realm to compare against: keep the pre-70009
@@ -113,10 +121,11 @@ end
 -- surname. Cross-realm units are unmeasured on Forever.
 function D.FullNameOf(unit)
     local ok, name, second = pcall(UnitFullName, unit)
-    if not ok or not name then return nil end
+    if not ok or not name or IsSecretOrRestricted(name) then return nil end
+    if IsSecretOrRestricted(second) then second = nil end
     if second == "" then second = nil end
     local okRealm, realm = pcall(GetNormalizedRealmName)
-    if not okRealm or realm == "" then realm = nil end
+    if not okRealm or realm == "" or IsSecretOrRestricted(realm) then realm = nil end
     if second and second ~= realm and not name:find(" ", 1, true) then
         return name .. " " .. second
     end
