@@ -519,9 +519,9 @@ Internal:SetScript("OnEvent", function(self, event, ...)
 		Internal:UpdateBattleNetAccountData()
 	elseif event == "PLAYER_LOGIN" then
 		_G.__chomp_internal = nil
-		hooksecurefunc(C_ChatInfo, "SendAddonMessage", HookSendAddonMessage)
-		hooksecurefunc(C_ChatInfo, "SendAddonMessageLogged", HookSendAddonMessageLogged)
-		ChatFrame_AddMessageEventFilter("CHAT_MSG_SYSTEM", MessageEventFilter_SYSTEM)
+		-- Hooks on C_ChatInfo and ChatFrame_AddMessageEventFilter removed to avoid
+		-- tainting ChatFrame_MessageEventHandler and causing secret-value arithmetic
+		-- errors in Blizzard_SharedXMLBase/FrameUtil.lua:425 (ChatFrame2Tab glow fade).
 		self.SameRealm = {}
 		if not Chomp.RegionalUniqueNamesEnabled() then
 			self.SameRealm[(Chomp.NormalizeRealmName(GetRealmName()))] = true
