@@ -70,7 +70,7 @@ local function CreateHelperCard()
 
     local template = BackdropTemplateMixin and "BackdropTemplate" or nil
     local card = CreateFrame("Frame", "GoldFinderSellHelperCard", UIParent, template)
-    card:SetSize(336, 185)
+    card:SetSize(350, 190)
     card:SetFrameStrata("HIGH")
     card:SetClampedToScreen(true)
 
@@ -95,13 +95,13 @@ local function CreateHelperCard()
 
     -- Header
     local title = card:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    title:SetPoint("TOPLEFT", 14, -10)
+    title:SetPoint("TOPLEFT", 16, -12)
     title:SetText("|cffffd100GoldFinder Price Helper|r")
 
     -- Item name
     local itemName = card:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     itemName:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
-    itemName:SetPoint("RIGHT", card, "RIGHT", -26)
+    itemName:SetPoint("RIGHT", card, "RIGHT", -32)
     itemName:SetJustifyH("LEFT")
     itemName:SetWordWrap(false)
     card.itemName = itemName
@@ -114,46 +114,46 @@ local function CreateHelperCard()
     local typVal = card:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     typVal:SetJustifyH("RIGHT")
     typVal:SetPoint("LEFT", typLabel, "RIGHT", 10)
-    typVal:SetPoint("RIGHT", card, "RIGHT", -26)
+    typVal:SetPoint("RIGHT", card, "RIGHT", -32)
     typVal:SetPoint("TOP", typLabel, "TOP")
     card.typVal = typVal
 
     -- Current lowest row
     local lowLabel = card:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    lowLabel:SetPoint("TOPLEFT", typLabel, "BOTTOMLEFT", 0, -4)
+    lowLabel:SetPoint("TOPLEFT", typLabel, "BOTTOMLEFT", 0, -5)
     lowLabel:SetText("Lowest AH Now:")
 
     local lowVal = card:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     lowVal:SetJustifyH("RIGHT")
     lowVal:SetPoint("LEFT", lowLabel, "RIGHT", 10)
-    lowVal:SetPoint("RIGHT", card, "RIGHT", -26)
+    lowVal:SetPoint("RIGHT", card, "RIGHT", -32)
     lowVal:SetPoint("TOP", lowLabel, "TOP")
     card.lowVal = lowVal
 
     -- Trend row
     local trendLabel = card:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    trendLabel:SetPoint("TOPLEFT", lowLabel, "BOTTOMLEFT", 0, -4)
+    trendLabel:SetPoint("TOPLEFT", lowLabel, "BOTTOMLEFT", 0, -5)
     trendLabel:SetText("Market Trend:")
 
     local trendVal = card:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     trendVal:SetJustifyH("RIGHT")
     trendVal:SetPoint("LEFT", trendLabel, "RIGHT", 10)
-    trendVal:SetPoint("RIGHT", card, "RIGHT", -26)
+    trendVal:SetPoint("RIGHT", card, "RIGHT", -32)
     trendVal:SetPoint("TOP", trendLabel, "TOP")
     card.trendVal = trendVal
 
     -- Suggestion banner
     local advice = card:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     advice:SetPoint("TOPLEFT", trendLabel, "BOTTOMLEFT", 0, -8)
-    advice:SetPoint("RIGHT", card, "RIGHT", -26)
+    advice:SetPoint("RIGHT", card, "RIGHT", -20)
     advice:SetJustifyH("LEFT")
     advice:SetWordWrap(true)
     card.advice = advice
 
-    -- Quick-Fill buttons (3 buttons, 96px width, 8px gap)
+    -- Quick-Fill buttons (3 buttons, 98px width, 11px gap inside 350px width)
     local btnUndercut = CreateFrame("Button", nil, card, "UIPanelButtonTemplate")
-    btnUndercut:SetSize(96, 22)
-    btnUndercut:SetPoint("BOTTOMLEFT", 14, 10)
+    btnUndercut:SetSize(98, 22)
+    btnUndercut:SetPoint("BOTTOMLEFT", 16, 12)
     btnUndercut:SetText("-1c Cut")
     btnUndercut:SetScript("OnClick", function()
         if card.suggestedUndercut and currentSellFrame then
@@ -163,8 +163,8 @@ local function CreateHelperCard()
     card.btnUndercut = btnUndercut
 
     local btnMatch = CreateFrame("Button", nil, card, "UIPanelButtonTemplate")
-    btnMatch:SetSize(96, 22)
-    btnMatch:SetPoint("LEFT", btnUndercut, "RIGHT", 8, 0)
+    btnMatch:SetSize(98, 22)
+    btnMatch:SetPoint("LEFT", btnUndercut, "RIGHT", 11, 0)
     btnMatch:SetText("Match")
     btnMatch:SetScript("OnClick", function()
         if card.suggestedMatch and currentSellFrame then
@@ -174,8 +174,8 @@ local function CreateHelperCard()
     card.btnMatch = btnMatch
 
     local btnTypical = CreateFrame("Button", nil, card, "UIPanelButtonTemplate")
-    btnTypical:SetSize(96, 22)
-    btnTypical:SetPoint("LEFT", btnMatch, "RIGHT", 8, 0)
+    btnTypical:SetSize(98, 22)
+    btnTypical:SetPoint("LEFT", btnMatch, "RIGHT", 11, 0)
     btnTypical:SetText("Typical")
     btnTypical:SetScript("OnClick", function()
         if card.suggestedTypical and currentSellFrame then
@@ -294,7 +294,7 @@ local function UpdateCardData(sellFrame, itemID)
 
     local right = parent:GetRight() or 0
     local screenWidth = UIParent:GetWidth()
-    if right + 350 < screenWidth then
+    if right + 365 < screenWidth then
         card:SetPoint("TOPLEFT", parent, "TOPRIGHT", 6, -10)
     else
         card:SetPoint("TOPRIGHT", parent, "TOPLEFT", -6, -10)
