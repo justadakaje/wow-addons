@@ -294,15 +294,14 @@ local function BuildPanel()
 
     -- Results view: gold count, one sentence, then the table.
     ui.title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    ui.title:SetPoint("TOPLEFT", panel, "TOPLEFT")
+    ui.title:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, 0)
     ui.title:SetJustifyH("LEFT")
 
     ui.sub = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     ui.sub:SetPoint("TOPLEFT", ui.title, "BOTTOMLEFT", 0, -6)
-    ui.sub:SetPoint("RIGHT", panel, "RIGHT", -270, 0)
     ui.sub:SetJustifyH("LEFT")
 
-    -- Options button in header to open settings UI (#36)
+    -- Row 1: Options & Search Box
     local optBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
     optBtn:SetSize(68, 22)
     optBtn:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -10, -2)
@@ -315,7 +314,7 @@ local function BuildPanel()
         end
     end)
     optBtn:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetOwner(self, "ANCHOR_BOTTOMLEFT")
         GameTooltip:SetText("GoldFinder Options", 1, 0.82, 0)
         GameTooltip:AddLine("Open graphical settings panel to configure deal thresholds, sound alerts, and filters.", 1, 1, 1, true)
         GameTooltip:Show()
@@ -323,9 +322,8 @@ local function BuildPanel()
     optBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
     ui.optionsButton = optBtn
 
-    -- Search box in header to filter deals in real time (#24)
     local search = CreateFrame("EditBox", nil, panel, "SearchBoxTemplate")
-    search:SetSize(140, 22)
+    search:SetSize(130, 22)
     search:SetPoint("TOPRIGHT", optBtn, "TOPLEFT", -8, 0)
     search:SetAutoFocus(false)
     search.Instructions:SetText("Search deals...")
@@ -341,16 +339,18 @@ local function BuildPanel()
     end)
     ui.searchBox = search
 
-    -- Cart button in header (#47)
+    ui.title:SetPoint("RIGHT", search, "LEFT", -12, 0)
+
+    -- Row 2: Staging Cart & Snipe Mode
     local cartBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-    cartBtn:SetSize(72, 22)
-    cartBtn:SetPoint("TOPRIGHT", search, "TOPLEFT", -8, 0)
+    cartBtn:SetSize(68, 22)
+    cartBtn:SetPoint("TOPRIGHT", optBtn, "BOTTOMRIGHT", 0, -4)
     cartBtn:SetText("Cart (0)")
     cartBtn:SetScript("OnClick", function()
         if ns.ToggleCart then ns.ToggleCart() end
     end)
     cartBtn:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetOwner(self, "ANCHOR_BOTTOMLEFT")
         GameTooltip:SetText("Staging Cart", 1, 0.82, 0)
         local n, items, cost, profit = ns.GetCartTotals and ns.GetCartTotals() or 0, 0, 0, 0
         GameTooltip:AddLine(("Staged lots: %d (%d items)"):format(n or 0, items or 0), 1, 1, 1)
@@ -366,9 +366,8 @@ local function BuildPanel()
     cartBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
     ui.cartButton = cartBtn
 
-    -- Snipe Mode toggle button in header (#44)
     local snipeBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-    snipeBtn:SetSize(86, 22)
+    snipeBtn:SetSize(90, 22)
     snipeBtn:SetPoint("TOPRIGHT", cartBtn, "TOPLEFT", -8, 0)
     snipeBtn:SetText("Snipe: OFF")
     snipeBtn:SetScript("OnClick", function()
@@ -377,7 +376,7 @@ local function BuildPanel()
         end
     end)
     snipeBtn:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetOwner(self, "ANCHOR_BOTTOMLEFT")
         GameTooltip:SetText("Live Snipe Engine", 1, 0.82, 0)
         GameTooltip:AddLine("Actively watches for ultra-deep discounts and high-profit mega flips.", 1, 1, 1, true)
         GameTooltip:AddLine("Triggers loud raid warning alarm on qualifying deals.", 1, 1, 1, true)
@@ -391,6 +390,8 @@ local function BuildPanel()
     end)
     snipeBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
     ui.snipeButton = snipeBtn
+
+    ui.sub:SetPoint("RIGHT", snipeBtn, "LEFT", -12, 0)
 
     function ns.UpdateCartButton()
         if ui.cartButton and ns.GetCartTotals then
@@ -544,7 +545,7 @@ local function BuildPanel()
     ns.UpdateCategoryButtons = UpdateCategoryButtons
 
     local filterBar = CreateFrame("Frame", nil, panel)
-    filterBar:SetPoint("TOPLEFT", ui.sub, "BOTTOMLEFT", 0, -6)
+    filterBar:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, -56)
     filterBar:SetSize(620, 24)
     ui.filterBar = filterBar
 
