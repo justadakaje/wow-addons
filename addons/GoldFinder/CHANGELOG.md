@@ -4,6 +4,13 @@ All notable changes to GoldFinder. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-11-08
+
+### Added
+
+- **Smart Buy Parity Advisor (`BuyHelper.lua`, [#57](https://github.com/justadakaje/wow-addons/issues/57)):** Real-time crafting parity comparison when browsing or purchasing commodities at the Auction House. Detects whether buying raw reagents and smelting/crafting saves money (e.g. Copper Ore vs. Copper Bar) or if finished goods are selling below raw crafting cost (e.g. pre-made Bolt of Silk cheaper than raw Silk Cloth). Features non-tainting UI companion card docking with a one-click alternative search button.
+- **BiSGearFinder Cross-Addon Synergy:** Dynamically registers a `[ BiS BoEs ]` category tab in GoldFinder when `BiSGearFinder` is loaded, displaying live underpriced deals and discounts on top-tier pre-raid BiS and world epic equipment.
+
 ## [1.0.2] - 2026-11-08
 
 ### Fixed

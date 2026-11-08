@@ -2,7 +2,7 @@
 ## Title: GoldFinder
 ## Notes: Adds a GoldFinder tab to the auction house. Shares the tab row with other auction house addons instead of fighting them for it.
 ## Author: justadakaje
-## Version: 1.0.2
+## Version: 1.0.3
 ## IconTexture: Interface\AddOns\GoldFinder\assets\GoldFinder-Logo.png
 ## Category: Auctions
 ## Category-enUS: Auctions
@@ -34,6 +34,7 @@ Deals.lua
 Tooltip.lua
 Broker.lua
 SellHelper.lua
+BuyHelper.lua
 Config.lua
 Mail.lua
 Ledger.lua

@@ -630,6 +630,7 @@ function ns.FindDeals()
                                 restockTarget   = restockTarget,
                                 restockCurrent  = restockCurrent,
                                 confidence      = conf,
+                                isBiS           = (_G.BiSGearFinder and _G.BiSGearFinder.IsBiSItem and _G.BiSGearFinder.IsBiSItem(itemID)) or false,
                             }
                             deals[#deals].tier = ns.GetDealTier(deals[#deals])
                         end

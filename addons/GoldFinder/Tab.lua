@@ -518,6 +518,9 @@ local function BuildPanel()
         { id = "shopping",    label = L["Shopping"],  width = 68 },
         { id = "watchlist",   label = L["Watchlist"], width = 84, isWatchlist = true },
     }
+    if _G.BiSGearFinder or (C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded("BiSGearFinder")) then
+        CATEGORIES[#CATEGORIES + 1] = { id = "bis", label = "BiS BoEs", width = 74 }
+    end
     local categoryButtons = {}
     local createGroupBtn = nil
 
@@ -1156,6 +1159,13 @@ function ns.RefreshPanel()
                 catDeals[#catDeals + 1] = d
             end
         end
+    elseif activeCat == "bis" then
+        catDeals = {}
+        for _, d in ipairs(allDeals) do
+            if d.isBiS or (_G.BiSGearFinder and _G.BiSGearFinder.IsBiSItem and _G.BiSGearFinder.IsBiSItem(d.itemID)) then
+                catDeals[#catDeals + 1] = d
+            end
+        end
     elseif activeCat == "conversions" or activeCat == "undercuts" or activeCat == "shopping" then
         catDeals = {}
         for _, d in ipairs(allDeals) do
@@ -1241,6 +1251,8 @@ function ns.RefreshPanel()
         catDisplayName = L["Undercuts"]
     elseif activeCat == "shopping" then
         catDisplayName = L["Shopping"]
+    elseif activeCat == "bis" then
+        catDisplayName = "BiS BoEs"
     elseif ns.GetCustomCategory and ns.GetCustomCategory(activeCat) then
         catDisplayName = ns.GetCustomCategory(activeCat).label or activeCat
     elseif isCategoryFiltered then
