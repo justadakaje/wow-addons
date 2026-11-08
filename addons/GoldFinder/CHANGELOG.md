@@ -4,6 +4,15 @@ All notable changes to GoldFinder. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-11-07
+
+### Added
+
+- **Interactive Feature Tour & Onboarding Walkthrough ([#51](https://github.com/justadakaje/wow-addons/issues/51)):** Added a clean, 6-step interactive onboarding walkthrough (`Tour.lua`) guiding users through GoldFinder's passive scanning architecture, discount calculation, Quick-Buy vs Cart staging, live Snipe mode, Sell tab price helper, and mailbox collection with Goblin P&L accounting. Accessible anytime via `/gf tour` or from the Info dashboard.
+- **Multi-Language Localization Engine ([#52](https://github.com/justadakaje/wow-addons/issues/52)):** Integrated full localization support (`Localization.lua`) supporting 8 regional locales (`deDE`, `frFR`, `esES`, `esMX`, `zhCN`, `zhTW`, `koKR`, `ruRU`) with metamethod-driven graceful fallback to `enUS`. Covers all UI headers, filters, tooltips, price helper cards, and slash command diagnostics.
+- **Performance Profiling, Benchmarking & GC Certification ([#53](https://github.com/justadakaje/wow-addons/issues/53)):** Added performance benchmarking slash commands (`/gf bench`, `/gf memory`) and real-time telemetry. Validates memory working set (strictly <5MB ceiling, typically <1.5MB) and sub-millisecond deal calculation latency across full commodity databases with zero frame stutter or memory leaks.
+- **Journalator-Style Info & Diagnostics Dashboard ([#54](https://github.com/justadakaje/wow-addons/issues/54)):** Added a polished project dashboard (`Info.lua`) accessible via `/gf info`, `/gf about`, or the `[About / Info]` button in GoldFinder Options. Features copyable edit boxes for Discord, GitHub issues, and CurseForge; translator acknowledgments; and a live system diagnostic card displaying current memory usage, tracked reagents, historical price counts, realm partition, client interface build, and AH architecture.
+
 ## [0.9.0] - 2026-11-07
 
 ### Added

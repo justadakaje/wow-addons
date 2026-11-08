@@ -2,7 +2,7 @@
 ## Title: GoldFinder
 ## Notes: Adds a GoldFinder tab to the auction house. Shares the tab row with other auction house addons instead of fighting them for it.
 ## Author: justadakaje
-## Version: 0.9.0
+## Version: 1.0.0
 ## IconTexture: Interface\ICONS\INV_Misc_Coin_01
 ## Category: Auctions
 ## Category-enUS: Auctions
@@ -26,6 +26,7 @@ libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
 libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
 libs\LibAHTab\LibAHTab.xml
 
+Localization.lua
 Core.lua
 Vendors.lua
 Scan.lua
@@ -38,5 +39,7 @@ Mail.lua
 Ledger.lua
 Cart.lua
 Profiles.lua
+Info.lua
+Tour.lua
 Sparkline.lua
 Tab.lua
