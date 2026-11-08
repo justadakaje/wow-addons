@@ -10,11 +10,76 @@ ns.version   = (getMetadata and getMetadata(ADDON, "Version")) or "unknown"
 
 local LABEL = "|cffffd100GoldFinder|r"
 
+function ns.FindChatFrameByName(name)
+    if not name or name == "" then return nil end
+    local searchName = name:lower()
+    for i = 1, (NUM_CHAT_WINDOWS or 10) do
+        local frame = _G["ChatFrame" .. i]
+        if frame then
+            local windowName = GetChatWindowInfo(i)
+            if windowName and windowName:lower() == searchName then
+                return frame, i
+            end
+        end
+    end
+    return nil
+end
+
+function ns.GetOrCreateChatWindow(name)
+    name = name or "GoldFinder"
+    local frame, idx = ns.FindChatFrameByName(name)
+    if frame then
+        return frame, idx
+    end
+
+    if type(FCF_OpenNewWindow) == "function" then
+        local newFrame = FCF_OpenNewWindow(name)
+        if newFrame then
+            return newFrame
+        end
+    end
+
+    return DEFAULT_CHAT_FRAME
+end
+
+function ns.IsDedicatedChatTabEnabled()
+    local s = ns.db and ns.db.settings
+    return s and (s.dedicatedChatTab == true)
+end
+
+function ns.SetDedicatedChatTab(enabled)
+    if ns.db and ns.db.settings then
+        ns.db.settings.dedicatedChatTab = (enabled == true)
+    end
+    if enabled then
+        local frame = ns.GetOrCreateChatWindow("GoldFinder")
+        if frame and frame.AddMessage then
+            frame:AddMessage("|cffffd100GoldFinder|r: Dedicated chat tab active. All GoldFinder notifications will appear here.")
+        end
+    end
+end
+
+local function GetTargetChatFrame()
+    if ns.IsDedicatedChatTabEnabled and ns.IsDedicatedChatTabEnabled() then
+        local frame = ns.GetOrCreateChatWindow("GoldFinder")
+        if frame then
+            return frame
+        end
+    end
+    return DEFAULT_CHAT_FRAME
+end
+
 local function emit(colour, msg, ...)
     if select("#", ...) > 0 then
         msg = msg:format(...)
     end
-    print(("%s: %s%s|r"):format(LABEL, colour, msg))
+    local fullMsg = ("%s: %s%s|r"):format(LABEL, colour, msg)
+    local target = GetTargetChatFrame()
+    if target and target.AddMessage then
+        target:AddMessage(fullMsg)
+    else
+        print(fullMsg)
+    end
 end
 
 function ns.Print(msg, ...) emit("|cffffffff", msg, ...) end
@@ -634,6 +699,7 @@ boot:SetScript("OnEvent", function(self, _, name)
     if db.settings.mailCollector == nil then db.settings.mailCollector = true end
     if db.settings.factionShare == nil then db.settings.factionShare = true end
     if db.settings.snipeThreshold == nil then db.settings.snipeThreshold = 1000000 end
+    if db.settings.dedicatedChatTab == nil then db.settings.dedicatedChatTab = false end
     if type(db.watchlist) ~= "table" then db.watchlist = {} end
     if type(db.shoppingLists) ~= "table" then db.shoppingLists = {} end
     if type(db.blacklist) ~= "table" then db.blacklist = {} end
@@ -1210,6 +1276,14 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         else val = not (ns.IsSellHelperEnabled and ns.IsSellHelperEnabled()) end
         if ns.SetSellHelperEnabled then ns.SetSellHelperEnabled(val) end
         ns.Good("Sell tab market helper %s.", val and "enabled" or "disabled")
+    elseif cmd == "chattab" or cmd == "tabchat" then
+        arg = arg and arg:lower() or ""
+        local val
+        if arg == "on" or arg == "1" or arg == "true" then val = true
+        elseif arg == "off" or arg == "0" or arg == "false" then val = false
+        else val = not ns.IsDedicatedChatTabEnabled() end
+        ns.SetDedicatedChatTab(val)
+        ns.Good("Dedicated 'GoldFinder' chat tab %s.", val and "enabled (created and routed)" or "disabled (routed to main chat)")
     elseif cmd == "minconf" or cmd == "confidence" or cmd == "minconfidence" then
         arg = arg and arg:lower():match("^%s*(.-)%s*$") or ""
         if arg == "high" or arg == "med" or arg == "moderate" or arg == "any" then
@@ -1733,6 +1807,7 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         ns.Print("  /gf maxspend <amt>   - set Quick-Buy spend cap (e.g. 50g, 100g, 0)")
         ns.Print("  /gf tooltip [on|off] - toggle item tooltip market pricing")
         ns.Print("  /gf helper [on|off]  - toggle Blizzard Sell tab market helper card")
+        ns.Print("  /gf chattab [on|off] - toggle dedicated GoldFinder chat window tab")
         ns.Print("  /gf export           - open CSV data export window")
         ns.Print("  /gf profile [export|import] - export or import settings & watchlist string")
         ns.Print("  /gf vacuum [days]    - compact database & prune old sightings (default 30d)")

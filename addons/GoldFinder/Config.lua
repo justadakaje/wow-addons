@@ -227,6 +227,12 @@ local function RefreshControls()
         controls.costBasisCb:SetChecked(cb == true)
     end
 
+    -- m) Dedicated chat tab checkbox
+    if controls.chatTabCb then
+        local ct = ns.IsDedicatedChatTabEnabled and ns.IsDedicatedChatTabEnabled()
+        controls.chatTabCb:SetChecked(ct == true)
+    end
+
     if statusText then
         statusText:SetText("|cff40ff40All settings saved and active|r")
     end
@@ -258,6 +264,9 @@ local function ResetDefaults()
     if ns.SetCostBasisTooltip then
         ns.SetCostBasisTooltip(true)
     end
+    if ns.SetDedicatedChatTab then
+        ns.SetDedicatedChatTab(false)
+    end
 
     -- Also synchronize ns.db convenience keys if present
     if ns.db then
@@ -286,7 +295,7 @@ local function CreateConfigFrameOnce()
 
     local template = BackdropTemplateMixin and "BackdropTemplate" or nil
     local f = CreateFrame("Frame", "GoldFinderConfigFrame", UIParent, template)
-    f:SetSize(620, 640)
+    f:SetSize(620, 670)
     f:SetPoint("CENTER", UIParent, "CENTER", 0, 20)
     f:SetFrameStrata("DIALOG")
     f:SetToplevel(true)
@@ -627,7 +636,22 @@ local function CreateConfigFrameOnce()
     )
     controls.crossFactionCb:SetPoint("TOPLEFT", 28, -424)
 
-    -- i) Checkbox: Show Minimap Button
+    -- i) Checkbox: Show Selling Tab Price Helper
+    controls.sellHelperCb = CreateCheckbox(
+        f,
+        "Enable Sell Tab Price Helper",
+        "Selling Price Helper",
+        "When enabled, docks market pricing suggestions and quick undercut buttons alongside the Auction House Sell tab.",
+        function(_, checked)
+            if ns.SetSellHelperEnabled then
+                ns.SetSellHelperEnabled(checked)
+            end
+            NotifySettingSaved("Sell tab price helper " .. (checked and "enabled" or "disabled"))
+        end
+    )
+    controls.sellHelperCb:SetPoint("TOPLEFT", 330, -424)
+
+    -- j) Checkbox: Show Minimap Button
     controls.minimapCb = CreateCheckbox(
         f,
         "Show Minimap Button",
@@ -646,39 +670,20 @@ local function CreateConfigFrameOnce()
     )
     controls.minimapCb:SetPoint("TOPLEFT", 28, -452)
 
-    -- j) Checkbox: Show Selling Tab Price Helper
-    controls.sellHelperCb = CreateCheckbox(
+    -- k) Checkbox: Output to 'GoldFinder' Chat Tab
+    controls.chatTabCb = CreateCheckbox(
         f,
-        "Enable Sell Tab Price Helper",
-        "Selling Price Helper",
-        "When enabled, docks market pricing suggestions and quick undercut buttons alongside the Auction House Sell tab.",
+        "Output to 'GoldFinder' Chat Tab",
+        "Dedicated Chat Window Tab",
+        "When enabled, creates and routes all GoldFinder deal notifications, audio alarms, and system output to a dedicated 'GoldFinder' chat tab instead of General chat.",
         function(_, checked)
-            if ns.SetSellHelperEnabled then
-                ns.SetSellHelperEnabled(checked)
+            if ns.SetDedicatedChatTab then
+                ns.SetDedicatedChatTab(checked)
             end
-            NotifySettingSaved("Sell tab price helper " .. (checked and "enabled" or "disabled"))
+            NotifySettingSaved("Dedicated chat tab " .. (checked and "enabled" or "disabled"))
         end
     )
-    controls.sellHelperCb:SetPoint("TOPLEFT", 330, -424)
-
-    -- k) Button: Create Custom Material Group (#39)
-    local newGroupBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    newGroupBtn:SetSize(210, 22)
-    newGroupBtn:SetPoint("TOPLEFT", 330, -454)
-    newGroupBtn:SetText("+ New Material Group")
-    newGroupBtn:SetScript("OnClick", function()
-        if ns.ShowCreateGroupDialog then
-            ns.ShowCreateGroupDialog()
-        end
-    end)
-    newGroupBtn:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText("Create Material Group", 1, 0.82, 0)
-        GameTooltip:AddLine("Define a custom category tab to track custom sets of crafting reagents or arbitrage items.", 1, 1, 1, true)
-        GameTooltip:AddLine("You can also manage groups via: /gf groups", 0.7, 0.7, 0.7)
-        GameTooltip:Show()
-    end)
-    newGroupBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    controls.chatTabCb:SetPoint("TOPLEFT", 330, -452)
 
     -- l) Checkbox: Mailbox Deal Collector (#40)
     controls.mailCollectorCb = CreateCheckbox(
@@ -710,10 +715,29 @@ local function CreateConfigFrameOnce()
     )
     controls.costBasisCb:SetPoint("TOPLEFT", 330, -482)
 
-    -- n) Button: Open Goblin Ledger (#41)
+    -- n) Button: Create Custom Material Group (#39)
+    local newGroupBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    newGroupBtn:SetSize(260, 24)
+    newGroupBtn:SetPoint("TOPLEFT", 28, -518)
+    newGroupBtn:SetText("+ New Material Group")
+    newGroupBtn:SetScript("OnClick", function()
+        if ns.ShowCreateGroupDialog then
+            ns.ShowCreateGroupDialog()
+        end
+    end)
+    newGroupBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("Create Material Group", 1, 0.82, 0)
+        GameTooltip:AddLine("Define a custom category tab to track custom sets of crafting reagents or arbitrage items.", 1, 1, 1, true)
+        GameTooltip:AddLine("You can also manage groups via: /gf groups", 0.7, 0.7, 0.7)
+        GameTooltip:Show()
+    end)
+    newGroupBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+    -- o) Button: Open Goblin Ledger (#41)
     local openLedgerBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    openLedgerBtn:SetSize(230, 24)
-    openLedgerBtn:SetPoint("TOPLEFT", 28, -514)
+    openLedgerBtn:SetSize(260, 24)
+    openLedgerBtn:SetPoint("TOPLEFT", 330, -518)
     openLedgerBtn:SetText("Open Goblin P&L Ledger")
     openLedgerBtn:SetScript("OnClick", function()
         f:Hide()
@@ -730,10 +754,10 @@ local function CreateConfigFrameOnce()
     end)
     openLedgerBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    -- o) Button: Open Staging Cart (#47)
+    -- p) Button: Open Staging Cart (#47)
     local openCartBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    openCartBtn:SetSize(230, 24)
-    openCartBtn:SetPoint("TOPLEFT", 330, -514)
+    openCartBtn:SetSize(260, 24)
+    openCartBtn:SetPoint("TOPLEFT", 28, -550)
     openCartBtn:SetText("Open Staging Cart")
     openCartBtn:SetScript("OnClick", function()
         f:Hide()
@@ -750,29 +774,10 @@ local function CreateConfigFrameOnce()
     end)
     openCartBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    -- p) Button: Profile Import / Export (#48)
-    local profileBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    profileBtn:SetSize(230, 24)
-    profileBtn:SetPoint("TOPLEFT", 28, -546)
-    profileBtn:SetText("Profile Import / Export")
-    profileBtn:SetScript("OnClick", function()
-        if ns.ShowProfileDialog then
-            ns.ShowProfileDialog("export")
-        end
-    end)
-    profileBtn:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText("Base64 Profile Data Portability", 1, 0.82, 0)
-        GameTooltip:AddLine("Export or import your complete GoldFinder configuration, watchlists, shopping lists, and custom categories as a sharable string.", 1, 1, 1, true)
-        GameTooltip:AddLine("Command: /gf profile [export|import]", 0.7, 0.7, 0.7)
-        GameTooltip:Show()
-    end)
-    profileBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
-
     -- q) Button: Compact & Vacuum Database (#50)
     local vacuumBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    vacuumBtn:SetSize(230, 24)
-    vacuumBtn:SetPoint("TOPLEFT", 330, -546)
+    vacuumBtn:SetSize(260, 24)
+    vacuumBtn:SetPoint("TOPLEFT", 330, -550)
     vacuumBtn:SetText("Compact & Vacuum DB")
     vacuumBtn:SetScript("OnClick", function()
         if ns.VacuumDatabase then
@@ -794,6 +799,44 @@ local function CreateConfigFrameOnce()
         GameTooltip:Show()
     end)
     vacuumBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+    -- r) Button: Profile Import / Export (#48)
+    local profileBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    profileBtn:SetSize(260, 24)
+    profileBtn:SetPoint("TOPLEFT", 28, -582)
+    profileBtn:SetText("Profile Import / Export")
+    profileBtn:SetScript("OnClick", function()
+        if ns.ShowProfileDialog then
+            ns.ShowProfileDialog("export")
+        end
+    end)
+    profileBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("Base64 Profile Data Portability", 1, 0.82, 0)
+        GameTooltip:AddLine("Export or import your complete GoldFinder configuration, watchlists, shopping lists, and custom categories as a sharable string.", 1, 1, 1, true)
+        GameTooltip:AddLine("Command: /gf profile [export|import]", 0.7, 0.7, 0.7)
+        GameTooltip:Show()
+    end)
+    profileBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+    -- s) Button: Replay Feature Tour (#51)
+    local tourBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    tourBtn:SetSize(260, 24)
+    tourBtn:SetPoint("TOPLEFT", 330, -582)
+    tourBtn:SetText("Replay Feature Tour")
+    tourBtn:SetScript("OnClick", function()
+        if ns.StartTour then
+            ns.StartTour()
+        end
+    end)
+    tourBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("Interactive Feature Tour", 1, 0.82, 0)
+        GameTooltip:AddLine("Replay the interactive 6-step walkthrough introducing GoldFinder's core arbitrage features.", 1, 1, 1, true)
+        GameTooltip:AddLine("Command: /gf tour", 0.7, 0.7, 0.7)
+        GameTooltip:Show()
+    end)
+    tourBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     -----------------------------------------------------------------------
     -- Section 4: Action Buttons at Bottom
