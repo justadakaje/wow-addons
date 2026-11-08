@@ -636,23 +636,20 @@ local function CreateProfileDialogOnce()
     local copyBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     copyBtn:SetSize(110, 24)
     copyBtn:SetPoint("RIGHT", closeBtn, "LEFT", -8, 0)
-    copyBtn:SetText("Copy String")
+    copyBtn:SetText("Copy (Ctrl+C)")
     copyBtn:SetScript("OnClick", function()
         editBox:HighlightText()
         editBox:SetFocus()
-        local text = editBox:GetText() or ""
-        local copied = false
-        if type(CopyToClipboard) == "function" then
-            local ok = pcall(CopyToClipboard, text, true)
-            if ok then copied = true end
-        end
-        if copied then
-            status:SetText("|cff40ff40Copied to clipboard!|r")
-            ns.Good("GoldFinder: Profile string copied to OS clipboard!")
-        else
-            status:SetText("|cff40ff40Highlighted. Press Ctrl+C.|r")
-        end
+        status:SetText("|cff40ff40String selected. Press Ctrl+C to copy!|r")
     end)
+    copyBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("Copy Profile String", 1, 0.82, 0)
+        GameTooltip:AddLine("Highlights the entire profile string and focuses the box.", 1, 1, 1, true)
+        GameTooltip:AddLine("Press Ctrl+C to copy to your clipboard.", 0.25, 1, 0.25)
+        GameTooltip:Show()
+    end)
+    copyBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
     f.copyBtn = copyBtn
 
     local selectBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")

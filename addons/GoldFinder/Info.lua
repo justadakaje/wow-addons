@@ -32,16 +32,7 @@ local function CreateCopyBox(parent, text, labelText, yOffset)
     copyBtn:SetScript("OnClick", function()
         box:HighlightText()
         box:SetFocus()
-        local copied = false
-        if type(CopyToClipboard) == "function" then
-            local ok = pcall(CopyToClipboard, text, true)
-            if ok then copied = true end
-        end
-        if copied then
-            ns.Good("Copied link to clipboard!")
-        else
-            ns.Print("Press Ctrl+C to copy.")
-        end
+        ns.Good("Link highlighted. Press Ctrl+C to copy!")
     end)
 
     return box
