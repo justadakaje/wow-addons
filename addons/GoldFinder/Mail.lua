@@ -283,17 +283,11 @@ local function CreateMailButtonOnce()
     end)
     btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    -- Hook InboxFrame Show and Hide explicitly to guarantee tab switching sync
-    if InboxFrame and InboxFrame.HookScript then
-        InboxFrame:HookScript("OnShow", function()
+    -- Safe post-hook on InboxFrame Show to sync deal count without taint
+    if InboxFrame and InboxFrame.Show then
+        hooksecurefunc(InboxFrame, "Show", function()
             if collectBtn then
-                collectBtn:Show()
                 UpdateCollectButton()
-            end
-        end)
-        InboxFrame:HookScript("OnHide", function()
-            if collectBtn then
-                collectBtn:Hide()
             end
         end)
     end

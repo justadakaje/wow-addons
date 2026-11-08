@@ -1,4 +1,4 @@
-local lib = LibStub:NewLibrary("LibAHTab-1-0", 4)
+local lib = LibStub:NewLibrary("LibAHTab-1-0", 6)
 
 if not lib or lib.internalState then return end
 
@@ -87,7 +87,6 @@ function lib:SetSelected(tabID)
   end
 
   AuctionHouseFrame:SetDisplayMode({})
-  AuctionHouseFrame.displayMode = nil
 
   for _, tab in ipairs(lib.internalState.Tabs) do
     tab.frameRef:Hide()

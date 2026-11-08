@@ -286,18 +286,18 @@ local function UpdateCardData(sellFrame, itemID)
         card.advice:SetText("|cff888888Insufficient scan data to determine market health.|r")
     end
 
-    -- Position docked neatly to the RIGHT of the entire AuctionHouseFrame outside the window,
-    -- NEVER overlaying or obscuring the price list!
-    local parent = AuctionHouseFrame or sellFrame
-    card:SetParent(parent)
+    -- Dock neatly to the RIGHT of the entire AuctionHouseFrame (or sellFrame fallback)
+    -- outside the window, NEVER overlaying or obscuring the price list!
+    -- Keep card parented to UIParent permanently to prevent Blizzard frame hierarchy taint.
+    local anchor = AuctionHouseFrame or sellFrame
     card:ClearAllPoints()
 
-    local right = parent:GetRight() or 0
-    local screenWidth = UIParent:GetWidth()
+    local right = (anchor and anchor.GetRight and anchor:GetRight()) or 0
+    local screenWidth = UIParent:GetWidth() or 1920
     if right + 335 < screenWidth then
-        card:SetPoint("TOPLEFT", parent, "TOPRIGHT", 6, -10)
+        card:SetPoint("TOPLEFT", anchor, "TOPRIGHT", 6, -10)
     else
-        card:SetPoint("TOPRIGHT", parent, "TOPLEFT", -6, -10)
+        card:SetPoint("TOPRIGHT", anchor, "TOPLEFT", -6, -10)
     end
 
     card:Show()
@@ -354,14 +354,24 @@ local function HookSellFrame(frame)
             currentItemID = nil
         end)
     end
-    frame:HookScript("OnHide", function()
-        if helperCard then helperCard:Hide() end
-        currentItemID = nil
-    end)
+    if frame.Hide then
+        hooksecurefunc(frame, "Hide", function()
+            if helperCard then helperCard:Hide() end
+            currentItemID = nil
+        end)
+    end
 end
 
 function ns.InitSellHelper()
     if not AuctionHouseFrame then return end
+
+    if AuctionHouseFrame.Hide then
+        hooksecurefunc(AuctionHouseFrame, "Hide", function()
+            if helperCard then helperCard:Hide() end
+            currentItemID = nil
+            currentSellFrame = nil
+        end)
+    end
 
     if AuctionHouseFrame.ItemSellFrame then
         HookSellFrame(AuctionHouseFrame.ItemSellFrame)
@@ -374,13 +384,20 @@ function ns.InitSellHelper()
     end
 end
 
--- Refresh market card when search results update for the listed item
+-- Refresh market card when search results update for the listed item, or hide when AH closes
 local sellEvents = CreateFrame("Frame")
 sellEvents:RegisterEvent("COMMODITY_SEARCH_RESULTS_RECEIVED")
 sellEvents:RegisterEvent("COMMODITY_SEARCH_RESULTS_UPDATED")
 sellEvents:RegisterEvent("ITEM_SEARCH_RESULTS_ADDED")
 sellEvents:RegisterEvent("ITEM_SEARCH_RESULTS_UPDATED")
-sellEvents:SetScript("OnEvent", function(_, _, itemID)
+sellEvents:RegisterEvent("AUCTION_HOUSE_CLOSED")
+sellEvents:SetScript("OnEvent", function(_, event, itemID)
+    if event == "AUCTION_HOUSE_CLOSED" then
+        if helperCard then helperCard:Hide() end
+        currentItemID = nil
+        currentSellFrame = nil
+        return
+    end
     if currentItemID and currentSellFrame and helperCard and helperCard:IsShown() then
         if itemID == currentItemID or not itemID then
             UpdateCardData(currentSellFrame, currentItemID)
