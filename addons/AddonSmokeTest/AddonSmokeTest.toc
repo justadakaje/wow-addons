@@ -1,9 +1,11 @@
-## Interface: 20506, 16001
+## Interface: 16001, 20506, 11506, 11507, 11508, 11509, 50400, 50500, 110007, 110100, 110200
 ## Title: Addon Smoke Test
 ## Notes: Minimal proof-of-life addon
 ## Author: justadakaje
+## Category: Development Tools
+## Category-enUS: Development Tools
 ## Version: 0.0.1
-## X-Target-Client: WoW: Forever (camelot)
+## X-Target-Client: Multi-Client (Forever, Classic Era, MoP, Retail)
 ## X-Tested-Build: 1.60.1.70707
 
 AddonSmokeTest.lua

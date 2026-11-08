@@ -1,8 +1,8 @@
 # C_GameRules
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
-`29` functions - `6` events
+`30` functions - `7` events
 
 > Generated from the live client by `scripts/extract-api.js`. Do not edit.
 
@@ -54,6 +54,12 @@ C_GameRules.GetCurrentGameModeRecordID() -> gameModeRecordID: number
 
 ```lua
 C_GameRules.GetDisplayedGameModeRecordIDAtIndex(displayIndex: luaIndex) -> gameModeRecordID: number
+```
+
+### GetForeverExperiencePreset
+
+```lua
+C_GameRules.GetForeverExperiencePreset() -> preset?: ForeverExperiencePreset
 ```
 
 ### GetGameModeDisplayInfoByRecordID
@@ -164,22 +170,22 @@ C_GameRules.IsStandard() -> active: bool
 C_GameRules.IsWoWHack() -> active: bool
 ```
 
-### SelectClassicExperiencePreset
+### SetForeverExperiencePresetPostLogin
 
 ```lua
-C_GameRules.SelectClassicExperiencePreset()
+C_GameRules.SetForeverExperiencePresetPostLogin(preset: ForeverExperiencePreset)
 ```
 
-### SelectModernExperiencePreset
+### SetForeverExperiencePresetPreLogin
 
 ```lua
-C_GameRules.SelectModernExperiencePreset()
+C_GameRules.SetForeverExperiencePresetPreLogin(preset: ForeverExperiencePreset)
 ```
 
 ### SetSDHDToggleValue
 
 ```lua
-C_GameRules.SetSDHDToggleValue(setToSD: bool)
+C_GameRules.SetSDHDToggleValue(setToSD: bool, usageLocation: SdToggleUsageLocationUI)
 ```
 
 ## Events
@@ -223,5 +229,11 @@ payload: gameModeRecordID: number, disabled: bool
 ### GameRulesChanged
 
 Fires as `GAME_RULES_CHANGED`.
+
+No payload.
+
+### SettingsHeaderTextUpdate
+
+Fires as `SETTINGS_HEADER_TEXT_UPDATE`.
 
 No payload.

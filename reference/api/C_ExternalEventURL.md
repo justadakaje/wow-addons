@@ -1,12 +1,18 @@
 # C_ExternalEventURL
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
-`3` functions - `1` events
+`4` functions - `2` events
 
 > Generated from the live client by `scripts/extract-api.js`. Do not edit.
 
 ## Functions
+
+### CanShow
+
+```lua
+C_ExternalEventURL.CanShow() -> canShow: bool
+```
 
 ### HasURL
 
@@ -28,8 +34,16 @@ C_ExternalEventURL.LaunchURL()
 
 ## Events
 
-### ExternalEventLaunchUrlFailed
+### ExternalEventLaunchUrlResult
 
-Fires as `EXTERNAL_EVENT_LAUNCH_URL_FAILED`.
+Fires as `EXTERNAL_EVENT_LAUNCH_URL_RESULT`.
+
+```lua
+payload: result: bool
+```
+
+### ExternalEventUrlChanged
+
+Fires as `EXTERNAL_EVENT_URL_CHANGED`.
 
 No payload.

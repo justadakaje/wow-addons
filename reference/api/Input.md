@@ -1,12 +1,18 @@
 # Input
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
-`29` functions - `1` events
+`31` functions - `1` events
 
 > Generated from the live client by `scripts/extract-api.js`. Do not edit.
 
 ## Functions
+
+### GetCursorCenterPosition
+
+```lua
+GetCursorCenterPosition() -> posX: number, posY: number
+```
 
 ### GetCursorDelta
 
@@ -54,6 +60,12 @@ IsAltKeyDown() -> down: bool
 
 ```lua
 IsControlKeyDown() -> down: bool
+```
+
+### IsCursorVisible
+
+```lua
+IsCursorVisible() -> visible: bool
 ```
 
 ### IsKeyDown

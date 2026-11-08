@@ -1,8 +1,8 @@
 # Expansion
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
-`23` functions - `3` events
+`24` functions - `3` events
 
 > Generated from the live client by `scripts/extract-api.js`. Do not edit.
 
@@ -30,6 +30,12 @@ GetAccountExpansionLevel() -> expansionLevel: number
 
 ```lua
 GetClientDisplayExpansionLevel() -> expansionLevel: number
+```
+
+### GetCreditsDisplayInfo
+
+```lua
+GetCreditsDisplayInfo() -> info: table
 ```
 
 ### GetCurrentRegionName

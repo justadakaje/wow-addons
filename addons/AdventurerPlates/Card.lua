@@ -394,7 +394,8 @@ local function VisibleUnitFor(name)
                              "party1", "party2", "party3", "party4" }) do
         -- Full names on both sides: on 70009 UnitName returns only the first
         -- name, which never equals a plate's "First Surname".
-        if D.FullNameOf(token) == name then return token end
+        local fullName = D.FullNameOf(token)
+        if fullName and fullName == name then return token end
     end
     return nil
 end

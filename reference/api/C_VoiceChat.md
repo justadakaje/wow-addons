@@ -1,8 +1,8 @@
 # C_VoiceChat
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
-`79` functions - `47` events
+`82` functions - `51` events
 
 > Generated from the live client by `scripts/extract-api.js`. Do not edit.
 
@@ -11,13 +11,13 @@ WoW: Forever 1.60.1 (build 69913) - Interface 16001
 ### ActivateChannel
 
 ```lua
-C_VoiceChat.ActivateChannel(channelID: number)
+C_VoiceChat.ActivateChannel(channelID: VoiceChatID)
 ```
 
 ### ActivateChannelTranscription
 
 ```lua
-C_VoiceChat.ActivateChannelTranscription(channelID: number)
+C_VoiceChat.ActivateChannelTranscription(channelID: VoiceChatID)
 ```
 
 ### BeginLocalCapture
@@ -47,13 +47,13 @@ C_VoiceChat.CreateChannel(channelDisplayName: cstring) -> status: VoiceChatStatu
 ### DeactivateChannel
 
 ```lua
-C_VoiceChat.DeactivateChannel(channelID: number)
+C_VoiceChat.DeactivateChannel(channelID: VoiceChatID)
 ```
 
 ### DeactivateChannelTranscription
 
 ```lua
-C_VoiceChat.DeactivateChannelTranscription(channelID: number)
+C_VoiceChat.DeactivateChannelTranscription(channelID: VoiceChatID)
 ```
 
 ### EndLocalCapture
@@ -65,13 +65,19 @@ C_VoiceChat.EndLocalCapture()
 ### GetActiveChannelID
 
 ```lua
-C_VoiceChat.GetActiveChannelID() -> channelID?: number
+C_VoiceChat.GetActiveChannelID() -> channelID?: VoiceChatID
 ```
 
 ### GetActiveChannelType
 
 ```lua
 C_VoiceChat.GetActiveChannelType() -> channelType?: ChatChannelType
+```
+
+### GetActiveVoiceProviderID
+
+```lua
+C_VoiceChat.GetActiveVoiceProviderID() -> activeVoiceProviderID: VoiceProviderID
 ```
 
 ### GetAvailableInputDevices
@@ -89,7 +95,7 @@ C_VoiceChat.GetAvailableOutputDevices() -> outputDevices?: table
 ### GetChannel
 
 ```lua
-C_VoiceChat.GetChannel(channelID: number) -> channel: VoiceChatChannel
+C_VoiceChat.GetChannel(channelID: VoiceChatID) -> channel: VoiceChatChannel
 ```
 
 ### GetChannelForChannelType
@@ -137,7 +143,7 @@ C_VoiceChat.GetLocalPlayerActiveChannelMemberInfo() -> memberInfo?: VoiceChatMem
 ### GetLocalPlayerMemberID
 
 ```lua
-C_VoiceChat.GetLocalPlayerMemberID(channelID: number) -> memberID?: number
+C_VoiceChat.GetLocalPlayerMemberID(channelID: VoiceChatID) -> memberID?: VoiceChatID
 ```
 
 ### GetMasterVolumeScale
@@ -149,25 +155,25 @@ C_VoiceChat.GetMasterVolumeScale() -> scale: number
 ### GetMemberGUID
 
 ```lua
-C_VoiceChat.GetMemberGUID(memberID: number, channelID: number) -> memberGUID: WOWGUID
+C_VoiceChat.GetMemberGUID(memberID: VoiceChatID, channelID: VoiceChatID) -> memberGUID: WOWGUID
 ```
 
 ### GetMemberID
 
 ```lua
-C_VoiceChat.GetMemberID(channelID: number, memberGUID: WOWGUID) -> memberID?: number
+C_VoiceChat.GetMemberID(channelID: VoiceChatID, memberGUID: WOWGUID) -> memberID?: VoiceChatID
 ```
 
 ### GetMemberInfo
 
 ```lua
-C_VoiceChat.GetMemberInfo(memberID: number, channelID: number) -> memberInfo?: VoiceChatMember
+C_VoiceChat.GetMemberInfo(memberID: VoiceChatID, channelID: VoiceChatID) -> memberInfo?: VoiceChatMember
 ```
 
 ### GetMemberName
 
 ```lua
-C_VoiceChat.GetMemberName(memberID: number, channelID: number) -> memberName?: string
+C_VoiceChat.GetMemberName(memberID: VoiceChatID, channelID: VoiceChatID) -> memberName?: string
 ```
 
 ### GetMemberVolume
@@ -245,7 +251,7 @@ C_VoiceChat.IsLoggedIn() -> isLoggedIn: bool
 ### IsMemberLocalPlayer
 
 ```lua
-C_VoiceChat.IsMemberLocalPlayer(memberID: number, channelID: number) -> isLocalPlayer: bool
+C_VoiceChat.IsMemberLocalPlayer(memberID: VoiceChatID, channelID: VoiceChatID) -> isLocalPlayer: bool
 ```
 
 ### IsMemberMuted
@@ -257,13 +263,13 @@ C_VoiceChat.IsMemberMuted(playerLocation: PlayerLocation) -> mutedForMe?: bool
 ### IsMemberMutedForAll
 
 ```lua
-C_VoiceChat.IsMemberMutedForAll(memberID: number, channelID: number) -> mutedForAll?: bool
+C_VoiceChat.IsMemberMutedForAll(memberID: VoiceChatID, channelID: VoiceChatID) -> mutedForAll?: bool
 ```
 
 ### IsMemberSilenced
 
 ```lua
-C_VoiceChat.IsMemberSilenced(memberID: number, channelID: number) -> silenced?: bool
+C_VoiceChat.IsMemberSilenced(memberID: VoiceChatID, channelID: VoiceChatID) -> silenced?: bool
 ```
 
 ### IsMuted
@@ -329,13 +335,13 @@ C_VoiceChat.IsVoiceChatConnected() -> connected: bool
 ### LeaveChannel
 
 ```lua
-C_VoiceChat.LeaveChannel(channelID: number)
+C_VoiceChat.LeaveChannel(channelID: VoiceChatID)
 ```
 
 ### Login
 
 ```lua
-C_VoiceChat.Login() -> status: VoiceChatStatusCode
+C_VoiceChat.Login(channelType?: ChatChannelType) -> status: VoiceChatStatusCode
 ```
 
 ### Logout
@@ -360,6 +366,18 @@ C_VoiceChat.RequestJoinAndActivateCommunityStreamChannel(clubId: ClubId, streamI
 
 ```lua
 C_VoiceChat.RequestJoinChannelByChannelType(channelType: ChatChannelType, autoActivate?: bool)
+```
+
+### RestoreActiveVoiceProvider
+
+```lua
+C_VoiceChat.RestoreActiveVoiceProvider() -> changed: bool
+```
+
+### SetActiveVoiceProvider
+
+```lua
+C_VoiceChat.SetActiveVoiceProvider(voiceProviderID: VoiceProviderID) -> success: bool
 ```
 
 ### SetCommunicationMode
@@ -425,7 +443,7 @@ C_VoiceChat.SetOutputVolume(volume: number)
 ### SetPortraitTexture
 
 ```lua
-C_VoiceChat.SetPortraitTexture(textureObject: SimpleTexture, memberID: number, channelID: number)
+C_VoiceChat.SetPortraitTexture(textureObject: SimpleTexture, memberID: VoiceChatID, channelID: VoiceChatID)
 ```
 
 ### SetPushToTalkBinding
@@ -496,6 +514,14 @@ Fires as `VOICE_CHAT_ACTIVE_OUTPUT_DEVICE_UPDATED`.
 
 No payload.
 
+### VoiceChatActiveVoiceProviderChanged
+
+Fires as `VOICE_CHAT_ACTIVE_VOICE_PROVIDER_CHANGED`.
+
+```lua
+payload: voiceProviderID: VoiceProviderID
+```
+
 ### VoiceChatAudioCaptureEnergy
 
 Fires as `VOICE_CHAT_AUDIO_CAPTURE_ENERGY`.
@@ -521,7 +547,7 @@ No payload.
 Fires as `VOICE_CHAT_CHANNEL_ACTIVATED`.
 
 ```lua
-payload: channelID: number
+payload: channelID: VoiceChatID
 ```
 
 ### VoiceChatChannelDeactivated
@@ -529,7 +555,7 @@ payload: channelID: number
 Fires as `VOICE_CHAT_CHANNEL_DEACTIVATED`.
 
 ```lua
-payload: channelID: number
+payload: channelID: VoiceChatID
 ```
 
 ### VoiceChatChannelDisplayNameChanged
@@ -537,7 +563,7 @@ payload: channelID: number
 Fires as `VOICE_CHAT_CHANNEL_DISPLAY_NAME_CHANGED`.
 
 ```lua
-payload: channelID: number, channelDisplayName: cstring
+payload: channelID: VoiceChatID, channelDisplayName: cstring
 ```
 
 ### VoiceChatChannelJoined
@@ -545,7 +571,7 @@ payload: channelID: number, channelDisplayName: cstring
 Fires as `VOICE_CHAT_CHANNEL_JOINED`.
 
 ```lua
-payload: status: VoiceChatStatusCode, channelID: number, channelType: ChatChannelType, clubId?: ClubId, streamId?: ClubStreamId
+payload: status: VoiceChatStatusCode, channelID: VoiceChatID, channelType: ChatChannelType, clubId?: ClubId, streamId?: ClubStreamId
 ```
 
 ### VoiceChatChannelMemberActiveStateChanged
@@ -553,7 +579,7 @@ payload: status: VoiceChatStatusCode, channelID: number, channelType: ChatChanne
 Fires as `VOICE_CHAT_CHANNEL_MEMBER_ACTIVE_STATE_CHANGED`.
 
 ```lua
-payload: memberID: number, channelID: number, isActive: bool
+payload: memberID: VoiceChatID, channelID: VoiceChatID, isActive: bool
 ```
 
 ### VoiceChatChannelMemberAdded
@@ -561,7 +587,7 @@ payload: memberID: number, channelID: number, isActive: bool
 Fires as `VOICE_CHAT_CHANNEL_MEMBER_ADDED`.
 
 ```lua
-payload: memberID: number, channelID: number
+payload: memberID: VoiceChatID, channelID: VoiceChatID
 ```
 
 ### VoiceChatChannelMemberEnergyChanged
@@ -569,7 +595,7 @@ payload: memberID: number, channelID: number
 Fires as `VOICE_CHAT_CHANNEL_MEMBER_ENERGY_CHANGED`.
 
 ```lua
-payload: memberID: number, channelID: number, speakingEnergy: number
+payload: memberID: VoiceChatID, channelID: VoiceChatID, speakingEnergy: number
 ```
 
 ### VoiceChatChannelMemberGuidUpdated
@@ -577,7 +603,7 @@ payload: memberID: number, channelID: number, speakingEnergy: number
 Fires as `VOICE_CHAT_CHANNEL_MEMBER_GUID_UPDATED`.
 
 ```lua
-payload: memberID: number, channelID: number
+payload: memberID: VoiceChatID, channelID: VoiceChatID
 ```
 
 ### VoiceChatChannelMemberMuteForAllChanged
@@ -585,7 +611,7 @@ payload: memberID: number, channelID: number
 Fires as `VOICE_CHAT_CHANNEL_MEMBER_MUTE_FOR_ALL_CHANGED`.
 
 ```lua
-payload: memberID: number, channelID: number, isMutedForAll: bool
+payload: memberID: VoiceChatID, channelID: VoiceChatID, isMutedForAll: bool
 ```
 
 ### VoiceChatChannelMemberMuteForMeChanged
@@ -593,7 +619,7 @@ payload: memberID: number, channelID: number, isMutedForAll: bool
 Fires as `VOICE_CHAT_CHANNEL_MEMBER_MUTE_FOR_ME_CHANGED`.
 
 ```lua
-payload: memberID: number, channelID: number, isMutedForMe: bool
+payload: memberID: VoiceChatID, channelID: VoiceChatID, isMutedForMe: bool
 ```
 
 ### VoiceChatChannelMemberRemoved
@@ -601,7 +627,7 @@ payload: memberID: number, channelID: number, isMutedForMe: bool
 Fires as `VOICE_CHAT_CHANNEL_MEMBER_REMOVED`.
 
 ```lua
-payload: memberID: number, channelID: number
+payload: memberID: VoiceChatID, channelID: VoiceChatID
 ```
 
 ### VoiceChatChannelMemberSilencedChanged
@@ -609,7 +635,7 @@ payload: memberID: number, channelID: number
 Fires as `VOICE_CHAT_CHANNEL_MEMBER_SILENCED_CHANGED`.
 
 ```lua
-payload: memberID: number, channelID: number, isSilenced: bool
+payload: memberID: VoiceChatID, channelID: VoiceChatID, isSilenced: bool
 ```
 
 ### VoiceChatChannelMemberSpeakingStateChanged
@@ -617,7 +643,7 @@ payload: memberID: number, channelID: number, isSilenced: bool
 Fires as `VOICE_CHAT_CHANNEL_MEMBER_SPEAKING_STATE_CHANGED`.
 
 ```lua
-payload: memberID: number, channelID: number, isSpeaking: bool
+payload: memberID: VoiceChatID, channelID: VoiceChatID, isSpeaking: bool
 ```
 
 ### VoiceChatChannelMemberSttMessage
@@ -625,7 +651,7 @@ payload: memberID: number, channelID: number, isSpeaking: bool
 Fires as `VOICE_CHAT_CHANNEL_MEMBER_STT_MESSAGE`.
 
 ```lua
-payload: memberID: number, channelID: number, message: string, language: string
+payload: memberID: VoiceChatID, channelID: VoiceChatID, message: string, language: string
 ```
 
 ### VoiceChatChannelMemberVolumeChanged
@@ -633,7 +659,7 @@ payload: memberID: number, channelID: number, message: string, language: string
 Fires as `VOICE_CHAT_CHANNEL_MEMBER_VOLUME_CHANGED`.
 
 ```lua
-payload: memberID: number, channelID: number, volume: number
+payload: memberID: VoiceChatID, channelID: VoiceChatID, volume: number
 ```
 
 ### VoiceChatChannelMuteStateChanged
@@ -641,7 +667,7 @@ payload: memberID: number, channelID: number, volume: number
 Fires as `VOICE_CHAT_CHANNEL_MUTE_STATE_CHANGED`.
 
 ```lua
-payload: channelID: number, isMuted: bool
+payload: channelID: VoiceChatID, isMuted: bool
 ```
 
 ### VoiceChatChannelPttChanged
@@ -649,7 +675,7 @@ payload: channelID: number, isMuted: bool
 Fires as `VOICE_CHAT_CHANNEL_PTT_CHANGED`.
 
 ```lua
-payload: channelID: number, pushToTalkSetting: cstring
+payload: channelID: VoiceChatID, pushToTalkSetting: cstring
 ```
 
 ### VoiceChatChannelRemoved
@@ -657,7 +683,7 @@ payload: channelID: number, pushToTalkSetting: cstring
 Fires as `VOICE_CHAT_CHANNEL_REMOVED`.
 
 ```lua
-payload: channelID: number
+payload: channelID: VoiceChatID
 ```
 
 ### VoiceChatChannelTranscribingChanged
@@ -665,7 +691,7 @@ payload: channelID: number
 Fires as `VOICE_CHAT_CHANNEL_TRANSCRIBING_CHANGED`.
 
 ```lua
-payload: channelID: number, isTranscribing: bool
+payload: channelID: VoiceChatID, isTranscribing: bool
 ```
 
 ### VoiceChatChannelTransmitChanged
@@ -673,7 +699,7 @@ payload: channelID: number, isTranscribing: bool
 Fires as `VOICE_CHAT_CHANNEL_TRANSMIT_CHANGED`.
 
 ```lua
-payload: channelID: number, isTransmitting: bool
+payload: channelID: VoiceChatID, isTransmitting: bool
 ```
 
 ### VoiceChatChannelVolumeChanged
@@ -681,7 +707,7 @@ payload: channelID: number, isTransmitting: bool
 Fires as `VOICE_CHAT_CHANNEL_VOLUME_CHANGED`.
 
 ```lua
-payload: channelID: number, volume: number
+payload: channelID: VoiceChatID, volume: number
 ```
 
 ### VoiceChatCommunicationModeChanged
@@ -705,6 +731,12 @@ Fires as `VOICE_CHAT_DEAFENED_CHANGED`.
 ```lua
 payload: isDeafened: bool
 ```
+
+### VoiceChatDiscordSettingsUpdated
+
+Fires as `VOICE_CHAT_DISCORD_SETTINGS_UPDATED`.
+
+No payload.
 
 ### VoiceChatError
 
@@ -835,5 +867,19 @@ No payload.
 ### VoiceChatVadSettingsUpdated
 
 Fires as `VOICE_CHAT_VAD_SETTINGS_UPDATED`.
+
+No payload.
+
+### VoiceChatVoiceProviderChanged
+
+Fires as `VOICE_CHAT_VOICE_PROVIDER_CHANGED`.
+
+```lua
+payload: voiceProviderID: VoiceProviderID
+```
+
+### VoiceChatVoiceProvidersAvailableChanged
+
+Fires as `VOICE_CHAT_VOICE_PROVIDERS_AVAILABLE_CHANGED`.
 
 No payload.

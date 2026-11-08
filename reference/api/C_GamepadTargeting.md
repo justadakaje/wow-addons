@@ -1,8 +1,8 @@
 # C_GamepadTargeting
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
-`4` functions - `0` events
+`3` functions - `0` events
 
 > Generated from the live client by `scripts/extract-api.js`. Do not edit.
 
@@ -18,12 +18,6 @@ C_GamepadTargeting.Disable() -> targetAlreadySelected: bool
 
 ```lua
 C_GamepadTargeting.Enable()
-```
-
-### HasReticleHoverTarget
-
-```lua
-C_GamepadTargeting.HasReticleHoverTarget() -> hasReticleHoverTarget: bool
 ```
 
 ### SetFilter

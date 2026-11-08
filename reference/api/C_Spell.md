@@ -1,8 +1,8 @@
 # C_Spell
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
-`70` functions - `6` events
+`71` functions - `6` events
 
 > Generated from the live client by `scripts/extract-api.js`. Do not edit.
 
@@ -54,6 +54,12 @@ C_Spell.GetBaseSpell(spellIdentifier: SpellIdentifier, spec: number) -> baseSpel
 
 ```lua
 C_Spell.GetDeadlyDebuffInfo(spellIdentifier: SpellIdentifier) -> deadlyDebuffInfo: DeadlyDebuffInfo
+```
+
+### GetItemCooldown
+
+```lua
+C_Spell.GetItemCooldown(itemID: number) -> spellCooldownInfo: SpellCooldownInfo
 ```
 
 ### GetItemModifiedAppearancesApplied

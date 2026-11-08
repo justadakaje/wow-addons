@@ -1,8 +1,8 @@
 # C_PetInfo
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
-`13` functions - `11` events
+`14` functions - `12` events
 
 > Generated from the live client by `scripts/extract-api.js`. Do not edit.
 
@@ -66,6 +66,12 @@ C_PetInfo.GetSpellForPetAction(actionID: number) -> spellID?: number
 
 ```lua
 C_PetInfo.IsPetActionPassive(actionID: number) -> isPassive: bool
+```
+
+### IsPetOrderMoveToPending
+
+```lua
+C_PetInfo.IsPetOrderMoveToPending() -> isPetOrderMoveToPending: bool
 ```
 
 ### PetAbandon
@@ -132,6 +138,14 @@ Fires as `PET_FORCE_NAME_DECLENSION`.
 
 ```lua
 payload: name: cstring, petNumber?: number, declinedName1?: cstring, declinedName2?: cstring, declinedName3?: cstring, declinedName4?: cstring, declinedName5?: cstring
+```
+
+### PetOrderMoveToPendingChanged
+
+Fires as `PET_ORDER_MOVE_TO_PENDING_CHANGED`.
+
+```lua
+payload: isPetOrderMoveToPending: bool
 ```
 
 ### PetUiClose

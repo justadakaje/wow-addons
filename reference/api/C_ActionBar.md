@@ -1,8 +1,8 @@
 # C_ActionBar
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
-`72` functions - `15` events
+`73` functions - `15` events
 
 > Generated from the live client by `scripts/extract-api.js`. Do not edit.
 
@@ -342,6 +342,12 @@ C_ActionBar.IsHarmfulAction(actionID: luaIndex, useNeutral: bool) -> isHarmful: 
 
 ```lua
 C_ActionBar.IsHelpfulAction(actionID: luaIndex, useNeutral: bool) -> isHelpful: bool
+```
+
+### IsHighestSpellRank
+
+```lua
+C_ActionBar.IsHighestSpellRank(spellID: SpellIdentifier) -> isHighestRank: bool
 ```
 
 ### IsInterruptAction

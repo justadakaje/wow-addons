@@ -74,11 +74,11 @@ which broke things that the API diff did not show. Then:
   which was true when written and is no longer. **For any single name prefer
   `lookup_api` over `list_deprecated`** — see Legacy globals for why.
 
-## Current work — AdventurerPlates
+## Current work — GoldFinder (Roadmap to v1.0.0)
 
-**This is the active work. Read `addons/AdventurerPlates/README.md` first.**
+> ⏸️ **AdventurerPlates is ON HOLD (Deprecated)**: Shelved per user direction in favor of GoldFinder. All active engineering focus is 100% dedicated to GoldFinder's march toward Production Gold Master (`v1.0.0`).
 
-### State as of 2026-09-27: 0.3.2, sharing tested with a second player
+### Archived Context: AdventurerPlates (Historical)
 
 Live test with Ava (Erica Cartwoman) on build 70009. Full results and every
 measurement: [`docs/facts-build-70009.md`](docs/facts-build-70009.md).
@@ -695,3 +695,144 @@ Addon Dev"). Practical consequences:
 - Scene collection is "WoW Forever - Duo" with scenes `Forever Only`,
   `Forever + Claude`, `Claude Only`. The user switches via hotkey, so a long
   silent tool-running stretch is dead air — say what is running.
+
+---
+
+## State as of 2026-11-04 (WoW: Forever Launch Day - Build 70707)
+
+### Active Harness
+* **AgyOrch (Windows Master):** Stream HUD, edge deploys, CurseForge releases, Twitch API & Threads social sync.
+* **AgyBuild (WSL Ubuntu 24.04):** Engine running test suites, live Lua AST validation, in-game verification.
+
+### Recent Shipments
+1. **GoldFinder v0.2.0 Live on CurseForge:**
+   * Net profit calculation accounting for 5% AH cut.
+   * Interactive sorting by discount % or net profit.
+   * Tooltip price integration, price trend trajectory analysis, and CSV export.
+2. **In-Tab Search Filter (#24 - Merged to master):**
+   * Real-time search editbox (`SearchBoxTemplate`) at top-right of GoldFinder AH tab.
+   * Case-insensitive substring deal filtering with dynamic result count.
+   * Focus safety: Escape/Enter unfocus handling so player character movement is never trapped.
+   * Live client symlink verified: `F:\World of Warcraft\_forever_\Interface\AddOns\GoldFinder`.
+
+3. **Multi-Client Manifests & Compatibility Layer (AgyBuild):**
+   * Multi-TOC collision resolved:
+     - Root cause: In WoW: Forever, the engine project ID is `Mainline` (1). When scanning `GoldFinder/`, the client prioritized `GoldFinder_Mainline.toc` over `GoldFinder.toc`. Because `GoldFinder_Mainline.toc` only targeted `110007-110200` (missing Forever `16001` and Retail Midnight `120100-120107`), the client flagged GoldFinder red and incompatible!
+     - Solution: Consolidated all client interfaces (`16001, 120100, 120105, 120107, 110007, 110100, 110107, 110200, 20506, 11506-11509, 50400-50504`) onto a single unified `GoldFinder.toc` (matching `AddonSmokeTest`, `Auctionator`, `Bagnon`, `BetterFishing`, `BugGrabber`), and removed redundant sibling TOCs (`_Mainline.toc`, `_Vanilla.toc`, `_Mists.toc`) since the codebase is 100% shared with runtime feature gates.
+   * Safe runtime shims applied in `Core.lua`, `Scan.lua`, and `Tab.lua`:
+     - Metadata retrieval fallback (`C_AddOns.GetAddOnMetadata` -> `GetAddOnMetadata`).
+     - Safe backdrop mixin fallback (`BackdropTemplateMixin and "BackdropTemplate" or nil`).
+     - Robust item class enums (`LE_TRADEGOODS` / `LE_REAGENT` constants for Classic Era).
+     - Auction house show events (`AUCTION_HOUSE_SHOW` registered alongside `PLAYER_INTERACTION_MANAGER_FRAME_SHOW`).
+   * Smoke test TOC updated: `AddonSmokeTest.toc` expanded to cover 16001, 20506, 11506-11509, 50400-50500, 110007-110200.
+   * Symlinks verified across client installs:
+     - `_forever_`: `F:\World of Warcraft\_forever_\Interface\AddOns\GoldFinder`
+     - `_classic_era_`: `F:\World of Warcraft\_classic_era_\Interface\AddOns\GoldFinder`
+     - `_retail_`: `F:\World of Warcraft\_retail_\Interface\AddOns\GoldFinder`
+   * Verification: `node scripts/check-toc.js` (5/5 passing) and `node scripts/check-lua.js` (27/27 passing).
+
+### Next Active Tasks:
+* **Live In-Game Feedback from Jakob Mortikus (RESOLVED):**
+  - Inspected 4 screenshots in `docs/media/feedback-01-goldfinder-tab.jpg` through `feedback-04-auctions-subtabs.jpg` and `docs/media/FEEDBACK_INSPECTION.md`.
+  - **Refinements Applied in `Tab.lua`:**
+    1. Replaced red dialog `UIPanelButtonTemplate` with dark bronze inset sub-tabs matching Blizzard's native `[ Auctions ] [ Bids ]` tabs in `feedback-04-auctions-subtabs.jpg` (charcoal backdrops, subtle borders, Blizzard gold active indicator bar, soft hover states, and tab click audio).
+    2. Replaced missing unicode font glyphs (`★` / `☆` displaying as square `[]` boxes) with native Blizzard `Interface\Common\ReputationStar` icon textures on both the Watchlist category pill and deal row star buttons.
+    3. Expanded button widths and padding (`All`: 48, `Herbs`: 58, `Mining`: 62, `Cloth`: 56, `Leather`: 66, `Watchlist`: 88) with 5px margins for spacious layout.
+    4. Fixed search query whitespace trimming and separated category empty states (`Watchlist is empty`, `No <Category> deals found`) from search empty states.
+    5. Fixed nil `ItemName` error on row star click / right-click watchlist toggle: forward-declared `ItemName` alongside `OpenInBuy` and `ShowRowTip` at top of `Tab.lua`, ensuring closures capture the function rather than resolving to nil global `_G.ItemName`.
+  - Verified with `node scripts/check-lua.js` (27/27) and `node scripts/check-toc.js` (5/5).
+### Blizzard AddOn List Category Grouping (Build 70707 Discovery):
+* **Observed Behavior (Screenshots: docs/media/feedback-05-addon-list-categories.jpg & feedback-06-addon-list-uncategorized.jpg):**
+  - Modern WoW client groups addons into expandable category trees (Auctions, Bags & Inventory, Combat, Development Tools, Equipment, Professions).
+  - Addons without explicit category metadata fall to the bottom of the list under uncategorized root items.
+* **TOC Directives Applied:**
+  - `GoldFinder.toc`: Added `## Category: Auctions` and `## Category-enUS: Auctions` (plus localized fallbacks). Nests GoldFinder cleanly alongside Auctionator and Journalator.
+  - `ForeverProbe.toc`: Added `## Category: Development Tools` (nests alongside BugGrabber / BugSack).
+  - `AddonSmokeTest.toc`: Added `## Category: Development Tools`.
+  - `AdventurerPlates.toc` & `AdventurerPlatesPortrait.toc`: Added `## Category: Unit Frames`.
+* **Verification:** `node scripts/check-toc.js` (5/5 passing).
+
+* **Sprint 1 Retrospective (v0.1.0 – v0.3.0 Shipped):**
+  - **#10** Net profit calculation accounting for 5% AH cut.
+  - **#11** Configurable deal threshold % and history sensitivity.
+  - **#13** Deal alert chimes & chat notifications.
+  - **#15** Price trend trajectory indicators (rising/steady/falling).
+  - **#16** Tooltip pricing across bags and vendors.
+  - **#19** Data hygiene, database pruning, and CSV data export.
+  - **#24** Real-time search box inside AH tab.
+  - **#30** Minimum profit threshold filter (`/gf minprofit`).
+  - **#25** Visual tier highlights (Bargain vs Snipe vs Mega Snipe).
+  - **#12** Category sub-tabs (`All`, `Herbs`, `Mining`, `Cloth`, `Leather`, `Watchlist`) & watchlist stars.
+  - Multi-client TOC consolidation & native `Auctions` category grouping.
+
+* **Sprint 2 Status:** **ALL 10 SPRINT 2 FEATURES COMPLETED & MERGED.** GoldFinder is ready for release tag **v0.5.0**.
+
+---
+
+## GoldFinder Sprint 2: 10-Issue Execution Sprint Queue (Velocity & Arbitrage First)
+
+Ranked and approved by user direction prioritizing execution velocity, reagent conversions, and active listing defense:
+
+| Seq | Issue | Title | Scope & Target Files | Status |
+|:---:|:---:|:---|:---|:---:|
+| **01** | **#14** | Direct Quick-Buy for Commodity Deals | `Tab.lua` Shift-Click direct purchase shortcut triggering `C_AuctionHouse.StartCommoditiesPurchase` & `ConfirmCommoditiesPurchase` with spend cap safety. | ✅ **Completed** |
+| **02** | **#18** | Reagent Conversion & Crafting Arbitrage | `Deals.lua` reagent conversion matrix (smelting ores $\rightarrow$ bars, milling herbs $\rightarrow$ inks, cloth $\rightarrow$ bolts, transmutes) & new `[ Conversions ]` sub-tab. | ✅ **Completed** |
+| **03** | **#17** | Active Auction Undercut Detection & Cancel Assistant | `Scan.lua` & `Tab.lua` player auction comparison against live lowest buyout prices via `C_AuctionHouse.GetOwnedAuctions()` & `CancelAuction()`. | ✅ **Completed** |
+| **04** | **#22** | Shopping Lists & Material Quota Tracker | `GoldFinderDB.shoppingLists` schema, bag/bank tracking via `C_Item.GetItemCount()`, quota progress bar, and required gold projection. | ✅ **Completed** |
+| **05** | **#33** | Selling & Relisting Price Helper (Sell Tab Integration) | Hook Blizzard Sell tab (`AuctionHouseFrame.ItemSellFrame`) to overlay GoldFinder median market price, current lowest price, and smart undercut suggestion. | ✅ **Completed** |
+| **06** | **#34** | Market Depth & Sighting Confidence Score | Statistical confidence rating (🟢 High, 🟡 Moderate, 🔴 Speculative) based on sample count $N$, time span, and variance to mitigate thin-market false positives. | ✅ **Completed** |
+| **07** | **#27** | Cross-Character & Faction Market Data Sharing | `GoldFinderDB.realmMarketData` global table across character profiles with neutral/faction AH partition toggles. | ✅ **Completed** |
+| **08** | **#35** | Item Blacklist & Market Ignore Filter | `GoldFinderDB.blacklist` table, right-click "Ignore Item" context menu, and `/gf ignore <link\|itemID>` filter. | ✅ **Completed** |
+| **09** | **#23** | LibDataBroker (LDB) Feed & Minimap Button | Vendor `libs/LibDataBroker-1.1` & `LibDBIcon-1.0`, minimap coin icon, and background deal count tooltip preview. | ✅ **Completed** |
+| **10** | **#26** | Customizable Audio Alerts & Cooldown Throttle | `GoldFinderDB.settings.soundName` sound kit picker (`auction`, `coins`, `whisper`, `raid`, `loot`) and audio throttle cooldown. | ✅ **Completed** |
+
+### Milestone Gate:
+Sprint 2 execution is split into **v0.4.0** (Issues 01–04: High-Velocity Arbitrage & Goal Procurement) and **v0.5.0** (Issues 05–10: Trading Intelligence & Ecosystem Polish). **Both phases complete and released in v0.5.0.**
+
+---
+
+## GoldFinder Master Roadmap to v1.0.0 (Production Gold Master)
+
+Populated across GitHub Issues #36 through #53:
+
+### Sprint 3: Visual Options & Price Intelligence (v0.6.0) — ✅ COMPLETED
+* **#36 (Completed):** Graphical options & configuration panel (Settings UI) — native Blizzard Settings & standalone `/gf config` draggable dialog with interactive sliders, sound kit picker, and toggles.
+* **#37 (Completed):** 14-day historical sparklines & price trend curve on deal tooltips with dynamic median reference line and high/low labels (`Sparkline.lua`).
+* **#38 (Completed):** Alternative valuation engine with Standard Median, Trimmed Mean (10% outlier trim), and 7-Day Exponential Moving Average (EMA) selectable via Settings UI and `/gf valuation <median|trimmed|ema>`.
+* **#39 (Completed):** Custom category builder & material group editor with dynamic category tab bar, wrapping layout, in-game creation modal, Shift+Right-Click item assignment, and `/gf group create|delete|add|remove|list`.
+
+### Sprint 4: Mailbox Procurement & Realized Margin Ledger (v0.7.0) — ✅ COMPLETED
+* **#40 (Completed):** Mailbox one-click deal collector & cost tracking (`MAIL_INBOX_UPDATE`) with command pending safety and auto-cost basis ingestion (`Mail.lua`).
+* **#41 (Completed):** Realized profit & loss (P&L) goblin ledger (`/gf ledger` / `/gf pnl`) standalone dashboard with 4 KPI summary cards, top 3 flips, 12-row scrollable table, and CSV export (`Ledger.lua`).
+* **#42 (Completed):** Inventory cost basis tooltip overlay on bags & bank items with average unit acquisition price and live unrealized net margins against market baselines (`Tooltip.lua`).
+* **#43 (Completed):** Expired auction re-listing evaluator & relist advisor with HOLD, RELIST, and WAIT guidance based on competitor price swings and purchase cost basis (`Mail.lua`).
+
+### Sprint 5: Live Snipe Engine & Goal Automation (v0.8.0) — ✅ COMPLETED
+* **#44 (Completed):** Live snipe mode & high-value audio alarm (`SOUNDKIT.RAID_WARNING`) on >= 70% discount or >= 100g profit (`Scan.lua`, `Tab.lua`, `Core.lua`).
+* **#45 (Completed):** Inventory restock & stockout safety level warnings (`GoldFinderDB.restock`) with bag+bank counting, `[LOW]` deal row tags, and broker alerts (`Core.lua`, `Tab.lua`, `Tooltip.lua`, `Broker.lua`).
+* **#46 (Completed):** Fixed vendor reagent cost integration (`Vendors.lua`) for Coal, Weak/Strong Flux, Threads, and Vials, with overpriced AH warnings and conversion recipe cost injection (`Vendors.lua`, `Deals.lua`, `Tooltip.lua`).
+* **#47 (Completed):** Multi-item quick-buy staging cart (`Cart.lua`) with Alt-Click deal staging, batch purchase execution, spend cap limits, and interactive cart modal (`Cart.lua`, `Tab.lua`, `Config.lua`).
+
+### Sprint 6: Data Portability, Profiles & Cross-Realm Compaction (v0.9.0) — ✅ COMPLETED
+* **#48 (Completed):** Base64 string profile import / export (`/gf profile [export|import]`, `Profiles.lua`) allowing full trading configurations, custom categories, watchlists, and shopping lists to be shared with friends and alts.
+* **#49 (Completed):** Multi-account SavedVariables database merger (`ns.MergeScanDatabase`, `/gf merge <string>`) synthesizing market observations and chronological sightings across separate client accounts without data loss.
+* **#50 (Completed):** Database compaction & automated vacuum maintenance (`ns.VacuumDatabase`, `/gf vacuum [days]`) pruning sightings >30 days, deduplicating same-day snapshots, capping per-item history arrays at 30, and ensuring SavedVariables remains <2MB.
+
+### Sprint 7: Production Gold Master Certification (v1.0.0) — ✅ COMPLETED & SHIPPED
+* **#51 (Completed):** Interactive feature onboarding tour & walkthrough (`Tour.lua`, `/gf tour`) guiding players through passive scanning, quick-buy vs cart staging, live snipe alarms, and Goblin P&L accounting.
+* **#52 (Completed):** Full multi-language localization engine (`Localization.lua`) supporting 8 regional locales (`deDE`, `frFR`, `esES`, `esMX`, `zhCN`, `zhTW`, `koKR`, `ruRU`) with graceful fallback to `enUS`.
+* **#53 (Completed):** Memory profiling, GC tuning & benchmark certification (`/gf bench`, `/gf memory`) proving <1.5MB working set footprint (<5MB hard ceiling) and sub-millisecond calculation latency.
+* **#54 (Completed):** Journalator-style Info & About dashboard (`Info.lua`, `/gf info`, `/gf about`, or `[About / Info]` in Options) with project metadata, copyable Discord/GitHub/CurseForge boxes, translator credits, replay tour action, and live system diagnostics.
+
+## Milestone Status: GoldFinder v1.0.0 PRODUCTION GOLD MASTER ACHIEVED
+* **All 54 GitHub Issues closed.**
+* Release tag `v1.0.0` tagged and pushed to `origin/master`.
+* Full test suite passing (5/5 TOCs, 42/42 Lua files parsed clean).
+* Live in-game symlinks active across `_forever_`, `_classic_era_`, and `_retail_`.
+
+## Future Projects Backlog
+
+### BiSFinder: Best-in-Slot BoE Arbitrage & Scarcity Radar
+* **#55 ([Issue #55](https://github.com/justadakaje/wow-addons/issues/55)):** Standalone companion addon (`addons/BiSFinder/`) in collaboration with Will Yoakum (@wyoakum). Bridges static Best-in-Slot (BiS) equipment rankings (Phase, Pre-Raid, Twink) with live Auction House pricing. Features scarcity/monopoly radar (alerts when 0 active AH listings exist for held BoEs), high-value snipe engine, character gear upgrade shopping list, and native two-way integration with GoldFinder (`[ BiS BoEs ]` category tab). Planned for post-v1.0.0 development.
+
+

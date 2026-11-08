@@ -1,8 +1,8 @@
 # C_System
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
-`1` functions - `28` events
+`1` functions - `31` events
 
 > Generated from the live client by `scripts/extract-api.js`. Do not edit.
 
@@ -68,6 +68,22 @@ Fires as `GLOBAL_MOUSE_UP`.
 
 ```lua
 payload: button: cstring
+```
+
+### GlobalRegionMouseDown
+
+Fires as `GLOBAL_REGION_MOUSE_DOWN`.
+
+```lua
+payload: region: ScriptRegion, button: cstring
+```
+
+### GlobalRegionMouseUp
+
+Fires as `GLOBAL_REGION_MOUSE_UP`.
+
+```lua
+payload: region: ScriptRegion, button: cstring
 ```
 
 ### InitialHotfixesApplied
@@ -137,6 +153,12 @@ No payload.
 ### ShardTransfer
 
 Fires as `SHARD_TRANSFER`.
+
+No payload.
+
+### ShardTransferCancelled
+
+Fires as `SHARD_TRANSFER_CANCELLED`.
 
 No payload.
 

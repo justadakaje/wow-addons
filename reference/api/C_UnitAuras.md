@@ -1,8 +1,8 @@
 # C_UnitAuras
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
-`37` functions - `6` events
+`38` functions - `6` events
 
 > Generated from the live client by `scripts/extract-api.js`. Do not edit.
 
@@ -150,6 +150,12 @@ C_UnitAuras.GetHiddenGroupBuffs() -> spellIDs: table
 
 ```lua
 C_UnitAuras.GetPlayerAuraBySpellID(spellID: SpellIdentifier) -> aura?: AuraData
+```
+
+### GetRefreshCarryOverDuration
+
+```lua
+C_UnitAuras.GetRefreshCarryOverDuration(auraInstanceUnit: UnitToken, auraInstanceID: number, spellID?: SpellIdentifier) -> newDuration?: number
 ```
 
 ### GetRefreshExtendedDuration

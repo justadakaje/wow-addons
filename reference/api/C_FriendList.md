@@ -1,8 +1,8 @@
 # C_FriendList
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
-`31` functions - `27` events
+`32` functions - `27` events
 
 > Generated from the live client by `scripts/extract-api.js`. Do not edit.
 
@@ -104,6 +104,12 @@ C_FriendList.GetSelectedIgnore() -> index?: luaIndex
 C_FriendList.GetWhoInfo(index: luaIndex) -> info: WhoInfo
 ```
 
+### GetWhoRaceFilters
+
+```lua
+C_FriendList.GetWhoRaceFilters() -> filters: table
+```
+
 ### IsFriend
 
 ```lua
@@ -149,7 +155,7 @@ C_FriendList.RemoveFriendByIndex(index: luaIndex)
 ### SendWho
 
 ```lua
-C_FriendList.SendWho(filter: cstring, origin?: number)
+C_FriendList.SendWho(filter: cstring, origin?: number, filters?: SendWhoFilters)
 ```
 
 ### SetFriendNotes
@@ -191,7 +197,7 @@ C_FriendList.ShowFriends()
 ### SortWho
 
 ```lua
-C_FriendList.SortWho(sorting: cstring)
+C_FriendList.SortWho(sorting: cstring, ascending?: bool)
 ```
 
 ## Events

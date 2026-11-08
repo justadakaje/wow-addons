@@ -276,33 +276,61 @@ end
 -----------------------------------------------------------------------
 -- ChatThrottleLib.Hook_SendChatMessage / .Hook_SendAddonMessage
 
+local function IsSecretOrRestricted(v)
+	if v == nil then return false end
+	if canaccessvalue and not canaccessvalue(v) then return true end
+	if issecretvalue and issecretvalue(v) then return true end
+	return false
+end
+
+local function HasAnySecret(...)
+	if hasanysecretvalues and hasanysecretvalues(...) then return true end
+	local count = select("#", ...)
+	for i = 1, count do
+		local v = select(i, ...)
+		if IsSecretOrRestricted(v) then return true end
+	end
+	return false
+end
+
+local function SafeStrLen(val)
+	if val == nil then return 0 end
+	if IsSecretOrRestricted(val) then return 0 end
+	local ok, len = pcall(function()
+		local s = tostring(val)
+		return strlen(s)
+	end)
+	return ok and len or 0
+end
+
 local bMyTraffic = false
 
 function ChatThrottleLib.Hook_SendChatMessage(text, chattype, language, destination, ...)
-	if issecretvalue and (issecretvalue(text) or issecretvalue(destination)) then return end
+	if HasAnySecret(text, chattype, language, destination, ...) then return end
 	if bMyTraffic then
 		return
 	end
 	local self = ChatThrottleLib
-	local size = strlen(tostring(text or "")) + strlen(tostring(destination or "")) + self.MSG_OVERHEAD
+	local size = SafeStrLen(text) + SafeStrLen(destination) + self.MSG_OVERHEAD
 	self.avail = self.avail - size
 	self.nBypass = self.nBypass + size	-- just a statistic
 end
 function ChatThrottleLib.Hook_SendAddonMessage(prefix, text, chattype, destination, ...)
-	if issecretvalue and (issecretvalue(text) or issecretvalue(destination)) then return end
+	if HasAnySecret(prefix, text, chattype, destination, ...) then return end
 	if bMyTraffic then
 		return
 	end
 	local self = ChatThrottleLib
-	local size = tostring(text or ""):len() + tostring(prefix or ""):len();
-	size = size + tostring(destination or ""):len() + self.MSG_OVERHEAD
+	local size = SafeStrLen(text) + SafeStrLen(prefix) + SafeStrLen(destination) + self.MSG_OVERHEAD
 	self.avail = self.avail - size
 	self.nBypass = self.nBypass + size	-- just a statistic
 end
 function ChatThrottleLib.Hook_SendAddonMessageLogged(prefix, text, chattype, destination, ...)
+	if HasAnySecret(prefix, text, chattype, destination, ...) then return end
 	ChatThrottleLib.Hook_SendAddonMessage(prefix, text, chattype, destination, ...)
 end
 function ChatThrottleLib.Hook_BNSendGameData(destination, prefix, text)
+	if HasAnySecret(destination, prefix, text) then return end
 	ChatThrottleLib.Hook_SendAddonMessage(prefix, text, "WHISPER", destination)
 end
 

@@ -1,17 +1,29 @@
 # C_Trainer
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
-`1` functions - `5` events
+`3` functions - `5` events
 
 > Generated from the live client by `scripts/extract-api.js`. Do not edit.
 
 ## Functions
 
+### GetCategorizeTrainerUI
+
+```lua
+C_Trainer.GetCategorizeTrainerUI() -> value: bool
+```
+
 ### GetTrainerType
 
 ```lua
 C_Trainer.GetTrainerType() -> trainerType: TrainerType
+```
+
+### SetCategorizeTrainerUI
+
+```lua
+C_Trainer.SetCategorizeTrainerUI(value: bool)
 ```
 
 ## Events

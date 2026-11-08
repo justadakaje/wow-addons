@@ -25,9 +25,12 @@
 local ADDON, ns = ...
 
 -- Trade goods (cloth, herbs, ore, leather...) and reagents.
+local LE_TRADEGOODS = (Enum and Enum.ItemClass and Enum.ItemClass.Tradegoods) or LE_ITEM_CLASS_TRADEGOODS or 7
+local LE_REAGENT    = (Enum and Enum.ItemClass and Enum.ItemClass.Reagent) or LE_ITEM_CLASS_REAGENT or 12
+
 local MATERIAL_CLASSES = {
-    [Enum.ItemClass.Tradegoods] = true,
-    [Enum.ItemClass.Reagent]    = true,
+    [LE_TRADEGOODS] = true,
+    [LE_REAGENT]    = true,
 }
 
 local CHUNK              = 250  -- snapshot listings read per frame
@@ -48,6 +51,31 @@ local function ClassID(itemID)
         classOf[itemID] = c
     end
     return c
+end
+
+local itemCategoryCache = {}
+function ns.GetItemCategory(itemID)
+    if not itemID then return "other" end
+    local cat = itemCategoryCache[itemID]
+    if cat ~= nil then return cat end
+
+    local _, _, subType, _, _, classID, subClassID = C_Item.GetItemInfoInstant(itemID)
+    local subLower = subType and subType:lower() or ""
+
+    if subClassID == 9 or subLower:find("herb") then
+        cat = "herbs"
+    elseif subClassID == 7 or subLower:find("metal") or subLower:find("stone") or subLower:find("ore") or subLower:find("mining") then
+        cat = "mining"
+    elseif subClassID == 5 or subLower:find("cloth") then
+        cat = "cloth"
+    elseif subClassID == 6 or subLower:find("leather") or subLower:find("hide") or subLower:find("scale") then
+        cat = "leather"
+    else
+        cat = "other"
+    end
+
+    itemCategoryCache[itemID] = cat
+    return cat
 end
 
 ---------------------------------------------------------------------------
@@ -178,22 +206,28 @@ local function Finish(c, totalRows)
     -- Trigger deal alerts if qualifying deals are detected
     local deals = ns.FindDeals and ns.FindDeals()
     if deals and #deals > 0 then
-        if ns.IsSoundAlertEnabled and ns.IsSoundAlertEnabled() then
-            local soundID = (SOUNDKIT and (SOUNDKIT.AUCTION_WINDOW_OPEN or SOUNDKIT.IG_MAINMENU_OPEN)) or 888
-            if type(PlaySound) == "function" then
-                pcall(PlaySound, soundID)
-            end
+        local top = deals[1]
+        local tier = top.tier or (ns.GetDealTier and ns.GetDealTier(top))
+        local isMegaSnipe = (tier and tier.id == "mega") or (ns.IsSnipeMode and ns.IsSnipeMode())
+
+        if isMegaSnipe and ns.PlaySnipeAlarm then
+            ns.PlaySnipeAlarm(top)
+        elseif ns.PlayDealSound then
+            ns.PlayDealSound()
         end
+
         if ns.IsChatAlertEnabled and ns.IsChatAlertEnabled() then
-            local top = deals[1]
             local topName = top.name or (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(top.itemID)) or ("Item " .. top.itemID)
             local pct = math.floor(top.below * 100 + 0.5)
             local profitStr = top.totalNetProfit and top.totalNetProfit > 0 and (", est. net +" .. ns.Money(top.totalNetProfit)) or ""
-            ns.Good("Found %d deal(s)! Top deal: %s (%d%% off%s)", #deals, topName, pct, profitStr)
+            local tierPrefix = (tier and tier.id == "mega") and "|cffa335ee[MEGA SNIPE]|r "
+                            or ((tier and tier.id == "great") and "|cff0070dd[GREAT DEAL]|r " or "")
+            ns.Good("%sFound %d deal(s)! Top deal: %s (%d%% off%s)", tierPrefix, #deals, topName, pct, profitStr)
         end
     end
 
     if ns.RefreshPanel then ns.RefreshPanel() end
+    if ns.UpdateBrokerText then ns.UpdateBrokerText() end
 end
 
 ---------------------------------------------------------------------------
@@ -261,7 +295,8 @@ local function ProcessSnapshot()
                   _, _, _, _, _, _, itemID, hasAllInfo = C_AuctionHouse.GetReplicateItemInfo(idx)
             if not hasAllInfo then c.noInfo = c.noInfo + 1 end
             local unit = (buyout and count and count > 0) and buyout / count or nil
-            AddRow(c, idx, itemID, unit, count, name)
+            local localName = (itemID and C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID)) or (itemID and GetItemInfo and GetItemInfo(itemID)) or name
+            AddRow(c, idx, itemID, unit, count, localName)
         end
         i = stop + 1
         if i <= total - 1 then
@@ -360,4 +395,5 @@ events:SetScript("OnEvent", function(_, event, payload)
         ArmSettle()
     end
     if ns.RefreshPanel then ns.RefreshPanel() end
+    if ns.UpdateBrokerText then ns.UpdateBrokerText() end
 end)

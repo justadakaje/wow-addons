@@ -1,8 +1,8 @@
 # C_Tutorial
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
-`3` functions - `6` events
+`4` functions - `6` events
 
 > Generated from the live client by `scripts/extract-api.js`. Do not edit.
 
@@ -24,6 +24,12 @@ C_Tutorial.GetCombatEventInfo()
 
 ```lua
 C_Tutorial.ReturnToTutorialArea()
+```
+
+### SendTutorialStartButtonTelem
+
+```lua
+C_Tutorial.SendTutorialStartButtonTelem(skipTutorial: bool)
 ```
 
 ## Events

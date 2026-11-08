@@ -1,6 +1,6 @@
 # Undocumented functions
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
 These `C_*` functions exist in the running client but carry no entry in
 Blizzard's documentation tables. Calling them means guessing at the
@@ -8,7 +8,7 @@ signature -- and `C_Housing.GetMaxHouseLevel` proved a documented function
 can still crash the client, so an undocumented one deserves more caution,
 not less.
 
-**627** functions.
+**624** functions.
 
 ```
 C_AccountServices.GetPreferredDatacenterLocalities
@@ -34,9 +34,6 @@ C_AdventureMap.Close
 C_AdventureMap.GetMapID
 C_AdventureMap.GetMapInsetDetailTileInfo
 C_AdventureMap.GetMapInsetInfo
-C_AdventureMap.GetNumMapInsets
-C_AdventureMap.GetNumQuestOffers
-C_AdventureMap.GetNumZoneChoices
 C_AdventureMap.GetQuestInfo
 C_AdventureMap.GetQuestOfferInfo
 C_AdventureMap.GetZoneChoiceInfo

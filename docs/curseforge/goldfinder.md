@@ -1,50 +1,130 @@
-**GoldFinder** adds a **GoldFinder** tab to the auction house that finds crafting materials listed well below their usual price. Click a deal and it opens in the Buy tab, ready to buy.
+# GoldFinder — Smart Auction House Deal Hunter & Trading Suite
 
-## How it works
+**GoldFinder** adds a dedicated, non-intrusive **GoldFinder** tab to the World of Warcraft Auction House that detects crafting materials, trade goods, and high-value items listed well below their typical market value. Built for goblins, crafters, and everyday players looking to maximize profit without wasting time.
 
-1. **Scan as you normally do.** Run Auctionator's Full Scan, or search the Buy tab. GoldFinder never searches the auction house itself — it quietly records the results of scans you already run, so it never uses up the scan cooldown.
-2. **GoldFinder builds a price history** for trade goods and reagents: the lowest listing each time it sees them.
-3. **Open the GoldFinder tab.** Any material listed **at least 30% below** its typical price shows up, deepest discount first, with its current lowest price, typical price, discount and quantity listed.
-4. **Click a deal** to open its listings in Blizzard's Buy tab. You buy there, with Blizzard's own confirmation.
+---
 
-Hover a deal for its prices; hover the grey line at the bottom of the tab for details of the last scan.
+## Why GoldFinder?
 
-## What counts as a deal
+1. **Zero Scan Cooldown Waste:** GoldFinder never triggers auction searches on its own or steals your scan cooldown. It quietly hooks into scans and searches you already run (such as Auctionator's Full Scan or normal Buy tab browsing) and continuously builds a local pricing intelligence database.
+2. **Peaceful Tab Coexistence:** Integrated via **LibAHTab**, GoldFinder cleanly docks alongside Blizzard's native tabs and other auction house addons without overlapping, fighting for frame focus, or tainting the UI.
+3. **Evidence-Based Pricing:** Never falls for bait listings or manipulated 1-copper traps. GoldFinder evaluates market depth and historical median trajectories across multiple distinct sightings before judging an item as a deal.
 
-- **Typical price** is the median of an item's *earlier* prices, so one listing at 1 copper or 999 gold barely moves it, and a new cheap listing cannot drag its own baseline down.
-- An item needs **three earlier prices**, taken at least 10 minutes apart, before it can be judged. Your first few scans show "Building price history" instead of a list — that is expected.
-- An item not seen in the **last 30 minutes** is not judged; it has probably sold.
+---
 
-## Tested, and not yet tested
+## Key Features
 
-Tested on **WoW: Forever build 70009**: the tab sits alongside Auctionator's tabs without overlapping, prices are recorded from Auctionator's Full Scan, deals are listed from real scans, and buying from a clicked deal works.
+### 💎 Smart Deal Radar & Valuation Models
+- **Historical Median & Alternative Valuation Engines:** Evaluates baselines using Standard Median, 10% Trimmed Mean (filtering erratic outliers), or 7-Day Exponential Moving Average (EMA). Switch models anytime in Options.
+- **True Net Profit Calculations:** Automatically deducts Blizzard's 5% auction house cut from flip profit calculations (`((Typical * 0.95) - LowestNow) * Quantity`).
+- **Statistical Confidence Scores:** Categorizes markets into `[HIGH]`, `[MED]`, and `[THIN]` confidence tiers based on sample size and price variance to protect against low-liquidity traps.
+- **Visual Tier Badges:** Instantly spot game-changing bargains with Epic Purple `[SNIPE]` highlights, Rare Blue `[GREAT]` value tags, and sound chimes.
 
-**Please check a deal in the Buy tab before buying it.** On a small beta market, three earlier scans can make a normal price swing look like a bargain. A click takes you straight there.
+### ⚡ Live Snipe Mode & Audio Alarms
+- **Background Snipe Watcher:** Turn on Snipe Mode (`/gf snipe`) while browsing to instantly trigger audio alarms (`SOUNDKIT.RAID_WARNING`), screen banners, and Epic chat alerts when high-margin "Mega Snipes" hit the market.
+- **Customizable Snipe Thresholds:** Configure minimum profit (e.g. 100g) or discount thresholds (e.g. 70%) via `/gf snipethreshold <amt>`.
 
-Not yet measured: whether prices for materials that are *not* commodities are per unit or per stack.
+### 🛒 One-Click Quick-Buy & Multi-Item Staging Cart
+- **Direct Commodity Quick-Buy:** Shift-Left-Click any commodity deal row to buy instantly without switching to the Blizzard Buy tab.
+- **Batch Staging Cart:** Alt-Left-Click deals to stage them into your `[ Cart (N) ]`. Review aggregate purchase costs, projected net flip profits, and execute batch purchases sequentially with automated spend cap protections.
 
-## Compatibility
+### 🏷️ Blizzard Sell Tab Price Helper
+- **Smart Selling Popout Card:** When dragging an item into Blizzard's Sell tab (`ItemSellFrame` or `CommoditiesSellFrame`), GoldFinder docks a neat market evaluation card.
+- **Instant Price Autofill:** Displays historical median price, lowest current AH buyout, and market trajectory (Rising, Steady, Falling) with one-click quick-fill buttons: `[-1c Cut]`, `[Match]`, and `[Typical]`.
 
-- **WoW: Forever only** (Interface 16001).
-- Works alongside Auctionator (tested): GoldFinder shares the auction house tab row through LibAHTab instead of drawing over other addons' tabs. It is also built to warn you if an addon adds a tab without that library, where tabs could overlap — not yet seen, since no such addon was installed.
-- GoldFinder is not based on Auctionator and contains none of its code.
+### 🔨 Crafting Arbitrage & Undercut Detection
+- **Reagent Crafting Arbitrage:** Detects profitable crafting conversions (Smelting ores, Tailoring cloth bolts, Alchemy transmutes) where crafted output value exceeds total material input costs.
+- **Vendor Reagent Integration:** Injects fixed NPC vendor costs (Flux, Coal, Thread, Vials) to avoid overpaying on the AH.
+- **Active Undercut Monitor:** Cross-checks your active auctions (`C_AuctionHouse.GetOwnedAuctions()`) against current lowest browse prices on the `[ Undercuts ]` tab with 1-click cancel.
 
-## Roadmap and Feature Backlog
+### 📬 Mailbox Collector & Goblin P&L Accounting Ledger
+- **One-Click Deal Collector:** Adds a native `[ Collect Deals (N) ]` button to the mailbox to safely retrieve won items and record acquisition costs.
+- **Realized Profit & Loss (P&L) Ledger:** Comprehensive financial dashboard (`/gf ledger` or `/gf pnl`) displaying Lifetime Net Profit, Average Flip ROI %, Total Flips, Top 3 Flips, and a searchable transaction log with hover breakdowns and CSV spreadsheet export.
+- **Expired Auction Relist Advisor:** Classifies returned mail into actionable guidance (`[RELIST]`, `[HOLD - BELOW COST]`, `[WAIT - UNDERCUT WAVE]`).
 
-Active feature requests and enhancements are tracked on GitHub:
-- **Net Profit & Flip Value Display:** Calculating potential gold gains after deducting the 5% AH cut ([#10](https://github.com/justadakaje/wow-addons/issues/10))
-- **Configurable Deal Thresholds:** Custom discount % and history scan sensitivity ([#11](https://github.com/justadakaje/wow-addons/issues/11))
-- **Category Filters & Watchlist:** Filtering by trade good subclass (Herbs, Ore, Cloth, etc.) and starred items ([#12](https://github.com/justadakaje/wow-addons/issues/12))
-- **Deal Alert Notifications:** Audio chime and chat summary when scans find deals ([#13](https://github.com/justadakaje/wow-addons/issues/13))
-- **Direct Commodity Quick-Buy:** Shift-Click instant purchase for fast-moving commodity deals ([#14](https://github.com/justadakaje/wow-addons/issues/14))
-- **Price Trend Indicator:** Distinguish between genuine dips and crashing markets ([#15](https://github.com/justadakaje/wow-addons/issues/15))
-- **Tooltip Price Integration:** Show GoldFinder typical and lowest seen prices on item tooltips in bags/vendors ([#16](https://github.com/justadakaje/wow-addons/issues/16))
-- **Undercut Detection:** Check active player auctions against current lowest prices ([#17](https://github.com/justadakaje/wow-addons/issues/17))
-- **Crafting Conversion Profitability:** Reagent cost vs. crafted item sell value (smelting, milling, etc.) ([#18](https://github.com/justadakaje/wow-addons/issues/18))
-- **Data Hygiene & CSV Export:** Prune old records and export pricing data to spreadsheets ([#19](https://github.com/justadakaje/wow-addons/issues/19))
+### ⚙️ HUD Edit Mode-Style Profiles & Maintenance
+- **Character-Specific & Account-Wide Profiles:** Switch between global settings and character-specific profiles with one click, mirroring WoW's native HUD Edit Mode architecture.
+- **Base64 Profile Sharing:** Export and import full configurations, custom material categories, and watchlists via copy-pasteable strings (`/gf profile export|import`).
+- **Automated Database Vacuum:** Built-in compaction engine prunes stale sightings (>30 days) and caps historical arrays every 7 days, keeping SavedVariables storage featherweight (<2MB).
+- **Multi-Account DB Merger:** Ingest scan dumps across accounts (`/gf merge`) without losing local history.
+- **Dedicated Chat Tab:** Route all notifications, deals, and snipes into a dedicated "GoldFinder" chat tab (`/gf chat tab`).
 
-## Credits and licence
+---
 
-MIT licensed. The tab uses [LibAHTab](https://github.com/TheMouseNest/LibAHTab) (MIT) and LibStub, both included. The source and the issue tracker are on GitHub — see the project links.
+## In-Game Screenshots
 
-Not affiliated with Blizzard Entertainment.
+<p align="center">
+  <img src="https://raw.githubusercontent.com/justadakaje/wow-addons/master/addons/GoldFinder/assets/GoldFinder-AH-Tab.png" alt="GoldFinder AH Tab" width="700">
+  <br><em>Main GoldFinder Tab featuring category sub-tabs (Herbs, Mining, Cloth, Leather, Crafts, Undercuts, Watchlist), live search, and visual tier highlights</em>
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/justadakaje/wow-addons/master/addons/GoldFinder/assets/GoldFinder-AH-Tab_ItemHover.png" alt="Deal Details Tooltip" width="700">
+  <br><em>Rich deal inspection tooltip showing Deal Tier, 5% AH cut profit calculation, and historical trajectory</em>
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/justadakaje/wow-addons/master/addons/GoldFinder/assets/GoldFinder-AH-Tab_StatsHover.png" alt="Market Statistics Tooltip" width="700">
+  <br><em>Market statistics and scan database health hover</em>
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/justadakaje/wow-addons/master/addons/GoldFinder/assets/AH-FullScan-GoldFinderChatAlert-MegaSnipe.png" alt="Mega Snipe Alert" width="700">
+  <br><em>Instant high-urgency Mega Snipe alerts with RaidWarning banners and audio chimes</em>
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/justadakaje/wow-addons/master/addons/GoldFinder/assets/AddOn%20List.png" alt="Native AddOn List Categorization" width="700">
+  <br><em>Cleanly organized under Blizzard's native Auctions category alongside Auctionator</em>
+</p>
+
+---
+
+## Supported Game Clients
+
+GoldFinder is engineered for multi-client compatibility with zero code duplication:
+
+- **WoW: Forever** (Interface `16001`) — Full modern AH compatibility.
+- **Classic Era & Season of Discovery** (Interface `11506`–`11509`, `20506`).
+- **Retail / The War Within / Midnight** (Interface `110007`–`110200`, `120100`).
+- **Mists of Pandaria Classic** (Interface `50400`–`50504`).
+
+---
+
+## Supported Languages
+
+Full native translation and localized category filtering across 8 languages:
+- **English** (`enUS` / `enGB`)
+- **German** (`deDE`)
+- **French** (`frFR`)
+- **Spanish** (`esES` / `esMX`)
+- **Simplified Chinese** (`zhCN`)
+- **Traditional Chinese** (`zhTW`)
+- **Korean** (`koKR`)
+- **Russian** (`ruRU`)
+
+---
+
+## Quick Slash Command Reference
+
+| Command | Action |
+| :--- | :--- |
+| `/gf` or `/goldfinder` | Opens the graphical Options & Settings window |
+| `/gf tour` | Starts the interactive 6-step feature onboarding walkthrough |
+| `/gf ledger` or `/gf pnl` | Opens the Realized Profit & Loss Goblin Ledger |
+| `/gf cart` | Opens the Multi-Item Quick-Buy Staging Cart |
+| `/gf snipe [on\|off]` | Toggles live background Snipe Mode |
+| `/gf info` or `/gf about` | Opens the Journalator-style project info and diagnostics dashboard |
+| `/gf chat tab` | Toggles routing messages to a dedicated "GoldFinder" chat tab |
+| `/gf profile [export\|import]` | Opens the Base64 profile sharing dialog |
+| `/gf vacuum [days]` | Runs manual database compaction and pruning |
+| `/gf bench` / `/gf memory` | Runs real-time GC benchmarks and memory diagnostics |
+
+---
+
+## Credits & License
+
+- **Author:** justadakaje
+- **License:** MIT License
+- **Vendored Libraries:** Includes [LibAHTab](https://github.com/TheMouseNest/LibAHTab) (MIT), LibStub, LibDataBroker-1.1, and LibDBIcon-1.0.
+- **Independence:** GoldFinder is 100% standalone and is not affiliated with Blizzard Entertainment or Auctionator.

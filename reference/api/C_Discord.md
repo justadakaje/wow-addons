@@ -1,8 +1,8 @@
 # C_Discord
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
-`20` functions - `6` events
+`21` functions - `6` events
 
 > Generated from the live client by `scripts/extract-api.js`. Do not edit.
 
@@ -23,13 +23,13 @@ C_Discord.GetDiscordChannelName(serverIndex: luaIndex, channelIndex: luaIndex) -
 ### GetDiscordUserID
 
 ```lua
-C_Discord.GetDiscordUserID() -> userID: DiscordID
+C_Discord.GetDiscordUserID() -> userID: DiscordMemberOpaqueID
 ```
 
 ### GetDiscordUserName
 
 ```lua
-C_Discord.GetDiscordUserName(userID: DiscordID) -> userName: KStringDiscordUserName
+C_Discord.GetDiscordUserName(userID: DiscordMemberOpaqueID) -> userName: KStringDiscordUserName
 ```
 
 ### GetDisplayNameType
@@ -102,6 +102,12 @@ C_Discord.IsGuildSettingSet(setting: DiscordGuildSettings) -> isSet: bool
 
 ```lua
 C_Discord.IsUserOAuthed() -> hasOAuth: bool
+```
+
+### IsVoiceEnabled
+
+```lua
+C_Discord.IsVoiceEnabled() -> enabled: bool
 ```
 
 ### RefreshAuth

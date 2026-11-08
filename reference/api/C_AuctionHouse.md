@@ -1,8 +1,8 @@
 # C_AuctionHouse
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
-`85` functions - `47` events
+`86` functions - `47` events
 
 > Generated from the live client by `scripts/extract-api.js`. Do not edit.
 
@@ -168,6 +168,12 @@ C_AuctionHouse.GetItemKeyInfo(itemKey: ItemKey, restrictQualityToFilter: bool) -
 
 ```lua
 C_AuctionHouse.GetItemKeyRequiredLevel(itemKey: ItemKey) -> requiredLevel: number
+```
+
+### GetItemKeySampleLink
+
+```lua
+C_AuctionHouse.GetItemKeySampleLink(itemKey: ItemKey) -> sampleItemLink?: string
 ```
 
 ### GetItemSearchResultInfo

@@ -1,6 +1,6 @@
 # C_LFGList
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
 `52` functions - `17` events
 
@@ -435,7 +435,7 @@ payload: searchResultID: number
 Fires as `LFG_LIST_SHOW_SEARCH`.
 
 ```lua
-payload: activityIDsFilter?: table
+payload: activityIDsFilter?: table, showAllLevelRanges: bool
 ```
 
 ### LfgListUpdateSearchResults

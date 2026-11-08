@@ -1,8 +1,8 @@
 # C_BattleNet
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
-`32` functions - `0` events
+`36` functions - `0` events
 
 > Generated from the live client by `scripts/extract-api.js`. Do not edit.
 
@@ -18,6 +18,12 @@ C_BattleNet.AreFriendTagsEnabled() -> areFriendTagsEnabled: bool
 
 ```lua
 C_BattleNet.AreHighResTexturesInstalled() -> installed: bool
+```
+
+### AreRealIDFriendsEnabled
+
+```lua
+C_BattleNet.AreRealIDFriendsEnabled() -> areRealIDFriendsEnabled: bool
 ```
 
 ### AreTitleFriendCustomNamesEnabled
@@ -68,6 +74,12 @@ C_BattleNet.GetAccountInfoByID(id: number, wowAccountGUID?: WOWGUID) -> accountI
 C_BattleNet.GetCustomTitleFriendName(id: number) -> customName: string
 ```
 
+### GetDefaultTitleWhisperTarget
+
+```lua
+C_BattleNet.GetDefaultTitleWhisperTarget(id: number) -> whisperTarget: string
+```
+
 ### GetFriendAccountInfo
 
 ```lua
@@ -84,6 +96,12 @@ C_BattleNet.GetFriendGameAccountInfo(friendIndex: luaIndex, accountIndex: luaInd
 
 ```lua
 C_BattleNet.GetFriendInviteInfo(inviteIndex: luaIndex) -> inviteInfo?: BNetFriendInviteInfo
+```
+
+### GetFriendLevelFromInviteText
+
+```lua
+C_BattleNet.GetFriendLevelFromInviteText(inviteText: cstring) -> friendLevel: BattleNetFriendLevel
 ```
 
 ### GetFriendNumGameAccounts
@@ -174,6 +192,12 @@ C_BattleNet.SetAFK(isAFK: bool)
 
 ```lua
 C_BattleNet.SetAppearOffline(isAppearOffline: bool)
+```
+
+### SetBlocked
+
+```lua
+C_BattleNet.SetBlocked(bnetAccountID: number, block: bool)
 ```
 
 ### SetCustomMessage
