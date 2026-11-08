@@ -36,6 +36,15 @@ jobs:
           npm install --no-save --no-audit --no-fund luaparse
           node scripts/check-lua.js
 
+      - name: Setup Lua 5.1 & Testing Toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.1 liblua5.1-0-dev luarocks lua-check
+          sudo luarocks --lua-version=5.1 install busted
+
+      - name: Run Addon QA Suite (Luacheck & Busted)
+        run: bash scripts/run-tests.sh
+
       - name: Run per-addon test suites (if present)
         shell: bash
         run: |

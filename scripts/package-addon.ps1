@@ -45,7 +45,7 @@ $ErrorActionPreference = "Stop"
 # author to run deliberately and a bad thing for a curious user to discover in
 # a command list. Its findings are already recorded in the README, so shipping
 # it buys nothing and costs a crash report we cannot reproduce.
-$DEV_ONLY = @("Probe.lua")
+$DEV_ONLY = @("Probe.lua", "tests", ".busted")
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $srcDir   = Join-Path $repoRoot "addons\$Addon"
@@ -84,7 +84,7 @@ try {
         foreach ($name in $DEV_ONLY) {
             $p = Join-Path $stageAddon $name
             if (Test-Path -LiteralPath $p) {
-                Remove-Item -LiteralPath $p -Force
+                Remove-Item -LiteralPath $p -Recurse -Force
                 $dropped += $name
             }
         }
