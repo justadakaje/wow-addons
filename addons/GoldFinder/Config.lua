@@ -9,6 +9,13 @@ local ADDON, ns = ...
 
 local configFrame = nil
 local isRefreshing = false
+local statusText = nil
+
+local function NotifySettingSaved(desc)
+    if statusText and desc then
+        statusText:SetText(("|cff40ff40✔ Saved: %s|r"):format(desc))
+    end
+end
 
 -- Slider and control references for programmatic refresh
 local controls = {}
@@ -220,6 +227,10 @@ local function RefreshControls()
         controls.costBasisCb:SetChecked(cb == true)
     end
 
+    if statusText then
+        statusText:SetText("|cff40ff40● All settings saved and active|r")
+    end
+
     isRefreshing = false
 end
 
@@ -265,6 +276,7 @@ local function ResetDefaults()
     end
 
     RefreshControls()
+    NotifySettingSaved("All settings restored to defaults")
     if ns.RefreshPanel then ns.RefreshPanel() end
     ns.Good("GoldFinder options restored to default values.")
 end
@@ -342,6 +354,7 @@ local function CreateConfigFrameOnce()
                 ns.db.discountThreshold = val / 100
                 if ns.db.settings then ns.db.settings.discountThreshold = val / 100 end
             end
+            NotifySettingSaved(("Discount threshold set to %d%%"):format(val))
             if ns.RefreshPanel then ns.RefreshPanel() end
         end
     )
@@ -362,6 +375,7 @@ local function CreateConfigFrameOnce()
                 ns.db.minScans = val
                 if ns.db.settings then ns.db.settings.minScans = val end
             end
+            NotifySettingSaved(("Minimum prior scans set to %d"):format(val))
             if ns.RefreshPanel then ns.RefreshPanel() end
         end
     )
@@ -387,6 +401,8 @@ local function CreateConfigFrameOnce()
                 ns.db.minProfit = copper
                 if ns.db.settings then ns.db.settings.minProfit = copper end
             end
+            local desc = (val <= 0) and "Profit floor disabled" or ("Min profit floor set to " .. ns.Money(copper))
+            NotifySettingSaved(desc)
             if ns.RefreshPanel then ns.RefreshPanel() end
         end
     )
@@ -411,6 +427,8 @@ local function CreateConfigFrameOnce()
                 ns.db.spendCap = copper
                 if ns.db.settings then ns.db.settings.spendCap = copper end
             end
+            local desc = (val <= 0) and "Spend cap unlimited" or ("Spend cap set to " .. val .. " Gold")
+            NotifySettingSaved(desc)
             if ns.RefreshPanel then ns.RefreshPanel() end
         end
     )
@@ -441,6 +459,7 @@ local function CreateConfigFrameOnce()
                 if ns.db.settings then ns.db.settings.minConfidence = opt.key end
             end
             SetButtonGroupActive(controls.confButtons, opt.key)
+            NotifySettingSaved("Confidence rating set to " .. opt.label)
             if ns.RefreshPanel then ns.RefreshPanel() end
         end)
         btn:SetScript("OnEnter", function(self)
@@ -473,6 +492,7 @@ local function CreateConfigFrameOnce()
         btn:SetScript("OnClick", function()
             ns.SetValuationModel(opt.key)
             SetButtonGroupActive(controls.valModelButtons, opt.key)
+            NotifySettingSaved("Valuation baseline set to " .. opt.label)
             if ns.RefreshPanel then ns.RefreshPanel() end
         end)
         btn:SetScript("OnEnter", function(self)
@@ -520,6 +540,7 @@ local function CreateConfigFrameOnce()
                     ns.db.alertSound = "none"
                     if ns.db.settings then ns.db.settings.soundName = "none" end
                 end
+                NotifySettingSaved("Audio alerts muted (None)")
             else
                 ns.SetSoundAlert(true)
                 ns.SetSoundChoice(opt.key)
@@ -531,6 +552,7 @@ local function CreateConfigFrameOnce()
                 if info and info.id and type(PlaySound) == "function" then
                     pcall(PlaySound, info.id)
                 end
+                NotifySettingSaved("Audio alert set to " .. opt.label)
             end
             SetButtonGroupActive(controls.soundButtons, opt.key)
         end)
@@ -574,6 +596,7 @@ local function CreateConfigFrameOnce()
                 ns.db.soundThrottle = val
                 if ns.db.settings then ns.db.settings.soundThrottle = val end
             end
+            NotifySettingSaved(("Audio cooldown set to %ds"):format(val))
         end
     )
     controls.throttleSlider:SetSize(250, 16)
@@ -598,6 +621,7 @@ local function CreateConfigFrameOnce()
                 ns.db.factionShare = checked
                 if ns.db.settings then ns.db.settings.factionShare = checked end
             end
+            NotifySettingSaved("Cross-faction sharing " .. (checked and "enabled" or "disabled"))
         end
     )
     controls.crossFactionCb:SetPoint("TOPLEFT", 28, -424)
@@ -616,6 +640,7 @@ local function CreateConfigFrameOnce()
                 GoldFinderDB.minimap = GoldFinderDB.minimap or {}
                 GoldFinderDB.minimap.hide = not checked
             end
+            NotifySettingSaved("Minimap button " .. (checked and "shown" or "hidden"))
         end
     )
     controls.minimapCb:SetPoint("TOPLEFT", 28, -452)
@@ -630,6 +655,7 @@ local function CreateConfigFrameOnce()
             if ns.SetSellHelperEnabled then
                 ns.SetSellHelperEnabled(checked)
             end
+            NotifySettingSaved("Sell tab price helper " .. (checked and "enabled" or "disabled"))
         end
     )
     controls.sellHelperCb:SetPoint("TOPLEFT", 330, -424)
@@ -663,6 +689,7 @@ local function CreateConfigFrameOnce()
             if ns.SetMailCollector then
                 ns.SetMailCollector(checked)
             end
+            NotifySettingSaved("Mailbox deal collector " .. (checked and "enabled" or "disabled"))
         end
     )
     controls.mailCollectorCb:SetPoint("TOPLEFT", 28, -482)
@@ -677,6 +704,7 @@ local function CreateConfigFrameOnce()
             if ns.SetCostBasisTooltip then
                 ns.SetCostBasisTooltip(checked)
             end
+            NotifySettingSaved("Cost basis tooltips " .. (checked and "enabled" or "disabled"))
         end
     )
     controls.costBasisCb:SetPoint("TOPLEFT", 330, -482)
@@ -737,11 +765,29 @@ local function CreateConfigFrameOnce()
     end)
     resetBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    local bottomCloseBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    bottomCloseBtn:SetSize(100, 24)
-    bottomCloseBtn:SetPoint("BOTTOMRIGHT", -28, 20)
-    bottomCloseBtn:SetText("Close")
-    bottomCloseBtn:SetScript("OnClick", function() f:Hide() end)
+    statusText = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    statusText:SetPoint("BOTTOMLEFT", resetBtn, "BOTTOMRIGHT", 16, 4)
+    statusText:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -150, 24)
+    statusText:SetJustifyH("CENTER")
+    statusText:SetText("|cff40ff40● All settings saved and active|r")
+
+    local saveCloseBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    saveCloseBtn:SetSize(120, 24)
+    saveCloseBtn:SetPoint("BOTTOMRIGHT", -28, 20)
+    saveCloseBtn:SetText("Save & Close")
+    saveCloseBtn:SetScript("OnClick", function()
+        f:Hide()
+        if ns.RefreshPanel then ns.RefreshPanel() end
+        ns.Good("GoldFinder: Settings saved and applied.")
+    end)
+    saveCloseBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("Save & Close", 1, 0.82, 0)
+        GameTooltip:AddLine("Confirm all active settings and close the configuration window.", 1, 1, 1, true)
+        GameTooltip:AddLine("All choices are immediately active and persist across sessions.", 0.7, 0.7, 0.7)
+        GameTooltip:Show()
+    end)
+    saveCloseBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     f:SetScript("OnShow", RefreshControls)
 
