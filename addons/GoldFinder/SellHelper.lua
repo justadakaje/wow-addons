@@ -321,9 +321,10 @@ local function UpdateHelper(sellFrame, itemLocation)
     end
 end
 
+local hookedSellFrames = {}
 local function HookSellFrame(frame)
-    if not frame or frame._gfHooked then return end
-    frame._gfHooked = true
+    if not frame or hookedSellFrames[frame] then return end
+    hookedSellFrames[frame] = true
 
     if frame.SetItem then
         hooksecurefunc(frame, "SetItem", function(self, itemLocation)

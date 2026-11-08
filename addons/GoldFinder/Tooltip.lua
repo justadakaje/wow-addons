@@ -22,8 +22,11 @@ local function AddPriceLines(tip, itemID)
     local cost = ns.GetCostBasis and ns.GetCostBasis(itemID)
     local hasHistory = rec and rec.history and #rec.history > 0
     local hasCost = cost and cost.totalQty and cost.totalQty > 0 and (ns.IsCostBasisTooltipEnabled and ns.IsCostBasisTooltipEnabled())
+    local vInfo = ns.GetVendorReagent and ns.GetVendorReagent(itemID)
+    local restockTarget = ns.GetRestockLevel and ns.GetRestockLevel(itemID)
+    local advice = (MailFrame and MailFrame:IsShown() and ns.EvaluateExpiredAuction) and ns.EvaluateExpiredAuction(itemID)
 
-    if not hasHistory and not hasCost then return end
+    if not hasHistory and not hasCost and not vInfo and not restockTarget and not advice then return end
 
     local typical = nil
     tip:AddLine(" ")
@@ -89,16 +92,11 @@ local function AddPriceLines(tip, itemID)
     end
 
     -- Mailbox expired auction relist advisor (#43)
-    if MailFrame and MailFrame:IsShown() and ns.EvaluateExpiredAuction then
-        local advice = ns.EvaluateExpiredAuction(itemID)
-        if advice then
-            tip:AddLine(" ")
-            tip:AddDoubleLine("GoldFinder Relist Advisor:", advice.tag, 1, 0.82, 0, advice.r, advice.g, advice.b)
-            tip:AddLine(advice.reason, 0.85, 0.85, 0.85, true)
-        end
+    if advice then
+        tip:AddLine(" ")
+        tip:AddDoubleLine("GoldFinder Relist Advisor:", advice.tag, 1, 0.82, 0, advice.r, advice.g, advice.b)
+        tip:AddLine(advice.reason, 0.85, 0.85, 0.85, true)
     end
-
-    tip:Show()
 end
 
 local function OnTooltipSetItem(tip)
