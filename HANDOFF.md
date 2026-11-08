@@ -824,3 +824,9 @@ Populated across GitHub Issues #36 through #53:
 * **#53:** Memory profiling, GC tuning & benchmark certification (< 5MB working set).
 * **#54:** Info & About dashboard (`/gf info`) with metadata, copyable Discord/GitHub links, translator credits, and options shortcut.
 
+## Future Projects Backlog
+
+### BiSFinder: Best-in-Slot BoE Arbitrage & Scarcity Radar
+* **#55 ([Issue #55](https://github.com/justadakaje/wow-addons/issues/55)):** Standalone companion addon (`addons/BiSFinder/`) in collaboration with Will Yoakum (@wyoakum). Bridges static Best-in-Slot (BiS) equipment rankings (Phase, Pre-Raid, Twink) with live Auction House pricing. Features scarcity/monopoly radar (alerts when 0 active AH listings exist for held BoEs), high-value snipe engine, character gear upgrade shopping list, and native two-way integration with GoldFinder (`[ BiS BoEs ]` category tab). Planned for post-v1.0.0 development.
+
+
