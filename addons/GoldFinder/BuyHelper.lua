@@ -26,6 +26,10 @@ function ns.SetBuyHelperEnabled(val)
     end
 end
 
+function ns.GetCurrentBuyHelperItemID()
+    return currentItemID
+end
+
 ---------------------------------------------------------------------------
 -- Conversion Lookups
 ---------------------------------------------------------------------------

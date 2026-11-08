@@ -3,7 +3,7 @@
 
 local ADDON, ns = ...
 
-_G.BiSGearFinder = ns
+rawset(_G, "BiSGearFinder", ns)
 
 local PREFIX = "|cffffd100BiSGearFinder:|r "
 

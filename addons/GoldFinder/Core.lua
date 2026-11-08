@@ -985,7 +985,7 @@ function ns.SetFactionShareEnabled(val)
         ns.db.items = rData.factions[fKey].items
         ns.db.scans = rData.factions[fKey].scans
     else
-        db = ns.db
+        local db = ns.db
         db.items = rData.items
         db.scans = rData.scans
     end
@@ -1635,7 +1635,10 @@ SlashCmdList["GOLDFINDER"] = function(msg)
             idStr, rest = rest:match("^(%d+)%s*(.*)$")
             itemID = tonumber(idStr)
         end
-        local qtyStr, maxStr = rest and rest:match("^%s*(%d+)%s*(.*)$")
+        local qtyStr, maxStr
+        if rest then
+            qtyStr, maxStr = rest:match("^%s*(%d+)%s*(.*)$")
+        end
         local qty = tonumber(qtyStr)
         if itemID and qty and qty > 0 then
             local maxPrice = (maxStr and maxStr ~= "") and ns.ParseMoneyString(maxStr) or nil
@@ -1990,18 +1993,27 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         end
     elseif cmd == "vacuum" or cmd == "compact" then
         local days = tonumber(arg) or 30
-        local ok, msg = ns.VacuumDatabase and ns.VacuumDatabase({ retentionDays = days, maxHistory = 30 })
+        local ok, vacMsg
+        if ns.VacuumDatabase then
+            ok, vacMsg = ns.VacuumDatabase({ retentionDays = days, maxHistory = 30 })
+        end
         if ok then
-            ns.Good(msg)
+            ns.Good(vacMsg or "Vacuum complete.")
         else
-            ns.Bad("Vacuum failed: " .. tostring(msg))
+            ns.Bad("Vacuum failed: " .. tostring(vacMsg))
         end
     elseif cmd == "merge" then
         if arg and arg ~= "" then
-            local decoded, err = ns.DecodeProfileString and ns.DecodeProfileString(arg)
+            local decoded, err
+            if ns.DecodeProfileString then
+                decoded, err = ns.DecodeProfileString(arg)
+            end
             if decoded then
-                local ok, msg = ns.MergeScanDatabase and ns.MergeScanDatabase(decoded)
-                if ok then ns.Good(msg) else ns.Bad("Merge failed: " .. tostring(msg)) end
+                local ok, mergeMsg
+                if ns.MergeScanDatabase then
+                    ok, mergeMsg = ns.MergeScanDatabase(decoded)
+                end
+                if ok then ns.Good(mergeMsg or "Merge complete.") else ns.Bad("Merge failed: " .. tostring(mergeMsg)) end
             else
                 ns.Bad("Could not parse merge data string: " .. tostring(err))
             end
@@ -2018,7 +2030,10 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         local mem = (GetAddOnMemoryUsage and GetAddOnMemoryUsage("GoldFinder")) or 0
         local memStr = (mem > 1024) and ("%.2f MB"):format(mem / 1024) or ("%.1f KB"):format(mem)
         local start = debugprofilestop and debugprofilestop() or 0
-        local deals, status = ns.FindDeals and ns.FindDeals()
+        local deals, status
+        if ns.FindDeals then
+            deals, status = ns.FindDeals()
+        end
         local elapsed = (debugprofilestop and debugprofilestop() or 0) - start
         ns.Print("GoldFinder Performance Benchmark:")
         ns.Print("  - Memory Working Set: %s", memStr)

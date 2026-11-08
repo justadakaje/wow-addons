@@ -71,7 +71,7 @@ local function AddPriceLines(tip, itemID)
     end
 
     -- Fixed vendor reagent integration (#46)
-    local vInfo = ns.GetVendorReagent and ns.GetVendorReagent(itemID)
+    vInfo = ns.GetVendorReagent and ns.GetVendorReagent(itemID)
     if vInfo then
         tip:AddDoubleLine("GoldFinder Vendor Price:", ns.Money(vInfo.vendorPrice), 1, 0.82, 0, 0.25, 1, 0.25)
         local curPrice = (rec and rec.history and #rec.history > 0 and rec.history[#rec.history].min) or typical
@@ -82,7 +82,7 @@ local function AddPriceLines(tip, itemID)
     end
 
     -- Inventory restock safety target (#45)
-    local restockTarget = ns.GetRestockLevel and ns.GetRestockLevel(itemID)
+    restockTarget = ns.GetRestockLevel and ns.GetRestockLevel(itemID)
     if restockTarget and restockTarget > 0 then
         local currentStock = (C_Item and C_Item.GetItemCount and C_Item.GetItemCount(itemID, true)) or (GetItemCount and GetItemCount(itemID, true) or 0)
         local isLow = currentStock < restockTarget

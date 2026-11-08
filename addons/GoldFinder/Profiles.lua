@@ -530,9 +530,8 @@ maintenance:SetScript("OnEvent", function(self)
         -- Run auto-vacuum if > 7 days since last run
         if (now - lastVac) > (7 * 86400) then
             local ok, msg = ns.VacuumDatabase({ retentionDays = 30, maxHistory = 30 })
-            if ok then
-                -- Silent maintenance logging
-                -- print("|cff00ff00[GoldFinder]|r " .. msg)
+            if ok and ns.debug then
+                ns.Print("Auto-vacuum: " .. tostring(msg))
             end
         end
     end)

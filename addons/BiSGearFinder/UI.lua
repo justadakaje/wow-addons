@@ -336,7 +336,14 @@ local function CreateBrowserFrame()
                     ns.Good("Searching AH for item %d...", self.itemID)
                 end
             elseif self.itemID and ChatEdit_InsertLink then
-                local _, link = (GetItemInfo and GetItemInfo(self.itemID)) or (C_Item and C_Item.GetItemLink and C_Item.GetItemLink(ItemLocation:CreateFromBagAndSlot(0, 1)))
+                local link = nil
+                if GetItemInfo then
+                    local _
+                    _, link = GetItemInfo(self.itemID)
+                end
+                if not link and C_Item and C_Item.GetItemLinkByID then
+                    link = C_Item.GetItemLinkByID(self.itemID)
+                end
                 if link then ChatEdit_InsertLink(link) end
             end
         end)

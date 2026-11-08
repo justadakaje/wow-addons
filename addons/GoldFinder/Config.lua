@@ -391,7 +391,10 @@ local function CreateConfigFrameOnce()
     copyProfBtn:SetScript("OnClick", function()
         local isChar = ns.IsCharacterSpecificProfile and ns.IsCharacterSpecificProfile()
         if isChar then
-            local ok, err = ns.CopyProfile and ns.CopyProfile("Default")
+            local ok, err
+            if ns.CopyProfile then
+                ok, err = ns.CopyProfile("Default")
+            end
             if ok then
                 RefreshControls()
                 NotifySettingSaved("Copied settings from Default")
@@ -402,7 +405,10 @@ local function CreateConfigFrameOnce()
         else
             local charKey = ns.GetCharacterKey and ns.GetCharacterKey()
             if GoldFinderDB and GoldFinderDB.profiles and GoldFinderDB.profiles[charKey] then
-                local ok, err = ns.CopyProfile and ns.CopyProfile(charKey)
+                local ok, err
+                if ns.CopyProfile then
+                    ok, err = ns.CopyProfile(charKey)
+                end
                 if ok then
                     RefreshControls()
                     NotifySettingSaved("Copied settings from " .. ns.GetCharacterName())

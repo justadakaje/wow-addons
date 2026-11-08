@@ -12,7 +12,7 @@ local icon = LibStub and LibStub:GetLibrary("LibDBIcon-1.0", true)
 local dataObj = nil
 
 function ns.ShowBrokerTooltip(tip)
-    local allDeals, status = (ns.FindDeals and ns.FindDeals()) or {}
+    local allDeals = (ns.FindDeals and ns.FindDeals()) or {}
     tip:AddDoubleLine("|cffffd100GoldFinder|r", "v" .. (ns.version or "0.8.0"), 1, 0.82, 0, 0.7, 0.7, 0.7)
     tip:AddLine(" ")
 
