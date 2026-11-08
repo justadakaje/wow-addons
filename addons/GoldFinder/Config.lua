@@ -157,15 +157,15 @@ local function RefreshControls()
     controls.minScansSlider:SetValue(minScans)
     controls.minScansSlider.UpdateDisplay(minScans)
 
-    -- c) Minimum profit floor slider (0 - 50g)
+    -- c) Minimum profit floor slider (0 - 10g, step 1s)
     local minProfit = ns.GetMinProfit()
-    local profitGold = math.min(50, minProfit / 10000)
+    local profitGold = math.min(10, minProfit / 10000)
     controls.minProfitSlider:SetValue(profitGold)
     controls.minProfitSlider.UpdateDisplay(profitGold)
 
-    -- d) Spend cap slider (0 - 500g)
+    -- d) Spend cap slider (0 - 100g, step 10s)
     local maxSpend = ns.GetMaxQuickBuySpend()
-    local spendGold = math.min(500, maxSpend / 10000)
+    local spendGold = math.min(100, maxSpend / 10000)
     controls.spendCapSlider:SetValue(spendGold)
     controls.spendCapSlider.UpdateDisplay(spendGold)
 
@@ -382,20 +382,20 @@ local function CreateConfigFrameOnce()
     controls.minScansSlider:SetSize(250, 16)
     controls.minScansSlider:SetPoint("TOPLEFT", 330, -82)
 
-    -- c) Minimum Profit Floor input/slider (0 to 50g, step 0.5g = 50s)
+    -- c) Minimum Profit Floor input/slider (0 to 10g, step 0.01g = 1s)
     controls.minProfitSlider = CreateSlider(
         f,
         "Minimum Profit Floor",
-        0, 50, 0.5,
+        0, 10, 0.01,
         function(val)
             if val <= 0 then return "0 (Disabled)" end
-            local copper = math.floor(val * 10000)
+            local copper = math.floor(val * 10000 + 0.5)
             return ns.Money(copper)
         end,
         "Minimum Profit Floor",
-        "Filter out deals whose estimated net profit after AH cut is below this threshold.",
+        "Filter out deals whose estimated net profit after AH cut is below this threshold (0 = show all deals).",
         function(_, val)
-            local copper = math.floor(val * 10000)
+            local copper = math.floor(val * 10000 + 0.5)
             ns.SetMinProfit(copper)
             if ns.db then
                 ns.db.minProfit = copper
@@ -409,25 +409,26 @@ local function CreateConfigFrameOnce()
     controls.minProfitSlider:SetSize(250, 16)
     controls.minProfitSlider:SetPoint("TOPLEFT", 28, -134)
 
-    -- d) Buyout Spend Cap input/slider (0 to 500g, step 10g)
+    -- d) Buyout Spend Cap input/slider (0 to 100g, step 0.1g = 10s)
     controls.spendCapSlider = CreateSlider(
         f,
         "Quick-Buy Spend Cap",
-        0, 500, 10,
+        0, 100, 0.1,
         function(val)
             if val <= 0 then return "0 (Unlimited)" end
-            return ("%d Gold"):format(val)
+            local copper = math.floor(val * 10000 + 0.5)
+            return ns.Money(copper)
         end,
         "Quick-Buy Spend Cap",
         "Maximum purchase price permitted for one-click Quick-Buy commodity purchases (0 = unlimited).",
         function(_, val)
-            local copper = math.floor(val * 10000)
+            local copper = math.floor(val * 10000 + 0.5)
             ns.SetMaxQuickBuySpend(copper)
             if ns.db then
                 ns.db.spendCap = copper
                 if ns.db.settings then ns.db.settings.spendCap = copper end
             end
-            local desc = (val <= 0) and "Spend cap unlimited" or ("Spend cap set to " .. val .. " Gold")
+            local desc = (val <= 0) and "Spend cap unlimited" or ("Spend cap set to " .. ns.Money(copper))
             NotifySettingSaved(desc)
             if ns.RefreshPanel then ns.RefreshPanel() end
         end
