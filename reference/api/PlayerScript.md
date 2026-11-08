@@ -1,8 +1,8 @@
 # PlayerScript
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
-`185` functions - `2` events
+`190` functions - `2` events
 
 > Generated from the live client by `scripts/extract-api.js`. Do not edit.
 
@@ -302,6 +302,18 @@ GetExpertise() -> mainhandExpertise: number, offhandExpertise: number, rangedExp
 GetExpertisePercent() -> mainhandExpertisePercent: number, offhandExpertisePercent: number, rangedExpertisePercent: number
 ```
 
+### GetGlancingBlowChance
+
+```lua
+GetGlancingBlowChance(playerWeaponSkill?: number, targetDefenseSkill: number) -> result: number
+```
+
+### GetGlancingBlowPenalty
+
+```lua
+GetGlancingBlowPenalty(playerWeaponSkill?: number, targetDefenseSkill: number) -> result: number
+```
+
 ### GetHaste
 
 ```lua
@@ -398,6 +410,12 @@ GetMoney() -> result: number
 GetNormalizedRealmName() -> result: cstring
 ```
 
+### GetOffhandHitModifier
+
+```lua
+GetOffhandHitModifier() -> result: number
+```
+
 ### GetOverrideAPBySpellPower
 
 ```lua
@@ -420,6 +438,18 @@ GetParryChance() -> result: number
 
 ```lua
 GetParryChanceFromAttribute() -> result: number
+```
+
+### GetPetCritChance
+
+```lua
+GetPetCritChance() -> meleeCrit: number, spellCrit: number
+```
+
+### GetPetDodgeChance
+
+```lua
+GetPetDodgeChance() -> result: number
 ```
 
 ### GetPetHitChanceModifier
@@ -455,7 +485,7 @@ GetPlayerFacing() -> result?: number
 ### GetPlayerInfoByGUID
 
 ```lua
-GetPlayerInfoByGUID(guid: WOWGUID) -> localizedClass: cstring, englishClass: cstring, localizedRace: cstring, englishRace: cstring, sex: number, name: cstring, realmName: cstring, level?: number
+GetPlayerInfoByGUID(guid: WOWGUID) -> localizedClass: cstring, englishClass: cstring, localizedRace: cstring, englishRace: cstring, sex: number, name: string, realmName: cstring, level?: number
 ```
 
 ### GetPowerRegen

@@ -1,8 +1,8 @@
 # C_SecureTransfer
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
-`11` functions - `5` events
+`14` functions - `6` events
 
 > Generated from the live client by `scripts/extract-api.js`. Do not edit.
 
@@ -50,16 +50,22 @@ C_SecureTransfer.GetHousingPurchaseQuantity() -> quantity: number
 C_SecureTransfer.GetHousingVCPurchaseProductID() -> productID: number
 ```
 
-### GetMailInfo
+### GetMailReceiveInfo
 
 ```lua
-C_SecureTransfer.GetMailInfo() -> mailInfo: MailInfo
+C_SecureTransfer.GetMailReceiveInfo() -> mailInfo: MailReceiveInfo
+```
+
+### GetMailSendInfo
+
+```lua
+C_SecureTransfer.GetMailSendInfo() -> mailInfo: MailSendInfo
 ```
 
 ### GetTradePartner
 
 ```lua
-C_SecureTransfer.GetTradePartner() -> name?: cstring
+C_SecureTransfer.GetTradePartner() -> name?: string
 ```
 
 ### SendMail
@@ -72,6 +78,18 @@ C_SecureTransfer.SendMail()
 
 ```lua
 C_SecureTransfer.ShouldShowTradeOfferWarning() -> shouldShow: bool
+```
+
+### ShouldShowTradeRMTWarning
+
+```lua
+C_SecureTransfer.ShouldShowTradeRMTWarning() -> shouldShow: bool
+```
+
+### TakeMailMoney
+
+```lua
+C_SecureTransfer.TakeMailMoney()
 ```
 
 ## Events
@@ -91,6 +109,12 @@ No payload.
 ### SecureTransferConfirmSendMail
 
 Fires as `SECURE_TRANSFER_CONFIRM_SEND_MAIL`.
+
+No payload.
+
+### SecureTransferConfirmTakeMailMoney
+
+Fires as `SECURE_TRANSFER_CONFIRM_TAKE_MAIL_MONEY`.
 
 No payload.
 

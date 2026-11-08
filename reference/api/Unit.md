@@ -1,8 +1,8 @@
 # Unit
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
-`217` functions - `142` events
+`218` functions - `142` events
 
 > Generated from the live client by `scripts/extract-api.js`. Do not edit.
 
@@ -1187,7 +1187,7 @@ UnitSpellTargetClass(unit: UnitToken) -> classFilename: cstring
 ### UnitSpellTargetName
 
 ```lua
-UnitSpellTargetName(unit: UnitToken) -> targetName: cstring
+UnitSpellTargetName(unit: UnitToken) -> targetName: string
 ```
 
 ### UnitStagger
@@ -1254,6 +1254,12 @@ UnitTrialBankedLevels(unit: UnitToken) -> bankedLevels: number, xpIntoCurrentLev
 
 ```lua
 UnitTrialXP(unit: UnitToken) -> result: number
+```
+
+### UnitUsesAmmo
+
+```lua
+UnitUsesAmmo(unit: UnitToken) -> result: bool
 ```
 
 ### UnitUsingVehicle
@@ -1569,7 +1575,7 @@ payload: oldLevel: number, newLevel: number, real: bool
 Fires as `PLAYER_LEVEL_UP`.
 
 ```lua
-payload: level: number, healthDelta: number, powerDelta: number, numNewTalents: number, numNewPvpTalentSlots: number, strengthDelta: number, agilityDelta: number, staminaDelta: number, intellectDelta: number
+payload: level: number, healthDelta: number, powerDelta: number, numNewTalents: number, numNewPvpTalentSlots: number, strengthDelta: number, agilityDelta: number, staminaDelta: number, intellectDelta: number, spiritDelta: number
 ```
 
 ### PlayerMaxLevelUpdate

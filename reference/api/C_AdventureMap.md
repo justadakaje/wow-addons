@@ -1,8 +1,8 @@
 # C_AdventureMap
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
-`2` functions - `5` events
+`5` functions - `5` events
 
 > Generated from the live client by `scripts/extract-api.js`. Do not edit.
 
@@ -12,6 +12,24 @@ WoW: Forever 1.60.1 (build 69913) - Interface 16001
 
 ```lua
 C_AdventureMap.GetAdventureMapTextureKit() -> adventureMapTextureKit: textureKit
+```
+
+### GetNumMapInsets
+
+```lua
+C_AdventureMap.GetNumMapInsets() -> numMapInsets: number
+```
+
+### GetNumQuestOffers
+
+```lua
+C_AdventureMap.GetNumQuestOffers() -> numQuestOffers: number
+```
+
+### GetNumZoneChoices
+
+```lua
+C_AdventureMap.GetNumZoneChoices() -> numZoneChoices: number
 ```
 
 ### GetQuestPortraitInfo

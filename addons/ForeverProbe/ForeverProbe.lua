@@ -22,6 +22,8 @@ local WATCHLIST = {
   "GetAddOnMetadata",             "C_AddOns.GetAddOnMetadata",
   "GetNumAddOns",                 "C_AddOns.GetNumAddOns",
   "IsAddOnLoaded",                "C_AddOns.IsAddOnLoaded",
+  "LoadAddOn",                    "C_AddOns.LoadAddOn",
+  "UseContainerItem",             "C_Container.UseContainerItem",
   "GetContainerNumSlots",         "C_Container.GetContainerNumSlots",
   "GetContainerItemInfo",         "C_Container.GetContainerItemInfo",
   "GetItemInfo",                  "C_Item.GetItemInfo",

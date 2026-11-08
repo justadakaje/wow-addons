@@ -1,6 +1,6 @@
 # C_PlayerInfo
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
 `40` functions - `0` events
 
@@ -77,7 +77,7 @@ C_PlayerInfo.GetInstancesUnlockedAtLevel(level: number, isRaid: bool) -> dungeon
 ### GetName
 
 ```lua
-C_PlayerInfo.GetName(playerLocation: PlayerLocation) -> name?: string
+C_PlayerInfo.GetName(playerLocation: PlayerLocation) -> name: string
 ```
 
 ### GetNativeDisplayID

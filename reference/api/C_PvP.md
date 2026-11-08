@@ -1,8 +1,8 @@
 # C_PvP
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
-`113` functions - `42` events
+`114` functions - `43` events
 
 > Generated from the live client by `scripts/extract-api.js`. Do not edit.
 
@@ -108,6 +108,12 @@ C_PvP.GetArenaCrowdControlDuration(playerToken: UnitToken) -> duration: LuaDurat
 
 ```lua
 C_PvP.GetArenaCrowdControlInfo(playerToken: UnitToken) -> spellID: number, startTime: number, duration: number
+```
+
+### GetArenaOpponentSpec
+
+```lua
+C_PvP.GetArenaOpponentSpec(index: luaIndex) -> specializationID: number, gender: number
 ```
 
 ### GetArenaRewards
@@ -785,6 +791,14 @@ No payload.
 Fires as `PLAYER_JOINED_PVP_MATCH`.
 
 No payload.
+
+### PlayerPvpFlagChanged
+
+Fires as `PLAYER_PVP_FLAG_CHANGED`.
+
+```lua
+payload: isPvpFlagged: bool
+```
 
 ### PostMatchCurrencyRewardUpdate
 

@@ -1,8 +1,8 @@
 # C_Mail
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
-`5` functions - `13` events
+`5` functions - `14` events
 
 > Generated from the live client by `scripts/extract-api.js`. Do not edit.
 
@@ -75,6 +75,12 @@ Fires as `MAIL_LOCK_SEND_ITEMS`.
 ```lua
 payload: attachSlot: luaIndex, itemLink: cstring
 ```
+
+### MailOpenAllCanceled
+
+Fires as `MAIL_OPEN_ALL_CANCELED`.
+
+No payload.
 
 ### MailSendInfoUpdate
 

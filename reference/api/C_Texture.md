@@ -1,6 +1,6 @@
 # C_Texture
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
 `11` functions - `1` events
 
@@ -53,19 +53,19 @@ C_Texture.GetFilenameFromFileDataID(fileDataID: number) -> filename: string
 ### GetTitleIconTexture
 
 ```lua
-C_Texture.GetTitleIconTexture(titleID: string, version: TitleIconVersion, callback: GetTitleIconTextureCallback)
+C_Texture.GetTitleIconTexture(titleID: string, version: TitleIconVersion, callback: GetTitleIconTextureCallback, subIcon?: string)
 ```
 
 ### IsTitleIconTextureReady
 
 ```lua
-C_Texture.IsTitleIconTextureReady(titleID: string, version: TitleIconVersion) -> ready: bool
+C_Texture.IsTitleIconTextureReady(titleID: string, version: TitleIconVersion, subIcon?: string) -> ready: bool
 ```
 
 ### SetTitleIconTexture
 
 ```lua
-C_Texture.SetTitleIconTexture(texture: SimpleTexture, titleID: string, version: TitleIconVersion)
+C_Texture.SetTitleIconTexture(texture: SimpleTexture, titleID: string, version: TitleIconVersion, subIcon?: string)
 ```
 
 ### SetURLTexture

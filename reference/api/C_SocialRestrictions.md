@@ -1,12 +1,18 @@
 # C_SocialRestrictions
 
-WoW: Forever 1.60.1 (build 69913) - Interface 16001
+WoW: Forever 1.60.1 (build 70862) - Interface 16001
 
-`9` functions - `3` events
+`12` functions - `4` events
 
 > Generated from the live client by `scripts/extract-api.js`. Do not edit.
 
 ## Functions
+
+### AcknowledgeAgeVerificationRestriction
+
+```lua
+C_SocialRestrictions.AcknowledgeAgeVerificationRestriction()
+```
 
 ### AcknowledgeRegionalChatDisabled
 
@@ -24,6 +30,18 @@ C_SocialRestrictions.CanReceiveChat() -> canReceiveChat: bool
 
 ```lua
 C_SocialRestrictions.CanSendChat() -> canSendChat: bool
+```
+
+### IsAgeVerificationRestricted
+
+```lua
+C_SocialRestrictions.IsAgeVerificationRestricted() -> restricted: bool
+```
+
+### IsAgeVerificationRestrictedMinor
+
+```lua
+C_SocialRestrictions.IsAgeVerificationRestrictedMinor() -> isMinor: bool
 ```
 
 ### IsChatDisabled
@@ -63,6 +81,12 @@ C_SocialRestrictions.SetChatDisabled(disabled: bool)
 ```
 
 ## Events
+
+### AlertAgeVerificationRestricted
+
+Fires as `ALERT_AGE_VERIFICATION_RESTRICTED`.
+
+No payload.
 
 ### AlertRegionalChatDisabled
 
