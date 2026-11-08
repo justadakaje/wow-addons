@@ -53,7 +53,7 @@ function ns.ShowBrokerTooltip(tip)
     -- Snipe Engine status (#44)
     if ns.IsSnipeMode and ns.IsSnipeMode() then
         tip:AddLine(" ")
-        tip:AddDoubleLine("Live Snipe Engine:", "|cff40ff40● ACTIVE|r", 1, 0.82, 0, 0.25, 1, 0.25)
+        tip:AddDoubleLine("Live Snipe Engine:", "|cff40ff40ACTIVE|r", 1, 0.82, 0, 0.25, 1, 0.25)
     end
 
     -- Scan freshness status

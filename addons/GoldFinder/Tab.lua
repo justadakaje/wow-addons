@@ -407,7 +407,7 @@ local function BuildPanel()
     function ns.UpdateSnipeButton()
         if ui.snipeButton and ns.IsSnipeMode then
             if ns.IsSnipeMode() then
-                ui.snipeButton:SetText("|cff40ff40● Snipe: ON|r")
+                ui.snipeButton:SetText("|cff40ff40Snipe: ON|r")
             else
                 ui.snipeButton:SetText("Snipe: OFF")
             end

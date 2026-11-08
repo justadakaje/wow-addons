@@ -12,7 +12,7 @@ local function CreateCopyBox(parent, text, labelText, yOffset)
     lbl:SetText(labelText)
 
     local box = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
-    box:SetSize(280, 20)
+    box:SetSize(236, 20)
     box:SetPoint("TOPLEFT", 28, yOffset - 16)
     box:SetAutoFocus(false)
     box:SetText(text)
@@ -24,6 +24,26 @@ local function CreateCopyBox(parent, text, labelText, yOffset)
     box:SetScript("OnEscapePressed", function(self)
         self:ClearFocus()
     end)
+
+    local copyBtn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    copyBtn:SetSize(54, 20)
+    copyBtn:SetPoint("LEFT", box, "RIGHT", 6, 0)
+    copyBtn:SetText("Copy")
+    copyBtn:SetScript("OnClick", function()
+        box:HighlightText()
+        box:SetFocus()
+        local copied = false
+        if type(CopyToClipboard) == "function" then
+            local ok = pcall(CopyToClipboard, text, true)
+            if ok then copied = true end
+        end
+        if copied then
+            ns.Good("Copied link to clipboard!")
+        else
+            ns.Print("Press Ctrl+C to copy.")
+        end
+    end)
+
     return box
 end
 
@@ -104,7 +124,7 @@ function ns.ShowInfoDialog()
     engageHeader:SetPoint("TOPLEFT", 28, -108)
     engageHeader:SetText("Engage With GoldFinder:")
 
-    CreateCopyBox(f, "https://discord.gg/xgz75Pp", "Discord Community & Support:", -130)
+    CreateCopyBox(f, "https://discord.gg/byEfdxqkS", "Organized Chaos Discord Community:", -130)
     CreateCopyBox(f, "https://github.com/justadakaje/wow-addons/issues", "Bug Reports & Feature Requests (GitHub):", -180)
     CreateCopyBox(f, "https://www.curseforge.com/wow/addons/goldfinder", "CurseForge Addon Page:", -230)
 

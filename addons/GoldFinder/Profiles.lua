@@ -628,7 +628,7 @@ function ns.ShowProfileDialog(mode)
 
     -- Bottom action buttons
     local closeBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    closeBtn:SetSize(90, 24)
+    closeBtn:SetSize(80, 24)
     closeBtn:SetPoint("BOTTOMRIGHT", -18, 18)
     closeBtn:SetText("Close")
     closeBtn:SetScript("OnClick", function() f:Hide() end)
@@ -650,16 +650,40 @@ function ns.ShowProfileDialog(mode)
                 ns.Bad("GoldFinder Profile Error: " .. tostring(msg))
             end
         end)
+        status:SetPoint("RIGHT", applyBtn, "LEFT", -10, 0)
     else
         local copyBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
         copyBtn:SetSize(110, 24)
         copyBtn:SetPoint("RIGHT", closeBtn, "LEFT", -8, 0)
-        copyBtn:SetText("Select All")
+        copyBtn:SetText("Copy String")
         copyBtn:SetScript("OnClick", function()
             editBox:HighlightText()
             editBox:SetFocus()
-            status:SetText("|cff40ff40Text highlighted. Press Ctrl+C.|r")
+            local text = editBox:GetText() or ""
+            local copied = false
+            if type(CopyToClipboard) == "function" then
+                local ok = pcall(CopyToClipboard, text, true)
+                if ok then copied = true end
+            end
+            if copied then
+                status:SetText("|cff40ff40Copied to clipboard!|r")
+                ns.Good("GoldFinder: Profile string copied to OS clipboard!")
+            else
+                status:SetText("|cff40ff40Highlighted. Press Ctrl+C.|r")
+            end
         end)
+
+        local selectBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        selectBtn:SetSize(90, 24)
+        selectBtn:SetPoint("RIGHT", copyBtn, "LEFT", -8, 0)
+        selectBtn:SetText("Select All")
+        selectBtn:SetScript("OnClick", function()
+            editBox:HighlightText()
+            editBox:SetFocus()
+            status:SetText("|cff40ff40Highlighted. Press Ctrl+C.|r")
+        end)
+
+        status:SetPoint("RIGHT", selectBtn, "LEFT", -10, 0)
     end
 
     profileDialog = f

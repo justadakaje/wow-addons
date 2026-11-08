@@ -13,7 +13,7 @@ local statusText = nil
 
 local function NotifySettingSaved(desc)
     if statusText and desc then
-        statusText:SetText(("|cff40ff40✔ Saved: %s|r"):format(desc))
+        statusText:SetText(("|cff40ff40Saved: %s|r"):format(desc))
     end
 end
 
@@ -228,7 +228,7 @@ local function RefreshControls()
     end
 
     if statusText then
-        statusText:SetText("|cff40ff40● All settings saved and active|r")
+        statusText:SetText("|cff40ff40All settings saved and active|r")
     end
 
     isRefreshing = false
@@ -850,7 +850,7 @@ local function CreateConfigFrameOnce()
     statusText:SetPoint("LEFT", infoBtn, "RIGHT", 10, 0)
     statusText:SetPoint("RIGHT", saveCloseBtn, "LEFT", -10, 0)
     statusText:SetJustifyH("CENTER")
-    statusText:SetText("|cff40ff40● All settings saved and active|r")
+    statusText:SetText("|cff40ff40All settings saved and active|r")
 
     f:SetScript("OnShow", RefreshControls)
 
