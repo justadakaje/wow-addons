@@ -86,7 +86,7 @@ local function InitBroker()
     dataObj = ldb:NewDataObject("GoldFinder", {
         type = "data source",
         text = "GoldFinder",
-        icon = "Interface\\ICONS\\INV_Misc_Coin_01",
+        icon = "Interface\\AddOns\\GoldFinder\\assets\\GoldFinder-Logo.png",
         OnEnter = function(self)
             GameTooltip:SetOwner(self, "ANCHOR_NONE")
             GameTooltip:ClearAllPoints()

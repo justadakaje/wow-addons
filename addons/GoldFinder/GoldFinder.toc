@@ -2,8 +2,8 @@
 ## Title: GoldFinder
 ## Notes: Adds a GoldFinder tab to the auction house. Shares the tab row with other auction house addons instead of fighting them for it.
 ## Author: justadakaje
-## Version: 1.0.0
-## IconTexture: Interface\ICONS\INV_Misc_Coin_01
+## Version: 1.0.1
+## IconTexture: Interface\AddOns\GoldFinder\assets\GoldFinder-Logo.png
 ## Category: Auctions
 ## Category-enUS: Auctions
 ## Category-deDE: Auktionen
@@ -14,7 +14,7 @@
 ## Category-ptBR: Leilões
 ## SavedVariables: GoldFinderDB
 ## X-Target-Client: Multi-Client (Forever, Retail, Classic Era, MoP)
-## X-Tested-Build: 1.60.1.70707
+## X-Tested-Build: 1.60.1.70862
 ## X-License: MIT
 ## X-Curse-Project-ID: 1715781
 

@@ -4,6 +4,19 @@ All notable changes to GoldFinder. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-11-08
+
+### Fixed
+
+- **Bag Right-Click Protected Action Taint Eradication:** Fixed `ADDON_ACTION_FORBIDDEN` error when right-clicking bag items (`UseContainerItem`) while the Auction House is open. The `GoldFinderSellHelperCard` is now permanently parented to `UIParent` with docking coordinates computed relative to `AuctionHouseFrame`, eliminating insecure Blizzard frame hierarchy taint. Replaced `HookScript("OnHide")` on secure sell frames with safe `hooksecurefunc` hooks and added explicit `AUCTION_HOUSE_CLOSED` event cleanup.
+- **LibAHTab v6 State Cleanliness:** Removed insecure `displayMode = nil` assignment in LibAHTab to maintain pure Blizzard AuctionHouseFrame state.
+- **Mailbox Collector Hook Hygiene:** Replaced `HookScript` on `InboxNextPageButton` / `InboxPrevPageButton` with clean post-hook execution.
+
+### Added
+
+- **High-Resolution Custom Emblem & Project Avatar:** Replaced generic `INV_Misc_Coin_01` stock texture with custom 1024x1024 artisan emblem (`GoldFinder-Logo.png`) across TOC metadata, LDB broker, and minimap button.
+- **WoW Forever Build 70862 Certification:** Tested and certified against WoW: Forever client patch 1.60.1.70862.
+
 ## [1.0.0] - 2026-11-07
 
 ### Added
