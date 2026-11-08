@@ -660,6 +660,213 @@ local MIGRATIONS = {
     end,
 }
 
+---------------------------------------------------------------------------
+-- Profile Persistence & Character Binding (HUD Edit Mode Style)
+
+function ns.GetCharacterKey()
+    local name = UnitName("player") or "Player"
+    local realm = (GetNormalizedRealmName and GetNormalizedRealmName()) or (GetRealmName and GetRealmName()) or "Default"
+    return name .. " - " .. realm
+end
+
+function ns.GetCharacterName()
+    return UnitName("player") or "Character"
+end
+
+function ns.GetActiveProfileName()
+    local db = GoldFinderDB
+    if not db or not db.profileKeys then return "Default" end
+    local charKey = ns.GetCharacterKey()
+    return db.profileKeys[charKey] or "Default"
+end
+
+function ns.IsCharacterSpecificProfile()
+    local db = GoldFinderDB
+    if not db or not db.profileKeys then return false end
+    local charKey = ns.GetCharacterKey()
+    return db.profileKeys[charKey] == charKey
+end
+
+function ns.GetProfileList()
+    local db = GoldFinderDB
+    local list = {}
+    if db and db.profiles then
+        for name in pairs(db.profiles) do
+            list[#list + 1] = name
+        end
+        table.sort(list, function(a, b)
+            if a == "Default" then return true end
+            if b == "Default" then return false end
+            return a < b
+        end)
+    else
+        list[1] = "Default"
+    end
+    return list
+end
+
+function ns.ApplyActiveProfile(profileKey)
+    local db = GoldFinderDB
+    if not db then return end
+    local charKey = ns.GetCharacterKey()
+
+    profileKey = profileKey or (db.profileKeys and db.profileKeys[charKey]) or "Default"
+
+    if not db.profiles then db.profiles = {} end
+    if not db.profileKeys then db.profileKeys = {} end
+
+    -- If the requested profile does not exist, clone from Default or seed new
+    if not db.profiles[profileKey] then
+        local source = db.profiles["Default"] or {}
+        local clone = {
+            settings = {},
+            watchlist = {},
+            shoppingLists = {},
+            blacklist = {},
+            customCategories = {},
+            restock = {},
+        }
+        if source.settings then
+            for k, v in pairs(source.settings) do clone.settings[k] = v end
+        end
+        if source.watchlist then
+            for k, v in pairs(source.watchlist) do clone.watchlist[k] = v end
+        end
+        if source.blacklist then
+            for k, v in pairs(source.blacklist) do clone.blacklist[k] = v end
+        end
+        if source.shoppingLists then
+            for k, v in pairs(source.shoppingLists) do clone.shoppingLists[k] = v end
+        end
+        if source.customCategories then
+            for k, v in pairs(source.customCategories) do clone.customCategories[k] = v end
+        end
+        if source.restock then
+            for k, v in pairs(source.restock) do clone.restock[k] = v end
+        end
+        db.profiles[profileKey] = clone
+    end
+
+    db.profileKeys[charKey] = profileKey
+    local active = db.profiles[profileKey]
+
+    if type(active.settings) ~= "table" then active.settings = {} end
+    if type(active.watchlist) ~= "table" then active.watchlist = {} end
+    if type(active.shoppingLists) ~= "table" then active.shoppingLists = {} end
+    if type(active.blacklist) ~= "table" then active.blacklist = {} end
+    if type(active.customCategories) ~= "table" then active.customCategories = {} end
+    if type(active.restock) ~= "table" then active.restock = {} end
+
+    local s = active.settings
+    if s.dealRatio == nil then s.dealRatio = 0.70 end
+    if s.minPrior == nil then s.minPrior = 3 end
+    if s.soundAlert == nil then s.soundAlert = true end
+    if s.chatAlert == nil then s.chatAlert = true end
+    if s.soundName == nil then s.soundName = "auction" end
+    if s.soundThrottle == nil then s.soundThrottle = 30 end
+    if s.sortBy == nil then s.sortBy = "profit" end
+    if s.tooltip == nil then s.tooltip = true end
+    if s.minProfit == nil then s.minProfit = 0 end
+    if s.maxQuickBuySpend == nil then s.maxQuickBuySpend = 500000 end
+    if s.minConfidence == nil then s.minConfidence = "any" end
+    if s.valuationModel == nil then s.valuationModel = "median" end
+    if s.costBasisTooltip == nil then s.costBasisTooltip = true end
+    if s.mailCollector == nil then s.mailCollector = true end
+    if s.factionShare == nil then s.factionShare = true end
+    if s.snipeThreshold == nil then s.snipeThreshold = 1000000 end
+    if s.dedicatedChatTab == nil then s.dedicatedChatTab = false end
+
+    -- Bind pointers to active profile
+    db.settings = active.settings
+    db.watchlist = active.watchlist
+    db.shoppingLists = active.shoppingLists
+    db.blacklist = active.blacklist
+    db.customCategories = active.customCategories
+    db.restock = active.restock
+
+    -- Sync faction share partition if changed
+    if ns.SetFactionShareEnabled and s.factionShare ~= nil then
+        ns.SetFactionShareEnabled(s.factionShare)
+    end
+
+    if ns.RefreshControls then ns.RefreshControls() end
+    if ns.RefreshPanel then ns.RefreshPanel() end
+end
+
+function ns.SetCharacterSpecificProfile(enabled)
+    local charKey = ns.GetCharacterKey()
+    if enabled then
+        ns.ApplyActiveProfile(charKey)
+        ns.Good("GoldFinder: Switched to Character-Specific profile for %s.", ns.GetCharacterName())
+    else
+        ns.ApplyActiveProfile("Default")
+        ns.Good("GoldFinder: Switched to Account-Wide profile (Default).")
+    end
+end
+
+function ns.CopyProfile(sourceKey)
+    local db = GoldFinderDB
+    if not db or not db.profiles or not db.profiles[sourceKey] then
+        return false, "Source profile not found."
+    end
+    local activeKey = ns.GetActiveProfileName()
+    if sourceKey == activeKey then
+        return false, "Cannot copy profile onto itself."
+    end
+    local source = db.profiles[sourceKey]
+    local target = db.profiles[activeKey] or {}
+    wipe(target)
+    target.settings = {}
+    target.watchlist = {}
+    target.shoppingLists = {}
+    target.blacklist = {}
+    target.customCategories = {}
+    target.restock = {}
+    for k, v in pairs(source.settings or {}) do target.settings[k] = v end
+    for k, v in pairs(source.watchlist or {}) do target.watchlist[k] = v end
+    for k, v in pairs(source.blacklist or {}) do target.blacklist[k] = v end
+    for k, v in pairs(source.shoppingLists or {}) do target.shoppingLists[k] = v end
+    for k, v in pairs(source.customCategories or {}) do target.customCategories[k] = v end
+    for k, v in pairs(source.restock or {}) do target.restock[k] = v end
+    db.profiles[activeKey] = target
+    ns.ApplyActiveProfile(activeKey)
+    return true
+end
+
+function ns.ResetCurrentProfile()
+    local activeKey = ns.GetActiveProfileName()
+    local db = GoldFinderDB
+    if db and db.profiles and db.profiles[activeKey] then
+        db.profiles[activeKey] = {
+            settings = {
+                dealRatio = 0.70,
+                minPrior = 3,
+                soundAlert = true,
+                chatAlert = true,
+                soundName = "auction",
+                soundThrottle = 30,
+                sortBy = "profit",
+                tooltip = true,
+                minProfit = 0,
+                maxQuickBuySpend = 500000,
+                minConfidence = "any",
+                valuationModel = "median",
+                costBasisTooltip = true,
+                mailCollector = true,
+                factionShare = true,
+                snipeThreshold = 1000000,
+                dedicatedChatTab = false,
+            },
+            watchlist = {},
+            shoppingLists = {},
+            blacklist = {},
+            customCategories = {},
+            restock = {},
+        }
+        ns.ApplyActiveProfile(activeKey)
+    end
+end
+
 -- Nothing here can crash: plain table checks only. The save path stays that way.
 local boot = CreateFrame("Frame")
 boot:RegisterEvent("ADDON_LOADED")
@@ -682,30 +889,23 @@ boot:SetScript("OnEvent", function(self, _, name)
         end
     end
 
-    if type(db.settings) ~= "table" then db.settings = {} end
-    if db.settings.dealRatio == nil then db.settings.dealRatio = 0.70 end
-    if db.settings.minPrior == nil then db.settings.minPrior = 3 end
-    if db.settings.soundAlert == nil then db.settings.soundAlert = true end
-    if db.settings.chatAlert == nil then db.settings.chatAlert = true end
-    if db.settings.soundName == nil then db.settings.soundName = "auction" end
-    if db.settings.soundThrottle == nil then db.settings.soundThrottle = 30 end
-    if db.settings.sortBy == nil then db.settings.sortBy = "profit" end
-    if db.settings.tooltip == nil then db.settings.tooltip = true end
-    if db.settings.minProfit == nil then db.settings.minProfit = 0 end
-    if db.settings.maxQuickBuySpend == nil then db.settings.maxQuickBuySpend = 500000 end
-    if db.settings.minConfidence == nil then db.settings.minConfidence = "any" end
-    if db.settings.valuationModel == nil then db.settings.valuationModel = "median" end
-    if db.settings.costBasisTooltip == nil then db.settings.costBasisTooltip = true end
-    if db.settings.mailCollector == nil then db.settings.mailCollector = true end
-    if db.settings.factionShare == nil then db.settings.factionShare = true end
-    if db.settings.snipeThreshold == nil then db.settings.snipeThreshold = 1000000 end
-    if db.settings.dedicatedChatTab == nil then db.settings.dedicatedChatTab = false end
-    if type(db.watchlist) ~= "table" then db.watchlist = {} end
-    if type(db.shoppingLists) ~= "table" then db.shoppingLists = {} end
-    if type(db.blacklist) ~= "table" then db.blacklist = {} end
-    if type(db.customCategories) ~= "table" then db.customCategories = {} end
+    -- Profile management initialization
+    if type(db.profiles) ~= "table" then db.profiles = {} end
+    if type(db.profileKeys) ~= "table" then db.profileKeys = {} end
+
+    -- Migrate legacy un-profiled settings into "Default" if not yet created
+    if not db.profiles["Default"] then
+        db.profiles["Default"] = {
+            settings = (type(db.settings) == "table") and db.settings or {},
+            watchlist = (type(db.watchlist) == "table") and db.watchlist or {},
+            shoppingLists = (type(db.shoppingLists) == "table") and db.shoppingLists or {},
+            blacklist = (type(db.blacklist) == "table") and db.blacklist or {},
+            customCategories = (type(db.customCategories) == "table") and db.customCategories or {},
+            restock = (type(db.restock) == "table") and db.restock or {},
+        }
+    end
+
     if type(db.costBasis) ~= "table" then db.costBasis = {} end
-    if type(db.restock) ~= "table" then db.restock = {} end
     if type(db.ledger) ~= "table" then
         db.ledger = {
             records = {},
@@ -713,6 +913,18 @@ boot:SetScript("OnEvent", function(self, _, name)
         }
     end
     if type(db.realms) ~= "table" then db.realms = {} end
+
+    ns.db = db
+
+    -- Set active profile based on character key
+    local charKey = ns.GetCharacterKey()
+    local profileKey = db.profileKeys[charKey] or "Default"
+    if not db.profiles[profileKey] then
+        profileKey = "Default"
+        db.profileKeys[charKey] = "Default"
+    end
+
+    ns.ApplyActiveProfile(profileKey)
 
     -- Active realm and faction partition binding
     local realm = (GetNormalizedRealmName and GetNormalizedRealmName()) or (GetRealmName and GetRealmName()) or "Default"
@@ -725,7 +937,7 @@ boot:SetScript("OnEvent", function(self, _, name)
     end
 
     local rData = db.realms[realm]
-    if db.settings.factionShare == false then
+    if db.settings and db.settings.factionShare == false then
         local fKey = (UnitFactionGroup and UnitFactionGroup("player")) or "Neutral"
         rData.factions = rData.factions or {}
         if not rData.factions[fKey] then
@@ -737,8 +949,6 @@ boot:SetScript("OnEvent", function(self, _, name)
         db.items = rData.items
         db.scans = rData.scans
     end
-
-    ns.db = db
 end)
 
 ---------------------------------------------------------------------------
@@ -1728,11 +1938,55 @@ SlashCmdList["GOLDFINDER"] = function(msg)
             ns.Print("Usage: /gf vendor <link or itemID>")
         end
     elseif cmd == "profile" then
-        arg = arg and arg:lower():match("^%s*(.-)%s*$") or ""
-        if arg == "import" then
-            if ns.ShowProfileDialog then ns.ShowProfileDialog("import") end
-        else
+        arg = arg and arg:match("^%s*(.-)%s*$") or ""
+        local subCmd, subArg = arg:match("^(%S+)%s*(.*)$")
+        subCmd = subCmd and subCmd:lower() or ""
+
+        if subCmd == "export" then
             if ns.ShowProfileDialog then ns.ShowProfileDialog("export") end
+        elseif subCmd == "import" then
+            if ns.ShowProfileDialog then ns.ShowProfileDialog("import") end
+        elseif subCmd == "char" or subCmd == "character" then
+            subArg = subArg and subArg:lower() or ""
+            local val
+            if subArg == "on" or subArg == "1" or subArg == "true" then val = true
+            elseif subArg == "off" or subArg == "0" or subArg == "false" then val = false
+            else val = not ns.IsCharacterSpecificProfile() end
+            ns.SetCharacterSpecificProfile(val)
+        elseif subCmd == "switch" or subCmd == "set" then
+            if subArg and subArg ~= "" then
+                ns.ApplyActiveProfile(subArg)
+                ns.Good("Switched to GoldFinder profile: %s.", subArg)
+            else
+                ns.Warn("Usage: /gf profile switch <ProfileName>")
+            end
+        elseif subCmd == "copy" then
+            if subArg and subArg ~= "" then
+                local ok, err = ns.CopyProfile(subArg)
+                if ok then
+                    ns.Good("Copied settings from profile '%s' into active profile.", subArg)
+                else
+                    ns.Bad("Copy failed: %s", tostring(err))
+                end
+            else
+                ns.Warn("Usage: /gf profile copy <SourceProfileName>")
+            end
+        elseif subCmd == "list" then
+            local list = ns.GetProfileList()
+            local cur = ns.GetActiveProfileName()
+            ns.Print("GoldFinder Profiles (%d):", #list)
+            for _, pName in ipairs(list) do
+                if pName == cur then
+                    ns.Print("  * |cff40ff40%s|r (active)", pName)
+                else
+                    ns.Print("  - %s", pName)
+                end
+            end
+        else
+            local isChar = ns.IsCharacterSpecificProfile()
+            local cur = ns.GetActiveProfileName()
+            ns.Print("GoldFinder Active Profile: |cffffd100%s|r (%s)", cur, isChar and "Character-Specific" or "Account-Wide")
+            ns.Print("Commands: /gf profile [export|import|char on/off|list|switch <name>|copy <name>]")
         end
     elseif cmd == "vacuum" or cmd == "compact" then
         local days = tonumber(arg) or 30

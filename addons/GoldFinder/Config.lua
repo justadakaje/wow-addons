@@ -144,6 +144,18 @@ local function RefreshControls()
     if not configFrame then return end
     isRefreshing = true
 
+    -- Profile persistence state (HUD Edit Mode style)
+    if controls.charProfileCb and controls.profileNameText then
+        local isChar = ns.IsCharacterSpecificProfile and ns.IsCharacterSpecificProfile()
+        controls.charProfileCb:SetChecked(isChar == true)
+        if isChar then
+            local charName = ns.GetCharacterName and ns.GetCharacterName() or "Character"
+            controls.profileNameText:SetText(("|cff40ff40%s (Character-Specific)|r"):format(charName))
+        else
+            controls.profileNameText:SetText("|cffffd100Default (Account-Wide)|r")
+        end
+    end
+
     -- a) Discount threshold slider (5% - 50%)
     local ratio = ns.GetDealRatio()
     local discount = math.floor((1 - ratio) * 100 + 0.5)
@@ -241,53 +253,41 @@ local function RefreshControls()
 end
 
 local function ResetDefaults()
-    -- Set core settings
-    ns.SetDealRatio(0.70)  -- 30% discount
-    ns.SetMinPrior(3)      -- 3 scans
-    ns.SetMinProfit(0)     -- 0c (disabled)
-    ns.SetMaxQuickBuySpend(500000) -- 50g cap
-    ns.SetMinConfidence("any")
-    ns.SetValuationModel("median")
-    ns.SetSoundAlert(true)
-    ns.SetSoundChoice("auction")
-    ns.SetSoundThrottle(30)
-    ns.SetFactionShareEnabled(true)
-    if ns.SetMinimapButtonShown then
-        ns.SetMinimapButtonShown(true)
-    end
-    if ns.SetSellHelperEnabled then
-        ns.SetSellHelperEnabled(true)
-    end
-    if ns.SetMailCollector then
-        ns.SetMailCollector(true)
-    end
-    if ns.SetCostBasisTooltip then
-        ns.SetCostBasisTooltip(true)
-    end
-    if ns.SetDedicatedChatTab then
-        ns.SetDedicatedChatTab(false)
-    end
-
-    -- Also synchronize ns.db convenience keys if present
-    if ns.db then
-        ns.db.discountThreshold = 0.30
-        ns.db.minScans = 3
-        ns.db.minProfit = 0
-        ns.db.spendCap = 500000
-        ns.db.minConfidence = "any"
-        ns.db.alertSound = "auction"
-        ns.db.soundThrottle = 30
-        ns.db.factionShare = true
-        if GoldFinderDB then
-            GoldFinderDB.minimap = GoldFinderDB.minimap or {}
-            GoldFinderDB.minimap.hide = false
+    if ns.ResetCurrentProfile then
+        ns.ResetCurrentProfile()
+    else
+        -- Set core settings
+        ns.SetDealRatio(0.70)  -- 30% discount
+        ns.SetMinPrior(3)      -- 3 scans
+        ns.SetMinProfit(0)     -- 0c (disabled)
+        ns.SetMaxQuickBuySpend(500000) -- 50g cap
+        ns.SetMinConfidence("any")
+        ns.SetValuationModel("median")
+        ns.SetSoundAlert(true)
+        ns.SetSoundChoice("auction")
+        ns.SetSoundThrottle(30)
+        ns.SetFactionShareEnabled(true)
+        if ns.SetMinimapButtonShown then
+            ns.SetMinimapButtonShown(true)
+        end
+        if ns.SetSellHelperEnabled then
+            ns.SetSellHelperEnabled(true)
+        end
+        if ns.SetMailCollector then
+            ns.SetMailCollector(true)
+        end
+        if ns.SetCostBasisTooltip then
+            ns.SetCostBasisTooltip(true)
+        end
+        if ns.SetDedicatedChatTab then
+            ns.SetDedicatedChatTab(false)
         end
     end
 
     RefreshControls()
-    NotifySettingSaved("All settings restored to defaults")
+    NotifySettingSaved("Active profile settings restored to defaults")
     if ns.RefreshPanel then ns.RefreshPanel() end
-    ns.Good("GoldFinder options restored to default values.")
+    ns.Good("GoldFinder: Active profile options restored to default values.")
 end
 
 local function CreateConfigFrameOnce()
@@ -295,7 +295,8 @@ local function CreateConfigFrameOnce()
 
     local template = BackdropTemplateMixin and "BackdropTemplate" or nil
     local f = CreateFrame("Frame", "GoldFinderConfigFrame", UIParent, template)
-    f:SetSize(620, 670)
+    f:Hide()
+    f:SetSize(620, 700)
     f:SetPoint("CENTER", UIParent, "CENTER", 0, 20)
     f:SetFrameStrata("DIALOG")
     f:SetToplevel(true)
@@ -342,10 +343,98 @@ local function CreateConfigFrameOnce()
     closeBtn:SetScript("OnClick", function() f:Hide() end)
 
     -----------------------------------------------------------------------
+    -- Section 0: Profile Persistence & Scope (HUD Edit Mode Style)
+    -----------------------------------------------------------------------
+    local profPanel = CreateFrame("Frame", nil, f, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    profPanel:SetSize(564, 30)
+    profPanel:SetPoint("TOPLEFT", 28, -48)
+    profPanel:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = false, tileSize = 16, edgeSize = 12,
+        insets = { left = 3, right = 3, top = 3, bottom = 3 }
+    })
+    if profPanel.SetBackdropColor then
+        profPanel:SetBackdropColor(0.04, 0.04, 0.06, 0.90)
+        profPanel:SetBackdropBorderColor(0.35, 0.35, 0.40, 0.8)
+    end
+
+    local profLabel = profPanel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    profLabel:SetPoint("LEFT", 10, 0)
+    profLabel:SetText("Active Profile:")
+
+    controls.profileNameText = profPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    controls.profileNameText:SetPoint("LEFT", profLabel, "RIGHT", 6, 0)
+    controls.profileNameText:SetText("|cffffd100Default (Account-Wide)|r")
+
+    -- Checkbox: Character-Specific Settings (matching HUD Edit Mode's "Character Specific Layout")
+    controls.charProfileCb = CreateCheckbox(
+        profPanel,
+        "Character-Specific Settings",
+        "Character-Specific Profile",
+        "When checked, saves all deal filters, notification sounds, and options exclusively for this character (like HUD Edit Mode's 'Character Specific Layout').\n\nWhen unchecked, settings are shared across all characters using the account-wide 'Default' profile.",
+        function(_, checked)
+            if ns.SetCharacterSpecificProfile then
+                ns.SetCharacterSpecificProfile(checked)
+            end
+            RefreshControls()
+            NotifySettingSaved(checked and "Using Character-Specific Profile" or "Using Account-Wide Profile")
+        end
+    )
+    controls.charProfileCb:SetPoint("RIGHT", profPanel, "RIGHT", -8, 0)
+
+    -- Button: Copy Profile
+    local copyProfBtn = CreateFrame("Button", nil, profPanel, "UIPanelButtonTemplate")
+    copyProfBtn:SetSize(86, 20)
+    copyProfBtn:SetPoint("RIGHT", controls.charProfileCb, "LEFT", -12, 0)
+    copyProfBtn:SetText("Copy From...")
+    copyProfBtn:SetScript("OnClick", function()
+        local isChar = ns.IsCharacterSpecificProfile and ns.IsCharacterSpecificProfile()
+        if isChar then
+            local ok, err = ns.CopyProfile and ns.CopyProfile("Default")
+            if ok then
+                RefreshControls()
+                NotifySettingSaved("Copied settings from Default")
+                ns.Good("GoldFinder: Copied settings from Account-Wide (Default) profile.")
+            else
+                NotifySettingSaved("Copy failed: " .. tostring(err))
+            end
+        else
+            local charKey = ns.GetCharacterKey and ns.GetCharacterKey()
+            if GoldFinderDB and GoldFinderDB.profiles and GoldFinderDB.profiles[charKey] then
+                local ok, err = ns.CopyProfile and ns.CopyProfile(charKey)
+                if ok then
+                    RefreshControls()
+                    NotifySettingSaved("Copied settings from " .. ns.GetCharacterName())
+                    ns.Good("GoldFinder: Copied settings from %s into Default profile.", ns.GetCharacterName())
+                else
+                    NotifySettingSaved("Copy failed: " .. tostring(err))
+                end
+            else
+                NotifySettingSaved("No character profile to copy from")
+                ns.Print("GoldFinder: No character profile found. Enable Character-Specific Settings first to create one.")
+            end
+        end
+    end)
+    copyProfBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("Copy Profile Settings", 1, 0.82, 0)
+        local isChar = ns.IsCharacterSpecificProfile and ns.IsCharacterSpecificProfile()
+        if isChar then
+            GameTooltip:AddLine("Copy all thresholds, sounds, and filter options from the Account-Wide Default profile into this character's profile.", 1, 1, 1, true)
+        else
+            GameTooltip:AddLine("Copy settings from this character's specific profile into the Account-Wide Default profile.", 1, 1, 1, true)
+        end
+        GameTooltip:Show()
+    end)
+    copyProfBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    controls.copyProfBtn = copyProfBtn
+
+    -----------------------------------------------------------------------
     -- Section 1: Deal Finding & Market Filters
     -----------------------------------------------------------------------
     local sec1 = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    sec1:SetPoint("TOPLEFT", 24, -54)
+    sec1:SetPoint("TOPLEFT", 24, -86)
     sec1:SetText("|cffffd100Deal Thresholds & Market Filters|r")
 
     -- a) Discount Threshold slider (5% to 50%, step 1%)
@@ -368,7 +457,7 @@ local function CreateConfigFrameOnce()
         end
     )
     controls.discountSlider:SetSize(250, 16)
-    controls.discountSlider:SetPoint("TOPLEFT", 28, -82)
+    controls.discountSlider:SetPoint("TOPLEFT", 28, -114)
 
     -- b) Minimum Sighting Count slider (1 to 20, step 1)
     controls.minScansSlider = CreateSlider(
@@ -389,7 +478,7 @@ local function CreateConfigFrameOnce()
         end
     )
     controls.minScansSlider:SetSize(250, 16)
-    controls.minScansSlider:SetPoint("TOPLEFT", 330, -82)
+    controls.minScansSlider:SetPoint("TOPLEFT", 330, -114)
 
     -- c) Minimum Profit Floor input/slider (0 to 10g, step 0.01g = 1s)
     controls.minProfitSlider = CreateSlider(
@@ -416,7 +505,7 @@ local function CreateConfigFrameOnce()
         end
     )
     controls.minProfitSlider:SetSize(250, 16)
-    controls.minProfitSlider:SetPoint("TOPLEFT", 28, -134)
+    controls.minProfitSlider:SetPoint("TOPLEFT", 28, -166)
 
     -- d) Buyout Spend Cap input/slider (0 to 100g, step 0.1g = 10s)
     controls.spendCapSlider = CreateSlider(
@@ -443,11 +532,11 @@ local function CreateConfigFrameOnce()
         end
     )
     controls.spendCapSlider:SetSize(250, 16)
-    controls.spendCapSlider:SetPoint("TOPLEFT", 330, -134)
+    controls.spendCapSlider:SetPoint("TOPLEFT", 330, -166)
 
     -- e) Sighting Confidence Filter (Any, Medium+, High Only)
     local confLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    confLabel:SetPoint("TOPLEFT", 28, -178)
+    confLabel:SetPoint("TOPLEFT", 28, -210)
     confLabel:SetText("Sighting Confidence Rating Filter:")
 
     controls.confButtons = {}
@@ -459,7 +548,7 @@ local function CreateConfigFrameOnce()
     for i, opt in ipairs(confOptions) do
         local btn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
         btn:SetSize(opt.width, 22)
-        btn:SetPoint("TOPLEFT", 28 + (i - 1) * 188, -196)
+        btn:SetPoint("TOPLEFT", 28 + (i - 1) * 188, -228)
         btn.rawLabel = opt.label
         btn:SetText(opt.label)
         btn:SetScript("OnClick", function()
@@ -484,7 +573,7 @@ local function CreateConfigFrameOnce()
 
     -- f) Valuation Baseline Engine (#38)
     local valModelLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    valModelLabel:SetPoint("TOPLEFT", 28, -226)
+    valModelLabel:SetPoint("TOPLEFT", 28, -258)
     valModelLabel:SetText("Valuation Baseline Engine:")
 
     controls.valModelButtons = {}
@@ -496,7 +585,7 @@ local function CreateConfigFrameOnce()
     for i, opt in ipairs(valModelOptions) do
         local btn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
         btn:SetSize(opt.width, 22)
-        btn:SetPoint("TOPLEFT", 28 + (i - 1) * 188, -244)
+        btn:SetPoint("TOPLEFT", 28 + (i - 1) * 188, -276)
         btn.rawLabel = opt.label
         btn:SetText(opt.label)
         btn:SetScript("OnClick", function()
@@ -519,11 +608,11 @@ local function CreateConfigFrameOnce()
     -- Section 2: Audio Alerts & Cooldown
     -----------------------------------------------------------------------
     local sec2 = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    sec2:SetPoint("TOPLEFT", 24, -280)
+    sec2:SetPoint("TOPLEFT", 24, -312)
     sec2:SetText("|cffffd100Audio Alerts & Cooldown|r")
 
     local soundLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    soundLabel:SetPoint("TOPLEFT", 28, -300)
+    soundLabel:SetPoint("TOPLEFT", 28, -332)
     soundLabel:SetText("Deal Found Alert Sound:")
 
     controls.soundButtons = {}
@@ -539,7 +628,7 @@ local function CreateConfigFrameOnce()
     for _, opt in ipairs(soundOptions) do
         local btn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
         btn:SetSize(opt.width, 22)
-        btn:SetPoint("TOPLEFT", curX, -318)
+        btn:SetPoint("TOPLEFT", curX, -350)
         btn.rawLabel = opt.label
         btn:SetText(opt.label)
         curX = curX + opt.width + 6
@@ -572,7 +661,7 @@ local function CreateConfigFrameOnce()
     -- [ Test Sound ] button
     local testBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     testBtn:SetSize(110, 22)
-    testBtn:SetPoint("TOPLEFT", curX + 10, -318)
+    testBtn:SetPoint("TOPLEFT", curX + 10, -350)
     testBtn:SetText("Test Sound")
     testBtn:SetScript("OnClick", function()
         if not ns.IsSoundAlertEnabled() then
@@ -610,13 +699,13 @@ local function CreateConfigFrameOnce()
         end
     )
     controls.throttleSlider:SetSize(250, 16)
-    controls.throttleSlider:SetPoint("TOPLEFT", 28, -360)
+    controls.throttleSlider:SetPoint("TOPLEFT", 28, -392)
 
     -----------------------------------------------------------------------
     -- Section 3: General & Database Settings
     -----------------------------------------------------------------------
     local sec3 = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    sec3:SetPoint("TOPLEFT", 24, -402)
+    sec3:SetPoint("TOPLEFT", 24, -434)
     sec3:SetText("|cffffd100Database & Interface Settings|r")
 
     -- h) Checkbox: Cross-Faction Market Data Sharing
@@ -634,7 +723,7 @@ local function CreateConfigFrameOnce()
             NotifySettingSaved("Cross-faction sharing " .. (checked and "enabled" or "disabled"))
         end
     )
-    controls.crossFactionCb:SetPoint("TOPLEFT", 28, -424)
+    controls.crossFactionCb:SetPoint("TOPLEFT", 28, -456)
 
     -- i) Checkbox: Show Selling Tab Price Helper
     controls.sellHelperCb = CreateCheckbox(
@@ -649,7 +738,7 @@ local function CreateConfigFrameOnce()
             NotifySettingSaved("Sell tab price helper " .. (checked and "enabled" or "disabled"))
         end
     )
-    controls.sellHelperCb:SetPoint("TOPLEFT", 330, -424)
+    controls.sellHelperCb:SetPoint("TOPLEFT", 330, -456)
 
     -- j) Checkbox: Show Minimap Button
     controls.minimapCb = CreateCheckbox(
@@ -668,7 +757,7 @@ local function CreateConfigFrameOnce()
             NotifySettingSaved("Minimap button " .. (checked and "shown" or "hidden"))
         end
     )
-    controls.minimapCb:SetPoint("TOPLEFT", 28, -452)
+    controls.minimapCb:SetPoint("TOPLEFT", 28, -484)
 
     -- k) Checkbox: Output to 'GoldFinder' Chat Tab
     controls.chatTabCb = CreateCheckbox(
@@ -683,7 +772,7 @@ local function CreateConfigFrameOnce()
             NotifySettingSaved("Dedicated chat tab " .. (checked and "enabled" or "disabled"))
         end
     )
-    controls.chatTabCb:SetPoint("TOPLEFT", 330, -452)
+    controls.chatTabCb:SetPoint("TOPLEFT", 330, -484)
 
     -- l) Checkbox: Mailbox Deal Collector (#40)
     controls.mailCollectorCb = CreateCheckbox(
@@ -698,7 +787,7 @@ local function CreateConfigFrameOnce()
             NotifySettingSaved("Mailbox deal collector " .. (checked and "enabled" or "disabled"))
         end
     )
-    controls.mailCollectorCb:SetPoint("TOPLEFT", 28, -482)
+    controls.mailCollectorCb:SetPoint("TOPLEFT", 28, -512)
 
     -- m) Checkbox: Cost Basis on Tooltips (#42)
     controls.costBasisCb = CreateCheckbox(
@@ -713,12 +802,12 @@ local function CreateConfigFrameOnce()
             NotifySettingSaved("Cost basis tooltips " .. (checked and "enabled" or "disabled"))
         end
     )
-    controls.costBasisCb:SetPoint("TOPLEFT", 330, -482)
+    controls.costBasisCb:SetPoint("TOPLEFT", 330, -512)
 
     -- n) Button: Create Custom Material Group (#39)
     local newGroupBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     newGroupBtn:SetSize(260, 24)
-    newGroupBtn:SetPoint("TOPLEFT", 28, -518)
+    newGroupBtn:SetPoint("TOPLEFT", 28, -548)
     newGroupBtn:SetText("+ New Material Group")
     newGroupBtn:SetScript("OnClick", function()
         if ns.ShowCreateGroupDialog then
@@ -737,7 +826,7 @@ local function CreateConfigFrameOnce()
     -- o) Button: Open Goblin Ledger (#41)
     local openLedgerBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     openLedgerBtn:SetSize(260, 24)
-    openLedgerBtn:SetPoint("TOPLEFT", 330, -518)
+    openLedgerBtn:SetPoint("TOPLEFT", 330, -548)
     openLedgerBtn:SetText("Open Goblin P&L Ledger")
     openLedgerBtn:SetScript("OnClick", function()
         f:Hide()
@@ -757,7 +846,7 @@ local function CreateConfigFrameOnce()
     -- p) Button: Open Staging Cart (#47)
     local openCartBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     openCartBtn:SetSize(260, 24)
-    openCartBtn:SetPoint("TOPLEFT", 28, -550)
+    openCartBtn:SetPoint("TOPLEFT", 28, -580)
     openCartBtn:SetText("Open Staging Cart")
     openCartBtn:SetScript("OnClick", function()
         f:Hide()
@@ -777,7 +866,7 @@ local function CreateConfigFrameOnce()
     -- q) Button: Compact & Vacuum Database (#50)
     local vacuumBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     vacuumBtn:SetSize(260, 24)
-    vacuumBtn:SetPoint("TOPLEFT", 330, -550)
+    vacuumBtn:SetPoint("TOPLEFT", 330, -580)
     vacuumBtn:SetText("Compact & Vacuum DB")
     vacuumBtn:SetScript("OnClick", function()
         if ns.VacuumDatabase then
@@ -803,7 +892,7 @@ local function CreateConfigFrameOnce()
     -- r) Button: Profile Import / Export (#48)
     local profileBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     profileBtn:SetSize(260, 24)
-    profileBtn:SetPoint("TOPLEFT", 28, -582)
+    profileBtn:SetPoint("TOPLEFT", 28, -612)
     profileBtn:SetText("Profile Import / Export")
     profileBtn:SetScript("OnClick", function()
         if ns.ShowProfileDialog then
@@ -822,7 +911,7 @@ local function CreateConfigFrameOnce()
     -- s) Button: Replay Feature Tour (#51)
     local tourBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     tourBtn:SetSize(260, 24)
-    tourBtn:SetPoint("TOPLEFT", 330, -582)
+    tourBtn:SetPoint("TOPLEFT", 330, -612)
     tourBtn:SetText("Replay Feature Tour")
     tourBtn:SetScript("OnClick", function()
         if ns.StartTour then
@@ -849,7 +938,7 @@ local function CreateConfigFrameOnce()
     resetBtn:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:SetText("Reset to Defaults", 1, 0.82, 0)
-        GameTooltip:AddLine("Restore all GoldFinder settings to their recommended default values.", 1, 1, 1, true)
+        GameTooltip:AddLine("Restore active profile settings to their recommended default values.", 1, 1, 1, true)
         GameTooltip:Show()
     end)
     resetBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -905,10 +994,13 @@ end
 function ns.OpenConfig()
     local f = CreateConfigFrameOnce()
     if f then
+        RefreshControls()
         f:Show()
         f:Raise()
     end
 end
+
+ns.RefreshControls = RefreshControls
 
 function ns.ToggleConfig()
     if configFrame and configFrame:IsShown() then

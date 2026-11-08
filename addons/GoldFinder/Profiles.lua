@@ -321,6 +321,7 @@ function ns.ImportProfile(encodedStr, mergeMode)
     end
 
     if ns.RebuildCategoryButtons then ns.RebuildCategoryButtons() end
+    if ns.RefreshControls then ns.RefreshControls() end
     if ns.RefreshPanel then ns.RefreshPanel() end
 
     return true, ("Successfully imported GoldFinder profile (v%s from realm %s)."):format(
