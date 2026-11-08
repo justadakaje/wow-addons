@@ -4,6 +4,15 @@ All notable changes to GoldFinder. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-11-07
+
+### Added
+
+- **Base64 Profile String Export & Import ([#48](https://github.com/justadakaje/wow-addons/issues/48)):** Added portable profile serialization (Profiles.lua) allowing full trading configurations, custom material categories, watchlists, shopping lists, and restock levels to be shared across characters, accounts, or friends via copy-pasteable Base64 strings. Accessible via /gf profile [export|import] and a dedicated [ Profile Import / Export ] button in GoldFinder Options. Includes an interactive multiline dialog with instant copy-to-clipboard focus.
+- **Multi-Account & Cross-Character Database Merger ([#49](https://github.com/justadakaje/wow-addons/issues/49)):** Added external scan database synchronization engine (
+s.MergeScanDatabase()). Ingests external scan dumps and price records, performing chronological deduplication across sightings (10-minute window) to synthesize shared market intelligence across multiple accounts without overwriting local history. Accessible via /gf merge <data_string>.
+- **Database Compaction & Automated Vacuum Maintenance ([#50](https://github.com/justadakaje/wow-addons/issues/50)):** Implemented a rigorous database compaction engine (
+s.VacuumDatabase()) guaranteeing SavedVariables storage stays well below 2MB. Prunes historical sightings older than 30 days, deduplicates same-day stagnant price points, trims excessive history arrays (capped at 30 entries per item), and purges orphaned unreferenced items. Runs automatically on login every 7 days and manually via /gf vacuum [days] or the [ Compact & Vacuum DB ] Options button.
 ## [0.8.0] - 2026-11-07
 
 ### Added

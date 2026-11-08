@@ -1,8 +1,8 @@
-## Interface: 16001, 120100, 120105, 120107, 110007, 110100, 110107, 110200, 20506, 11506, 11507, 11508, 11509, 50400, 50500, 50504
+## Interface: 16001, 120100, 120105, 120107, 110007, 110100, 110107, 110200, 20506, 11506, 11507, 11508, 11509, 50400, 50504
 ## Title: GoldFinder
 ## Notes: Adds a GoldFinder tab to the auction house. Shares the tab row with other auction house addons instead of fighting them for it.
 ## Author: justadakaje
-## Version: 0.8.0
+## Version: 0.9.0
 ## IconTexture: Interface\ICONS\INV_Misc_Coin_01
 ## Category: Auctions
 ## Category-enUS: Auctions
@@ -37,5 +37,6 @@ Config.lua
 Mail.lua
 Ledger.lua
 Cart.lua
+Profiles.lua
 Sparkline.lua
 Tab.lua

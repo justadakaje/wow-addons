@@ -1653,6 +1653,34 @@ SlashCmdList["GOLDFINDER"] = function(msg)
             end
             ns.Print("Usage: /gf vendor <link or itemID>")
         end
+    elseif cmd == "profile" then
+        arg = arg and arg:lower():match("^%s*(.-)%s*$") or ""
+        if arg == "import" then
+            if ns.ShowProfileDialog then ns.ShowProfileDialog("import") end
+        else
+            if ns.ShowProfileDialog then ns.ShowProfileDialog("export") end
+        end
+    elseif cmd == "vacuum" or cmd == "compact" then
+        local days = tonumber(arg) or 30
+        local ok, msg = ns.VacuumDatabase and ns.VacuumDatabase({ retentionDays = days, maxHistory = 30 })
+        if ok then
+            ns.Good(msg)
+        else
+            ns.Bad("Vacuum failed: " .. tostring(msg))
+        end
+    elseif cmd == "merge" then
+        if arg and arg ~= "" then
+            local decoded, err = ns.DecodeProfileString and ns.DecodeProfileString(arg)
+            if decoded then
+                local ok, msg = ns.MergeScanDatabase and ns.MergeScanDatabase(decoded)
+                if ok then ns.Good(msg) else ns.Bad("Merge failed: " .. tostring(msg)) end
+            else
+                ns.Bad("Could not parse merge data string: " .. tostring(err))
+            end
+        else
+            ns.Print("Usage: /gf merge <encoded_data_string>")
+            ns.Print("Merges external scan data and price history into your local database.")
+        end
     else
         local ratio = ns.GetDealRatio()
         local pct = math.floor((1 - ratio) * 100 + 0.5)
@@ -1691,6 +1719,9 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         ns.Print("  /gf tooltip [on|off] - toggle item tooltip market pricing")
         ns.Print("  /gf helper [on|off]  - toggle Blizzard Sell tab market helper card")
         ns.Print("  /gf export           - open CSV data export window")
+        ns.Print("  /gf profile [export|import] - export or import settings & watchlist string")
+        ns.Print("  /gf vacuum [days]    - compact database & prune old sightings (default 30d)")
+        ns.Print("  /gf merge <string>   - merge external scan database")
         ns.Print("  /gf prune [days]     - prune items not seen in [days] (default 30)")
         ns.Print("  /gf resetitem <link> - clear price history for a specific item")
         ns.Print("  /gf preset <snipe|standard|volume> - apply preset trading profile")

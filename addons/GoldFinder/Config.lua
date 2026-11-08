@@ -286,7 +286,7 @@ local function CreateConfigFrameOnce()
 
     local template = BackdropTemplateMixin and "BackdropTemplate" or nil
     local f = CreateFrame("Frame", "GoldFinderConfigFrame", UIParent, template)
-    f:SetSize(620, 630)
+    f:SetSize(620, 640)
     f:SetPoint("CENTER", UIParent, "CENTER", 0, 20)
     f:SetFrameStrata("DIALOG")
     f:SetToplevel(true)
@@ -748,6 +748,51 @@ local function CreateConfigFrameOnce()
         GameTooltip:Show()
     end)
     openCartBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+    -- p) Button: Profile Import / Export (#48)
+    local profileBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    profileBtn:SetSize(230, 24)
+    profileBtn:SetPoint("TOPLEFT", 28, -546)
+    profileBtn:SetText("Profile Import / Export")
+    profileBtn:SetScript("OnClick", function()
+        if ns.ShowProfileDialog then
+            ns.ShowProfileDialog("export")
+        end
+    end)
+    profileBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("Base64 Profile Data Portability", 1, 0.82, 0)
+        GameTooltip:AddLine("Export or import your complete GoldFinder configuration, watchlists, shopping lists, and custom categories as a sharable string.", 1, 1, 1, true)
+        GameTooltip:AddLine("Command: /gf profile [export|import]", 0.7, 0.7, 0.7)
+        GameTooltip:Show()
+    end)
+    profileBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+    -- q) Button: Compact & Vacuum Database (#50)
+    local vacuumBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    vacuumBtn:SetSize(230, 24)
+    vacuumBtn:SetPoint("TOPLEFT", 330, -546)
+    vacuumBtn:SetText("Compact & Vacuum DB")
+    vacuumBtn:SetScript("OnClick", function()
+        if ns.VacuumDatabase then
+            local ok, msg = ns.VacuumDatabase({ retentionDays = 30, maxHistory = 30 })
+            if ok then
+                NotifySettingSaved("Database compacted")
+                ns.Good("GoldFinder: " .. msg)
+            else
+                ns.Bad("Vacuum failed: " .. tostring(msg))
+            end
+        end
+    end)
+    vacuumBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("Database Maintenance & Compaction", 1, 0.82, 0)
+        GameTooltip:AddLine("Prunes stale historical price points (>30 days), deduplicates identical same-day sightings, and purges orphaned items.", 1, 1, 1, true)
+        GameTooltip:AddLine("Keeps SavedVariables file size well under the 2MB performance ceiling.", 0.25, 1, 0.25)
+        GameTooltip:AddLine("Command: /gf vacuum [days]", 0.7, 0.7, 0.7)
+        GameTooltip:Show()
+    end)
+    vacuumBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     -----------------------------------------------------------------------
     -- Section 4: Action Buttons at Bottom
