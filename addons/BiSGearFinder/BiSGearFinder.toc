@@ -14,4 +14,7 @@
 
 Knowledge\Data.lua
 Core.lua
+Scanner.lua
+Radar.lua
+UI.lua
 Bridge.lua

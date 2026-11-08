@@ -3,6 +3,8 @@
 
 local ADDON, ns = ...
 
+_G.BiSGearFinder = ns
+
 local PREFIX = "|cffffd100BiSGearFinder:|r "
 
 function ns.Print(fmt, ...)
@@ -130,7 +132,36 @@ local function HandleSlash(msg)
     cmd = (cmd or ""):lower()
     arg = arg and arg:match("^%s*(.-)%s*$") or ""
 
-    if cmd == "list" then
+    if cmd == "" or cmd == "browse" or cmd == "ui" then
+        if ns.ToggleBrowser then
+            ns.ToggleBrowser()
+        end
+
+    elseif cmd == "scan" then
+        if ns.StartBiSScan then
+            ns.StartBiSScan()
+        end
+
+    elseif cmd == "radar" then
+        if ns.GetScarcityReport then
+            local rep = ns.GetScarcityReport()
+            ns.Good("BiS Realm Scarcity Report:")
+            DEFAULT_CHAT_FRAME:AddMessage(("  🔥 |cffff4040Unlisted (Zero Listings):|r %d items"):format(#rep.scarce))
+            DEFAULT_CHAT_FRAME:AddMessage(("  ⚠️ |cffff9900Single Seller (Monopoly):|r %d items"):format(#rep.single))
+            DEFAULT_CHAT_FRAME:AddMessage(("  ✓ |cff40ff40Active Listings:|r %d items"):format(#rep.available))
+            if #rep.scarce > 0 then
+                local names = {}
+                for i = 1, math.min(5, #rep.scarce) do
+                    names[#names + 1] = rep.scarce[i].info.name
+                end
+                DEFAULT_CHAT_FRAME:AddMessage("  Top Unlisted: " .. table.concat(names, ", "))
+            end
+        end
+        if ns.CheckMonopolyOpportunities then
+            ns.CheckMonopolyOpportunities()
+        end
+
+    elseif cmd == "list" then
         local all = ns.GetAllBiSItems and ns.GetAllBiSItems() or {}
         local filter = arg:upper()
         local matched = {}
@@ -219,6 +250,9 @@ local function HandleSlash(msg)
 
     else
         ns.Print("Commands:")
+        DEFAULT_CHAT_FRAME:AddMessage("  |cffffd100/bgf|r (or /bis) - Open interactive BiS BoE radar browser")
+        DEFAULT_CHAT_FRAME:AddMessage("  |cffffd100/bgf scan|r - Start targeted Auction House query for all BiS items")
+        DEFAULT_CHAT_FRAME:AddMessage("  |cffffd100/bgf radar|r - Scan inventory for unlisted monopoly items & print scarcity")
         DEFAULT_CHAT_FRAME:AddMessage("  |cffffd100/bgf list [class|tier]|r - List tracked BiS items (e.g. /bgf list warrior, /bgf list twink)")
         DEFAULT_CHAT_FRAME:AddMessage("  |cffffd100/bgf check <link|id>|r - Look up an item in the BiS database")
         DEFAULT_CHAT_FRAME:AddMessage("  |cffffd100/bgf tooltip|r - Toggle item tooltip annotations")
