@@ -109,34 +109,37 @@ local function CreateHelperCard()
     -- Typical price row
     local typLabel = card:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     typLabel:SetPoint("TOPLEFT", itemName, "BOTTOMLEFT", 0, -8)
+    typLabel:SetSize(115, 14)
+    typLabel:SetJustifyH("LEFT")
     typLabel:SetText("Typical (Median):")
 
     local typVal = card:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     typVal:SetJustifyH("LEFT")
-    typVal:SetPoint("LEFT", card, "LEFT", 125)
-    typVal:SetPoint("TOP", typLabel, "TOP")
+    typVal:SetPoint("LEFT", typLabel, "RIGHT", 8, 0)
     card.typVal = typVal
 
     -- Current lowest row
     local lowLabel = card:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     lowLabel:SetPoint("TOPLEFT", typLabel, "BOTTOMLEFT", 0, -5)
+    lowLabel:SetSize(115, 14)
+    lowLabel:SetJustifyH("LEFT")
     lowLabel:SetText("Lowest AH Now:")
 
     local lowVal = card:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     lowVal:SetJustifyH("LEFT")
-    lowVal:SetPoint("LEFT", card, "LEFT", 125)
-    lowVal:SetPoint("TOP", lowLabel, "TOP")
+    lowVal:SetPoint("LEFT", lowLabel, "RIGHT", 8, 0)
     card.lowVal = lowVal
 
     -- Trend row
     local trendLabel = card:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     trendLabel:SetPoint("TOPLEFT", lowLabel, "BOTTOMLEFT", 0, -5)
+    trendLabel:SetSize(115, 14)
+    trendLabel:SetJustifyH("LEFT")
     trendLabel:SetText("Market Trend:")
 
     local trendVal = card:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     trendVal:SetJustifyH("LEFT")
-    trendVal:SetPoint("LEFT", card, "LEFT", 125)
-    trendVal:SetPoint("TOP", trendLabel, "TOP")
+    trendVal:SetPoint("LEFT", trendLabel, "RIGHT", 8, 0)
     card.trendVal = trendVal
 
     -- Suggestion banner
