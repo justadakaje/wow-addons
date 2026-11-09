@@ -37,6 +37,9 @@ local function GetPlayerHeldBiSItems()
     return held
 end
 
+ns.GetPlayerHeldBiSItems = GetPlayerHeldBiSItems
+ns.ResetMonopolyWarnings = function() warnedItems = {} end
+
 function ns.CheckMonopolyOpportunities()
     if not (ns.db and ns.db.settings and ns.db.settings.scarcityAlert) then return end
 
@@ -54,9 +57,9 @@ function ns.CheckMonopolyOpportunities()
                 or entry.info.name
                 or ("Item " .. itemID)
 
-            ns.Good("🔥 |cffffd100Monopoly Radar:|r You have |cffff8000[%s]|r in your bags!", name)
+            ns.Good("|cffffd100[Monopoly Radar]|r You have |cffff8000[%s]|r in your bags!", name)
             DEFAULT_CHAT_FRAME:AddMessage("   There are currently |cffff4040ZERO active listings|r on this realm!")
-            DEFAULT_CHAT_FRAME:AddMessage("   💡 |cff40ff40Recommendation:|r Price with a +25% to +50% scarcity premium on the AH.")
+            DEFAULT_CHAT_FRAME:AddMessage("   |cff40ff40[Recommendation]|r Price with a +25% to +50% scarcity premium on the AH.")
         end
     end
 end

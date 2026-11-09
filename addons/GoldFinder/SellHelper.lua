@@ -76,6 +76,18 @@ local function CreateHelperCard()
     card:SetFrameStrata("HIGH")
     card:SetClampedToScreen(true)
 
+    -- Enable interactive dragging
+    card:EnableMouse(true)
+    card:SetMovable(true)
+    card:RegisterForDrag("LeftButton")
+    card:SetScript("OnDragStart", function(self)
+        self:StartMoving()
+    end)
+    card:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        self.userMoved = true
+    end)
+
     if card.SetBackdrop then
         card:SetBackdrop({
             bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
@@ -292,21 +304,24 @@ local function UpdateCardData(sellFrame, itemID)
     -- Dock neatly to the RIGHT of the entire AuctionHouseFrame (or sellFrame fallback)
     -- outside the window, NEVER overlaying or obscuring the price list!
     -- Keep card parented to UIParent permanently to prevent Blizzard frame hierarchy taint.
-    local anchor = AuctionHouseFrame or sellFrame
-    card:ClearAllPoints()
+    if not card.userMoved then
+        local anchor = AuctionHouseFrame or sellFrame
+        card:ClearAllPoints()
 
-    local right = (anchor and anchor.GetRight and anchor:GetRight()) or 0
-    local screenWidth = UIParent:GetWidth() or 1920
-    if right + 335 < screenWidth then
-        card:SetPoint("TOPLEFT", anchor, "TOPRIGHT", 6, -10)
-    else
-        card:SetPoint("TOPRIGHT", anchor, "TOPLEFT", -6, -10)
+        local right = (anchor and anchor.GetRight and anchor:GetRight()) or 0
+        local screenWidth = UIParent:GetWidth() or 1920
+        if right + 335 < screenWidth then
+            card:SetPoint("TOPLEFT", anchor, "TOPRIGHT", 6, -10)
+        else
+            card:SetPoint("TOPRIGHT", anchor, "TOPLEFT", -6, -10)
+        end
     end
 
     card:Show()
 end
 
 local function UpdateHelper(sellFrame, itemLocation)
+    if ns.HideBuyHelper then ns.HideBuyHelper() end
     if not itemLocation then
         if helperCard then helperCard:Hide() end
         currentItemID = nil
@@ -370,7 +385,10 @@ function ns.InitSellHelper()
 
     if AuctionHouseFrame.Hide then
         hooksecurefunc(AuctionHouseFrame, "Hide", function()
-            if helperCard then helperCard:Hide() end
+            if helperCard then
+                helperCard:Hide()
+                helperCard.userMoved = nil
+            end
             currentItemID = nil
             currentSellFrame = nil
         end)
@@ -396,7 +414,10 @@ sellEvents:RegisterEvent("ITEM_SEARCH_RESULTS_UPDATED")
 sellEvents:RegisterEvent("AUCTION_HOUSE_CLOSED")
 sellEvents:SetScript("OnEvent", function(_, event, itemID)
     if event == "AUCTION_HOUSE_CLOSED" then
-        if helperCard then helperCard:Hide() end
+        if helperCard then
+            helperCard:Hide()
+            helperCard.userMoved = nil
+        end
         currentItemID = nil
         currentSellFrame = nil
         return

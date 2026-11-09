@@ -1,7 +1,7 @@
 ## Interface: 16001, 120100, 120105, 120107, 110007, 110100, 110107, 110200, 20506, 11506, 11507, 11508, 11509, 50400, 50504
 ## Title: GoldFinder
 ## Notes: Adds a GoldFinder tab to the auction house. Shares the tab row with other auction house addons instead of fighting them for it.
-## Author: justadakaje
+## Author: KenHenChan
 ## Version: 1.0.3
 ## IconTexture: Interface\AddOns\GoldFinder\assets\GoldFinder-Logo.png
 ## Category: Auctions

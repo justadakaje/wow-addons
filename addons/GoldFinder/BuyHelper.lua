@@ -30,6 +30,13 @@ function ns.GetCurrentBuyHelperItemID()
     return currentItemID
 end
 
+function ns.HideBuyHelper()
+    if helperCard and helperCard:IsShown() then
+        helperCard:Hide()
+    end
+    currentItemID = nil
+end
+
 ---------------------------------------------------------------------------
 -- Conversion Lookups
 ---------------------------------------------------------------------------
@@ -58,6 +65,51 @@ local function BuildConversionLookups()
 end
 
 ---------------------------------------------------------------------------
+-- Display State Check (Multi-Layered Mutual Exclusion)
+---------------------------------------------------------------------------
+
+local function IsBuyFrameActive()
+    if not AuctionHouseFrame or not AuctionHouseFrame:IsVisible() then
+        return false, "AuctionHouseFrame not visible"
+    end
+
+    -- Tab check: tab 1 is Blizzard's Buy tab
+    local selectedTab = (PanelTemplates_GetSelectedTab and PanelTemplates_GetSelectedTab(AuctionHouseFrame))
+        or AuctionHouseFrame.selectedTab
+        or 0
+    if selectedTab ~= 1 then
+        return false, ("selectedTab=%s (not Buy tab 1)"):format(tostring(selectedTab))
+    end
+
+    -- Mutual exclusion: If any Sell frame or Auctions frame is currently visible on screen, we are NOT buying!
+    if AuctionHouseFrame.CommoditiesSellFrame and AuctionHouseFrame.CommoditiesSellFrame:IsVisible() then
+        return false, "CommoditiesSellFrame is visible"
+    end
+    if AuctionHouseFrame.ItemSellFrame and AuctionHouseFrame.ItemSellFrame:IsVisible() then
+        return false, "ItemSellFrame is visible"
+    end
+    if AuctionHouseFrame.WoWTokenSellFrame and AuctionHouseFrame.WoWTokenSellFrame:IsVisible() then
+        return false, "WoWTokenSellFrame is visible"
+    end
+    if AuctionHouseFrame.AuctionsFrame and AuctionHouseFrame.AuctionsFrame:IsVisible() then
+        return false, "AuctionsFrame is visible"
+    end
+
+    -- Subframe check: player must be actively viewing commodities or items to buy (and it must be ISVISIBLE, not just isshown!)
+    local buyCommodities = AuctionHouseFrame.CommoditiesBuyFrame
+    local buyItem = AuctionHouseFrame.ItemBuyFrame
+
+    local isCommVisible = buyCommodities and buyCommodities:IsVisible()
+    local isItemVisible = buyItem and buyItem:IsVisible()
+
+    if not isCommVisible and not isItemVisible then
+        return false, "Neither CommoditiesBuyFrame nor ItemBuyFrame is visible"
+    end
+
+    return true, "Buy commodity/item view active"
+end
+
+---------------------------------------------------------------------------
 -- Card UI Construction
 ---------------------------------------------------------------------------
 
@@ -69,6 +121,18 @@ local function CreateBuyHelperCard()
     card:SetSize(320, 175)
     card:SetFrameStrata("HIGH")
     card:SetClampedToScreen(true)
+
+    -- Enable interactive dragging
+    card:EnableMouse(true)
+    card:SetMovable(true)
+    card:RegisterForDrag("LeftButton")
+    card:SetScript("OnDragStart", function(self)
+        self:StartMoving()
+    end)
+    card:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        self.userMoved = true
+    end)
 
     if card.SetBackdrop then
         card:SetBackdrop({
@@ -86,8 +150,7 @@ local function CreateBuyHelperCard()
     closeBtn:SetSize(22, 22)
     closeBtn:SetPoint("TOPRIGHT", -4, -4)
     closeBtn:SetScript("OnClick", function()
-        card:Hide()
-        currentItemID = nil
+        ns.HideBuyHelper()
     end)
 
     -- Header Title
@@ -145,9 +208,20 @@ end
 
 local function EvaluateParity(itemID)
     if not ns.IsBuyHelperEnabled() then
-        if helperCard then helperCard:Hide() end
+        ns.HideBuyHelper()
         return
     end
+
+    -- Strictly ensure the player is on the Buy tab viewing a commodity or item!
+    -- Never show on the Sell tab, GoldFinder tab, or Auctions tab.
+    local active, reason = IsBuyFrameActive()
+    if not active then
+        if ns.Trace then ns.Trace("BuyHelper EvaluateParity(%s) SUPPRESSED: %s", tostring(itemID), reason or "not active") end
+        ns.HideBuyHelper()
+        return
+    end
+
+    if ns.Trace then ns.Trace("BuyHelper EvaluateParity(%s) ACTIVE: %s", tostring(itemID), reason or "active") end
 
     BuildConversionLookups()
 
@@ -155,7 +229,7 @@ local function EvaluateParity(itemID)
     local asReagent = reagentToConv[itemID]
 
     if not asOutput and not asReagent then
-        if helperCard then helperCard:Hide() end
+        ns.HideBuyHelper()
         return
     end
 
@@ -192,14 +266,14 @@ local function EvaluateParity(itemID)
             local savingsPerUnit = currentPrice - unitCraftCost
             local pct = math.floor((savingsPerUnit / currentPrice) * 100 + 0.5)
 
-            card.compLine:SetText(("|cffffd100💡 Cheaper to Craft:|r 1x %s costs %s to craft."):format(curName, ns.Money(unitCraftCost)))
+            card.compLine:SetText(("|cffffd100[Craft Alert]:|r 1x %s costs %s to craft."):format(curName, ns.Money(unitCraftCost)))
             card.savings:SetText(("|cff40ff40Save %s (%d%% cheaper)|r by buying %s and crafting yourself."):format(ns.Money(savingsPerUnit), pct, rName))
             card.targetAltID = mainReagent and mainReagent.itemID
             card.targetAltName = rName
             card.switchBtn:SetText("Search " .. (rName:sub(1, 14)))
             card.switchBtn:Show()
         else
-            card.compLine:SetText(("|cff40ff40✓ Competitive Listing:|r Crafting costs %s."):format(hasAllReagentPrices and ns.Money(unitCraftCost) or "unknown"))
+            card.compLine:SetText(("|cff40ff40[Competitive]:|r Crafting costs %s."):format(hasAllReagentPrices and ns.Money(unitCraftCost) or "unknown"))
             card.savings:SetText("Current finished item price is reasonable compared to raw materials.")
             card.switchBtn:Hide()
         end
@@ -223,42 +297,95 @@ local function EvaluateParity(itemID)
 
         if outputPrice and outputPrice > 0 and rawCostForOne > 0 and outputPrice < math.floor(rawCostForOne * 0.90) then
             local savingsAmt = rawCostForOne - outputPrice
-            card.compLine:SetText(("|cffff4040⚠️ Don't Craft!|r %s is selling for %s."):format(outName, ns.Money(outputPrice)))
+            card.compLine:SetText(("|cffff4040[Do Not Craft]:|r %s is selling for %s."):format(outName, ns.Money(outputPrice)))
             card.savings:SetText(("|cff40ff40Save %s|r: Buying pre-crafted %s is cheaper than crafting from raw materials!"):format(ns.Money(savingsAmt), outName))
             card.targetAltID = conv.output.itemID
             card.targetAltName = outName
             card.switchBtn:SetText("Search " .. (outName:sub(1, 14)))
             card.switchBtn:Show()
         else
-            card.compLine:SetText(("|cff40ff40✓ Raw Parity Normal:|r Finished %s is %s."):format(outName, outputPrice and ns.Money(outputPrice) or "unknown"))
+            card.compLine:SetText(("|cff40ff40[Parity Normal]:|r Finished %s is %s."):format(outName, outputPrice and ns.Money(outputPrice) or "unknown"))
             card.savings:SetText("Raw material prices align with finished market value.")
             card.switchBtn:Hide()
         end
     end
 
-    -- Dock card to the right of AuctionHouseFrame
-    local anchor = AuctionHouseFrame
-    if anchor and anchor:IsShown() then
-        card:ClearAllPoints()
-        local right = (anchor.GetRight and anchor:GetRight()) or 0
-        local screenWidth = UIParent:GetWidth() or 1920
-        if right + 335 < screenWidth then
-            card:SetPoint("TOPLEFT", anchor, "TOPRIGHT", 6, -10)
-        else
-            card:SetPoint("TOPRIGHT", anchor, "TOPLEFT", -6, -10)
+    -- Dock card to the right of AuctionHouseFrame (if not manually moved by the user)
+    if not card.userMoved then
+        local anchor = AuctionHouseFrame
+        if anchor and anchor:IsShown() then
+            card:ClearAllPoints()
+            local right = (anchor.GetRight and anchor:GetRight()) or 0
+            local screenWidth = UIParent:GetWidth() or 1920
+            if right + 335 < screenWidth then
+                card:SetPoint("TOPLEFT", anchor, "TOPRIGHT", 6, -10)
+            else
+                card:SetPoint("TOPRIGHT", anchor, "TOPLEFT", -6, -10)
+            end
         end
-        card:Show()
-    else
-        card:Hide()
     end
+    card:Show()
 end
 
 ---------------------------------------------------------------------------
--- Event Watcher
+-- Lifecycle & Event Watcher (10-Layer Defense)
 ---------------------------------------------------------------------------
+
+local hookedAH = false
+function ns.InitBuyHelper()
+    if hookedAH or not AuctionHouseFrame then return end
+    hookedAH = true
+
+    -- 1. Hook AH hide
+    if AuctionHouseFrame.Hide then
+        hooksecurefunc(AuctionHouseFrame, "Hide", function()
+            if ns.Trace then ns.Trace("AuctionHouseFrame:Hide -> hiding BuyHelper") end
+            ns.HideBuyHelper()
+            if helperCard then
+                helperCard.userMoved = nil
+            end
+        end)
+    end
+
+    -- 2. Hook subframe method hides (using method hooksecurefunc, NEVER HookScript on Blizzard frames!)
+    if AuctionHouseFrame.CommoditiesBuyFrame and AuctionHouseFrame.CommoditiesBuyFrame.Hide then
+        hooksecurefunc(AuctionHouseFrame.CommoditiesBuyFrame, "Hide", function()
+            if ns.Trace then ns.Trace("CommoditiesBuyFrame:Hide -> hiding BuyHelper") end
+            ns.HideBuyHelper()
+        end)
+    end
+
+    if AuctionHouseFrame.ItemBuyFrame and AuctionHouseFrame.ItemBuyFrame.Hide then
+        hooksecurefunc(AuctionHouseFrame.ItemBuyFrame, "Hide", function()
+            if ns.Trace then ns.Trace("ItemBuyFrame:Hide -> hiding BuyHelper") end
+            ns.HideBuyHelper()
+        end)
+    end
+
+    -- 3. Hook LibAHTab addon tab changes (GoldFinder, Auctionator, etc.)
+    local LibAHTab = LibStub and LibStub("LibAHTab-1-0", true)
+    if LibAHTab and LibAHTab.SetSelected then
+        hooksecurefunc(LibAHTab, "SetSelected", function(_, tabID)
+            if ns.Trace then ns.Trace("LibAHTab:SetSelected(%s) -> hiding BuyHelper", tostring(tabID)) end
+            ns.HideBuyHelper()
+        end)
+    end
+
+    -- 4. Hook AH display mode changes (Blizzard's state machine for all tab and search transitions)
+    if AuctionHouseFrame.SetDisplayMode then
+        hooksecurefunc(AuctionHouseFrame, "SetDisplayMode", function()
+            local isBuying, reason = IsBuyFrameActive()
+            if not isBuying and helperCard and helperCard:IsShown() then
+                if ns.Trace then ns.Trace("SetDisplayMode -> not buying (%s) -> hiding BuyHelper", reason or "inactive") end
+                ns.HideBuyHelper()
+            end
+        end)
+    end
+end
 
 local buyWatcher = CreateFrame("Frame")
 buyWatcher:RegisterEvent("COMMODITY_SEARCH_RESULTS_UPDATED")
+buyWatcher:RegisterEvent("AUCTION_HOUSE_SHOW")
 buyWatcher:RegisterEvent("AUCTION_HOUSE_CLOSED")
 
 buyWatcher:SetScript("OnEvent", function(self, event, arg1)
@@ -266,8 +393,14 @@ buyWatcher:SetScript("OnEvent", function(self, event, arg1)
         if arg1 and arg1 > 0 then
             EvaluateParity(arg1)
         end
+    elseif event == "AUCTION_HOUSE_SHOW" then
+        if ns.InitBuyHelper then ns.InitBuyHelper() end
     elseif event == "AUCTION_HOUSE_CLOSED" then
-        if helperCard then helperCard:Hide() end
+        if ns.Trace then ns.Trace("AUCTION_HOUSE_CLOSED -> hiding BuyHelper") end
+        if helperCard then
+            helperCard:Hide()
+            helperCard.userMoved = nil
+        end
         currentItemID = nil
     end
 end)

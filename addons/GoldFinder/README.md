@@ -114,7 +114,7 @@ Full native translation and localized category filtering across 8 languages:
 
 ## Credits & License
 
-- **Author:** justadakaje
+- **Author:** KenHenChan
 - **License:** MIT License
 - **Vendored Libraries:** Includes [LibAHTab](https://github.com/TheMouseNest/LibAHTab) (MIT), LibStub, LibDataBroker-1.1, and LibDBIcon-1.0.
 - **Independence:** GoldFinder is **not** based on Auctionator. None of Auctionator's code is used or was read. The two only share the auction house window through LibAHTab.

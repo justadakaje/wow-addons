@@ -154,6 +154,14 @@ local function RefreshControls()
         else
             controls.profileNameText:SetText("|cffffd100Default (Account-Wide)|r")
         end
+        local parent = controls.charProfileCb:GetParent()
+        if parent then
+            local tw = (controls.charProfileCb.text and controls.charProfileCb.text:GetStringWidth()) or 0
+            if tw > 0 then
+                controls.charProfileCb:ClearAllPoints()
+                controls.charProfileCb:SetPoint("RIGHT", parent, "RIGHT", -(tw + 12), 0)
+            end
+        end
     end
 
     -- a) Discount threshold slider (5% - 50%)
@@ -381,7 +389,10 @@ local function CreateConfigFrameOnce()
             NotifySettingSaved(checked and "Using Character-Specific Profile" or "Using Account-Wide Profile")
         end
     )
-    controls.charProfileCb:SetPoint("RIGHT", profPanel, "RIGHT", -8, 0)
+    -- Align checkbox so its label text stays fully within the right border of profPanel
+    local cbTextWidth = (controls.charProfileCb.text and controls.charProfileCb.text:GetStringWidth()) or 0
+    if not cbTextWidth or cbTextWidth <= 0 then cbTextWidth = 145 end
+    controls.charProfileCb:SetPoint("RIGHT", profPanel, "RIGHT", -(cbTextWidth + 12), 0)
 
     -- Button: Copy Profile
     local copyProfBtn = CreateFrame("Button", nil, profPanel, "UIPanelButtonTemplate")

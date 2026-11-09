@@ -409,3 +409,25 @@ function ns.ToggleBrowser()
 end
 
 ns.RefreshUI = RefreshBrowserUI
+ns.GetFilteredItems = GetFilteredItems
+ns.CreateBrowserFrame = CreateBrowserFrame
+ns.SetBrowserFilter = function(filterVal)
+    currentFilter = filterVal or "ALL"
+    currentPage = 1
+end
+ns.SetBrowserClassFilter = function(classVal)
+    currentClassFilter = classVal or "ALL"
+    currentPage = 1
+end
+ns.SetBrowserQuery = function(q)
+    currentQuery = q or ""
+    currentPage = 1
+end
+ns.GetBrowserState = function()
+    return {
+        filter = currentFilter,
+        classFilter = currentClassFilter,
+        query = currentQuery,
+        page = currentPage,
+    }
+end

@@ -98,6 +98,8 @@ local function ProcessItemSearchResults(itemKey)
     end
 end
 
+ns.ProcessItemSearchResults = ProcessItemSearchResults
+
 scanFrame:SetScript("OnEvent", function(self, event, arg1)
     if event == "ITEM_SEARCH_RESULTS_UPDATED" then
         ProcessItemSearchResults(arg1)

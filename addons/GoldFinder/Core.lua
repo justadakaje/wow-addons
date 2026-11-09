@@ -87,6 +87,25 @@ function ns.Good(msg, ...)  emit("|cff40ff40", msg, ...) end
 function ns.Warn(msg, ...)  emit("|cffff9900", msg, ...) end
 function ns.Bad(msg, ...)   emit("|cffff4040", msg, ...) end
 
+ns.debugTrace = false
+function ns.Trace(msg, ...)
+    if ns.debugTrace then
+        if select("#", ...) > 0 then
+            msg = msg:format(...)
+        end
+        DEFAULT_CHAT_FRAME:AddMessage("|cff00ffff[GF Trace]|r " .. msg)
+    end
+end
+
+ns.lastErrors = ns.lastErrors or {}
+function ns.RecordError(err)
+    if not err then return end
+    table.insert(ns.lastErrors, 1, tostring(err))
+    if #ns.lastErrors > 5 then
+        table.remove(ns.lastErrors)
+    end
+end
+
 function ns.Money(copper, height)
     copper = math.floor(copper or 0)
     if C_CurrencyInfo and C_CurrencyInfo.GetCoinTextureString then
@@ -1354,6 +1373,15 @@ SlashCmdList["GOLDFINDER"] = function(msg)
             ns.OpenConfig()
         elseif ns.ToggleConfig then
             ns.ToggleConfig()
+        end
+    elseif cmd == "trace" or cmd == "debug" then
+        ns.debugTrace = not ns.debugTrace
+        ns.Good("Diagnostics trace mode %s.", ns.debugTrace and "|cff40ff40ENABLED|r (will log AH state transitions to chat)" or "|cffff4040DISABLED|r")
+    elseif cmd == "diag" or cmd == "diagnostic" or cmd == "report" or cmd == "bug" then
+        if ns.ShowDiagnosticDialog then
+            ns.ShowDiagnosticDialog()
+        elseif ns.ShowInfoDialog then
+            ns.ShowInfoDialog()
         end
     elseif cmd == "ratio" or cmd == "discount" then
         local num = tonumber(arg)

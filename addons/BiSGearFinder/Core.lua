@@ -146,9 +146,9 @@ local function HandleSlash(msg)
         if ns.GetScarcityReport then
             local rep = ns.GetScarcityReport()
             ns.Good("BiS Realm Scarcity Report:")
-            DEFAULT_CHAT_FRAME:AddMessage(("  🔥 |cffff4040Unlisted (Zero Listings):|r %d items"):format(#rep.scarce))
-            DEFAULT_CHAT_FRAME:AddMessage(("  ⚠️ |cffff9900Single Seller (Monopoly):|r %d items"):format(#rep.single))
-            DEFAULT_CHAT_FRAME:AddMessage(("  ✓ |cff40ff40Active Listings:|r %d items"):format(#rep.available))
+            DEFAULT_CHAT_FRAME:AddMessage(("  |cffff4040[Unlisted (Zero Listings)]:|r %d items"):format(#rep.scarce))
+            DEFAULT_CHAT_FRAME:AddMessage(("  |cffff9900[Single Seller (Monopoly)]:|r %d items"):format(#rep.single))
+            DEFAULT_CHAT_FRAME:AddMessage(("  |cff40ff40[Active Listings]:|r %d items"):format(#rep.available))
             if #rep.scarce > 0 then
                 local names = {}
                 for i = 1, math.min(5, #rep.scarce) do

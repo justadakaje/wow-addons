@@ -124,7 +124,7 @@ Full native translation and localized category filtering across 8 languages:
 
 ## Credits & License
 
-- **Author:** justadakaje
+- **Author:** KenHenChan
 - **License:** MIT License
 - **Vendored Libraries:** Includes [LibAHTab](https://github.com/TheMouseNest/LibAHTab) (MIT), LibStub, LibDataBroker-1.1, and LibDBIcon-1.0.
 - **Independence:** GoldFinder is 100% standalone and is not affiliated with Blizzard Entertainment or Auctionator.
