@@ -4,6 +4,31 @@ All notable changes to GoldFinder. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2026-11-08
+
+### Added
+
+- **In-Game Diagnostic Vault (`/gf diag` & `/gf report`):** Generates standardized markdown diagnostic reports capturing client interface, build version, character/realm info, memory footprint, database volume, profile thresholds, valuation engines, UI states, live scan engine diagnostics, and trapped error traces. Includes a one-click `[ Copy Diagnostic Report ]` button in the Info & About dashboard for seamless copy-pasting to GitHub issues or Discord.
+- **Lifetime Scan Telemetry:** Persistent tracking of total cumulative scans performed (`db.lifetimeScans`) alongside the retained 100-entry rolling summary buffer (`CAPTURES_KEPT = 100`). The UI and AH tab footer now explicitly distinguish lifetime scans from the rolling buffer (e.g. `102 scans (100 retained), last 20:39`).
+- **Draggable Helper Companion Cards:** Enabled user repositioning via left-click dragging on both the `GoldFinderBuyHelperCard` (Smart Buy Parity Advisor) and `GoldFinderSellHelperCard` (Sell Price Helper).
+
+### Fixed
+
+- **Scan Retention Ceiling & Duplicate Dropping on Quiet Realms:**
+  - Resolved an issue where running repeated Full Scans on low-population or beta realms caused subsequent scans to be permanently dropped due to an identical result fingerprint. Replicate full snapshots are now only debounced if within 60 seconds of another snapshot; browse result echoes are debounced within the 10-minute sighting window.
+  - Fixed `ns.ScanStatus().status` returning rich metadata (e.g. `2026-11-08 20:39 (Browse, 310 materials, 11094 rows)`), eliminating the `"Last Scan Summary: None recorded"` display bug.
+- **Buy & Sell Helper Layering Collision:**
+  - Fixed an issue where dropping an item into the AH Sell slot triggered `COMMODITY_SEARCH_RESULTS_UPDATED`, causing the Smart Buy Parity Advisor to dock simultaneously over the Sell Price Helper.
+  - Implemented strict `IsBuyFrameActive()` validation and mutual interlock (`ns.HideBuyHelper()` called whenever an item is placed in the Sell slot).
+- **Bag Right-Click Protected Action Taint Eradication:**
+  - Removed insecure hooks on `PanelTemplates_SetTab` and Blizzard UI tab button scripts that tainted `ContainerFrame.lua`, resolving `ADDON_ACTION_FORBIDDEN` errors on `UseContainerItem` when right-clicking bag items (such as Waylaid Crates). Tab switching is now detected via safe `AuctionHouseFrame.SetDisplayMode` hooks.
+- **UI Glyph & Font Rendering:**
+  - Replaced Unicode emojis that rendered as broken box glyphs `[]` in native WoW fonts with clean standardized tags (`[Craft Alert]`, `[Competitive]`, `[Do Not Craft]`, `[Parity Normal]`).
+- **Options Window Profile Bar Text Overflow:**
+  - Fixed an anchoring defect in `Config.lua` where the `"Character-Specific Settings"` label extended past the right window border. Anchor offsets are now measured dynamically via `GetStringWidth()`.
+- **Author Attribution:**
+  - Updated author metadata to `KenHenChan` across all manifests and in-game dashboards.
+
 ## [1.0.3] - 2026-11-08
 
 ### Added

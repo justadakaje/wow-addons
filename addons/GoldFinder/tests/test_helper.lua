@@ -119,7 +119,7 @@ _G.C_Timer = {
 
 _G.C_AddOns = {
     GetAddOnMetadata = function(_addon, field)
-        if field == "Version" then return "1.0.3" end
+        if field == "Version" then return "1.0.4" end
         return nil
     end,
     IsAddOnLoaded = function(_addon) return true end,
@@ -251,7 +251,7 @@ end
 function helper.createNamespace(overrides)
     local ns = {
         addonName = "GoldFinder",
-        version = "1.0.3",
+        version = "1.0.4",
         db = {
             items = {},
             scans = {},
