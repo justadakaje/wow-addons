@@ -951,6 +951,7 @@ boot:SetScript("OnEvent", function(self, _, name)
         db.realms[realm] = {
             items = db.items or {},
             scans = db.scans or {},
+            lifetimeScans = db.lifetimeScans or (db.scans and #db.scans) or 0,
             factions = {},
         }
     end
@@ -960,13 +961,15 @@ boot:SetScript("OnEvent", function(self, _, name)
         local fKey = (UnitFactionGroup and UnitFactionGroup("player")) or "Neutral"
         rData.factions = rData.factions or {}
         if not rData.factions[fKey] then
-            rData.factions[fKey] = { items = {}, scans = {} }
+            rData.factions[fKey] = { items = {}, scans = {}, lifetimeScans = 0 }
         end
         db.items = rData.factions[fKey].items
         db.scans = rData.factions[fKey].scans
+        db.lifetimeScans = rData.factions[fKey].lifetimeScans or (db.scans and #db.scans) or 0
     else
         db.items = rData.items
         db.scans = rData.scans
+        db.lifetimeScans = rData.lifetimeScans or (db.scans and #db.scans) or 0
     end
 end)
 
@@ -1000,13 +1003,15 @@ function ns.SetFactionShareEnabled(val)
     if val == false then
         local fKey = ns.GetActiveFaction()
         rData.factions = rData.factions or {}
-        rData.factions[fKey] = rData.factions[fKey] or { items = {}, scans = {} }
+        rData.factions[fKey] = rData.factions[fKey] or { items = {}, scans = {}, lifetimeScans = 0 }
         ns.db.items = rData.factions[fKey].items
         ns.db.scans = rData.factions[fKey].scans
+        ns.db.lifetimeScans = rData.factions[fKey].lifetimeScans or (rData.factions[fKey].scans and #rData.factions[fKey].scans) or 0
     else
         local db = ns.db
         db.items = rData.items
         db.scans = rData.scans
+        db.lifetimeScans = rData.lifetimeScans or (rData.scans and #rData.scans) or 0
     end
 
     if ns.RefreshPanel then ns.RefreshPanel() end

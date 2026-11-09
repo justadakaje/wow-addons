@@ -28,6 +28,8 @@ end
 
 _G.tinsert = table.insert
 _G.tremove = table.remove
+_G.date = os.date
+_G.time = os.time
 
 _G.strsplit = function(delim, str, limit)
     if not str then return nil end
@@ -80,6 +82,9 @@ _G.C_Item = {
     end,
     GetItemCount = function(itemID, _includeBank)
         return helper.mockItemCounts[itemID] or 0
+    end,
+    GetItemInfoInstant = function(itemID)
+        return itemID, "item", "parts", 1, 1, 7, 0
     end,
 }
 

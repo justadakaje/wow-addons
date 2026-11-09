@@ -137,12 +137,29 @@ local function Finish(c, totalRows)
     -- and dropped. Saved, so a /reload cannot replay it either.
     local fingerprint = ("%d:%d:%.0f:%.0f"):format(
         totalRows, c.distinctItems, c.fpPrice or 0, c.fpQty or 0)
+    local isDuplicate = false
     if fingerprint == db.lastFingerprint then
+        if c.source == "browse" then
+            -- Client re-delivers cached browse results on tab clicks; drop if within the sighting window (10 min)
+            if not db.lastScanTime or (now - db.lastScanTime < SAME_POINT_SECONDS) then
+                isDuplicate = true
+            end
+        elseif c.source == "replicate" then
+            -- Full snapshots with identical fingerprints within 60s are debounced
+            if db.lastScanTime and (now - db.lastScanTime < 60) then
+                isDuplicate = true
+            end
+        end
+    end
+
+    if isDuplicate then
         diag.duplicates = diag.duplicates + 1
         if ns.RefreshPanel then ns.RefreshPanel() end
         return
     end
+
     db.lastFingerprint = fingerprint
+    db.lastScanTime = now
 
     local perItem = {}
     for _, r in pairs(c.rows) do
@@ -197,6 +214,7 @@ local function Finish(c, totalRows)
                       noPrice = c.noPrice, noItem = c.noItem, skipped = c.skipped }
     db.scans[#db.scans + 1] = summary
     while #db.scans > CAPTURES_KEPT do table.remove(db.scans, 1) end
+    db.lifetimeScans = (db.lifetimeScans or #db.scans) + 1
     diag.skip = nil
 
     if totalRows >= ANNOUNCE_ROWS then
@@ -327,6 +345,10 @@ end
 -- Short footer text plus tooltip detail. Each detail is either a
 -- { label, value } pair or a plain sentence string; warn marks anything
 -- the player should act on.
+function ns.GetScanDiag()
+    return DiagSentence()
+end
+
 function ns.ScanStatus()
     local db = ns.db
     local st = { lines = {}, warn = false }
@@ -334,10 +356,30 @@ function ns.ScanStatus()
 
     if not db or #db.scans == 0 then
         st.footer = "No scans recorded yet"
+        st.status = "No scans recorded yet"
+        st.count = 0
+        st.lifetime = 0
         L[#L + 1] = "Run a Full Scan (Auctionator's works) or search the Buy tab. GoldFinder records what comes back."
     else
         local s = db.scans[#db.scans]
-        st.footer = ("%d scan%s recorded, last %s"):format(#db.scans, #db.scans == 1 and "" or "s", date("%H:%M", s.t))
+        local count = #db.scans
+        local lifetime = db.lifetimeScans or count
+        st.count = count
+        st.lifetime = lifetime
+        st.lastTime = s.t
+
+        local countLabel = (lifetime > count)
+            and ("%d scans (%d retained)"):format(lifetime, count)
+            or ("%d scan%s recorded"):format(count, count == 1 and "" or "s")
+        st.footer = ("%s, last %s"):format(countLabel, date("%H:%M", s.t))
+
+        st.status = ("%s (%s, %d materials, %d rows)"):format(
+            date("%Y-%m-%d %H:%M", s.t),
+            s.source == "browse" and "Browse" or "Snapshot",
+            s.items or s.materials or 0,
+            s.rows or 0
+        )
+
         L[#L + 1] = { "Last scan", date("%Y-%m-%d %H:%M", s.t) }
         L[#L + 1] = { "Source", s.source == "browse" and "Browse results" or "Full snapshot" }
         if s.distinctItems then
@@ -345,7 +387,7 @@ function ns.ScanStatus()
         else
             L[#L + 1] = { "Results", tostring(s.rows) }
         end
-        L[#L + 1] = { "Materials", tostring(s.items) }
+        L[#L + 1] = { "Materials", tostring(s.items or s.materials or 0) }
         if s.noInfo > 0 then
             L[#L + 1] = ("%d listing(s) had not finished loading and may show without a name."):format(s.noInfo)
         end

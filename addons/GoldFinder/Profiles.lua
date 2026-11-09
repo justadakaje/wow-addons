@@ -410,6 +410,9 @@ function ns.MergeScanDatabase(externalData)
             end
         end
         table.sort(db.scans, function(a, b) return (a.t or 0) < (b.t or 0) end)
+        if externalData.lifetimeScans and type(externalData.lifetimeScans) == "number" then
+            db.lifetimeScans = math.max(db.lifetimeScans or #db.scans, externalData.lifetimeScans)
+        end
     end
 
     if ns.RefreshPanel then ns.RefreshPanel() end

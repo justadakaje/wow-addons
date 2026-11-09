@@ -77,7 +77,9 @@ function ns.GenerateDiagnosticReport()
         end
     end
     local scanCount = (db and db.scans and #db.scans) or 0
-    local lastScan = (ns.ScanStatus and ns.ScanStatus().status) or "None recorded"
+    local lifetimeScans = (db and db.lifetimeScans) or scanCount
+    local scanStatus = ns.ScanStatus and ns.ScanStatus()
+    local lastScan = (scanStatus and scanStatus.status) or "None recorded"
 
     local isChar = ns.IsCharacterSpecificProfile and ns.IsCharacterSpecificProfile()
     local profileName = isChar and (charName .. " (Character-Specific)") or "Default (Account-Wide)"
@@ -113,7 +115,10 @@ function ns.GenerateDiagnosticReport()
     lines[#lines + 1] = ("- **Player:** %s (Level %s %s, Faction: %s)"):format(charName, tostring(charLevel), tostring(charClass or "Class"), faction)
     lines[#lines + 1] = ("- **Realm:** %s"):format(realm)
     lines[#lines + 1] = ("- **Memory Footprint:** %s"):format(memStr)
-    lines[#lines + 1] = ("- **Database:** %d items tracked, %d price points, %d scans recorded (Last: %s)"):format(itemCount, historyCount, scanCount, lastScan)
+    local scanStr = (lifetimeScans > scanCount)
+        and ("%d scans recorded (%d retained in rolling buffer)"):format(lifetimeScans, scanCount)
+        or ("%d scans recorded"):format(scanCount)
+    lines[#lines + 1] = ("- **Database:** %d items tracked, %d price points, %s (Last: %s)"):format(itemCount, historyCount, scanStr, lastScan)
     lines[#lines + 1] = ("- **Active Profile:** %s"):format(profileName)
     lines[#lines + 1] = ("- **Thresholds:** Discount: %d%%, MinPrior: %d, MinProfit: %s, SpendCap: %s"):format(
         discount, minPrior, ns.Money(minProfit), (spendCap > 0) and ns.Money(spendCap) or "Unlimited")
@@ -121,6 +126,11 @@ function ns.GenerateDiagnosticReport()
     lines[#lines + 1] = ("- **Modules:** Sound: %s (%ds throttle), ChatTab: %s, Tooltip: %s, SellHelper: %s, BuyHelper: %s, MailCollector: %s, CostBasis: %s"):format(
         soundOn and "ON" or "MUTED", soundThrottle, chatTab and "ON" or "OFF", tooltipOn and "ON" or "OFF", sellHelper and "ON" or "OFF", buyHelper and "ON" or "OFF", mailCollector and "ON" or "OFF", costBasis and "ON" or "OFF")
     lines[#lines + 1] = ("- **AH State:** IsShown=%s, SelectedTab=%s"):format(tostring(ahShown), tostring(ahSelectedTab))
+
+    local scanDiag = ns.GetScanDiag and ns.GetScanDiag()
+    if scanDiag then
+        lines[#lines + 1] = ("- **Scan Engine Activity:** %s"):format(scanDiag)
+    end
 
     -- Recent errors if any
     local errors = ns.lastErrors or {}
@@ -420,21 +430,27 @@ function ns.ShowInfoDialog()
         end
 
         local scanCount = (db and db.scans and #db.scans) or 0
-        local lastScan = (ns.ScanStatus and ns.ScanStatus().status) or "None recorded"
+        local lifetimeScans = (db and db.lifetimeScans) or scanCount
+        local scanStatus = ns.ScanStatus and ns.ScanStatus()
+        local lastScan = (scanStatus and scanStatus.status) or "None recorded"
         local realm = ns.GetActiveRealm and ns.GetActiveRealm() or "Default"
         local buildInfo = (GetBuildInfo and select(4, GetBuildInfo())) or 16001
+
+        local scanDisplay = (lifetimeScans > scanCount)
+            and ("%d scans (%d in buffer)"):format(lifetimeScans, scanCount)
+            or ("%d scans"):format(scanCount)
 
         statsText:SetText(
             ("|cffffd100Memory Working Set:|r %s\n\n" ..
              "|cffffd100Tracked Reagents:|r %d items\n\n" ..
              "|cffffd100Historical Price Points:|r %d points\n\n" ..
-             "|cffffd100Full Scans Recorded:|r %d scans\n\n" ..
+             "|cffffd100Full Scans Recorded:|r %s\n\n" ..
              "|cffffd100Current Realm:|r %s\n\n" ..
              "|cffffd100Client Interface Build:|r %s\n\n" ..
              "|cffffd100AH API Architecture:|r Modern (C_AuctionHouse)\n\n" ..
              "|cffffd100Database Status:|r Health Optimal (<2MB)\n\n" ..
              "|cffffd100Last Scan Summary:|r %s"):format(
-                memStr, itemCount, historyCount, scanCount, realm, tostring(buildInfo), lastScan
+                memStr, itemCount, historyCount, scanDisplay, realm, tostring(buildInfo), lastScan
             )
         )
     end
