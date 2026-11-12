@@ -114,4 +114,60 @@ describe("GoldFinder Scan Engine & Buffer Tracking", function()
             assert.is_nil(report:find("Last: None recorded"))
         end)
     end)
+
+    describe("Deal & Snipe Alert Throttling & Muting", function()
+        before_each(function()
+            helper.loadAddonFile("Core.lua", ns)
+        end)
+
+        it("mutes audio alarm when soundAlert is disabled", function()
+            ns.SetSoundAlert(false)
+            local deal = { itemID = 100, name = "Black Lotus", below = 0.80, totalNetProfit = 5000000, now = 100000 }
+            ns.PlaySnipeAlarm(deal)
+            assert.are.equal(0, #helper.playedSounds)
+        end)
+
+        it("plays raid warning sound when soundAlert is enabled", function()
+            ns.SetSoundAlert(true)
+            local deal = { itemID = 100, name = "Black Lotus", below = 0.80, totalNetProfit = 5000000, now = 100000 }
+            ns.PlaySnipeAlarm(deal)
+            assert.are.equal(1, #helper.playedSounds)
+            assert.are.equal(8959, helper.playedSounds[1])
+        end)
+
+        it("enforces alert throttle cooldown", function()
+            ns.SetSoundAlert(true)
+            ns.SetSoundThrottle(90)
+            local deal = { itemID = 100, name = "Black Lotus", below = 0.80, totalNetProfit = 5000000, now = 100000 }
+
+            -- First alert plays
+            local fired1 = ns.PlaySnipeAlarm(deal)
+            assert.is_true(fired1)
+            assert.are.equal(1, #helper.playedSounds)
+
+            -- Second alert within 90s cooldown is blocked
+            helper.currentServerTime = helper.currentServerTime + 10 -- 10 seconds later
+            local fired2 = ns.PlaySnipeAlarm(deal)
+            assert.is_false(fired2)
+            assert.are.equal(1, #helper.playedSounds)
+
+            -- Third alert after 90s throttle succeeds
+            helper.currentServerTime = helper.currentServerTime + 85 -- 95 seconds total
+            local fired3 = ns.PlaySnipeAlarm(deal)
+            assert.is_true(fired3)
+            assert.are.equal(2, #helper.playedSounds)
+        end)
+
+        it("respects raidWarningAlert toggle for on-screen banner", function()
+            ns.SetRaidWarningAlertEnabled(false)
+            local deal = { itemID = 100, name = "Black Lotus", below = 0.80, totalNetProfit = 5000000, now = 100000 }
+            ns.PlaySnipeAlarm(deal)
+            assert.are.equal(0, #helper.raidNotices)
+
+            ns.SetRaidWarningAlertEnabled(true)
+            helper.currentServerTime = helper.currentServerTime + 100
+            ns.PlaySnipeAlarm(deal)
+            assert.are.equal(1, #helper.raidNotices)
+        end)
+    end)
 end)

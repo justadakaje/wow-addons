@@ -4,6 +4,19 @@ All notable changes to GoldFinder. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.5] - 2026-11-12
+
+### Fixed
+
+- **Audio Mute Compliance for Mega Snipe Alarms ([#59](https://github.com/justadakaje/wow-addons/issues/59)):** Fixed an issue reported by CurseForge community member FortisVoluntas where muting audio alerts (setting sound to `None` in Options or `/gf sound off`) failed to silence `PlaySnipeAlarm()`. Audio alarms now strictly honor `ns.IsSoundAlertEnabled()`.
+- **Alert Throttle Cooldown Enforcement:** Enforced the configured Audio Throttle Cooldown slider (default 30s, up to 120s) across both standard deal chimes and Mega Snipe alarms (`PlaySnipeAlarm()`, `PlayDealSound()`, on-screen Raid Warning banners, and chat notices). High-urgency alerts can no longer trigger repeatedly within seconds of each other.
+- **Auction Posting Trigger Eradication:** Fixed an issue where posting an auction on the Sell tab triggered browse update events that evaluated the entire pricing database and re-alerted on existing stale deals. General deal alerts now only execute on scan-sized captures (`totalRows >= ANNOUNCE_ROWS` or replicate snapshots). Small browse captures only evaluate snipes if Live Snipe Mode is explicitly enabled (`[ Snipe: ON ]`), and only for items contained within that specific incoming capture.
+- **Duplicate Chat Notice Suppression:** Resolved double chat notifications where Mega Snipes printed both `[MEGA SNIPE DETECTED]` and general `[MEGA SNIPE] Found X deal(s)` summaries simultaneously.
+
+### Added
+
+- **Configurable Mega Snipe Raid Warning Banners:** Added a dedicated `[x] Show Mega Snipe Raid Warnings` checkbox in GoldFinder Options (Audio Alerts & Cooldown section) and `/gf rw [on|off]` slash command, allowing players to toggle on-screen center-display banners independently of audio chimes.
+
 ## [1.0.4] - 2026-11-08
 
 ### Added

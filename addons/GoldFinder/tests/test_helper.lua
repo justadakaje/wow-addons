@@ -6,6 +6,7 @@ local helper = {}
 -- State tracking for assertions
 helper.chatMessages = {}
 helper.playedSounds = {}
+helper.raidNotices = {}
 helper.timers = {}
 helper.mockItemNames = {}
 helper.mockItemCounts = {}
@@ -119,12 +120,18 @@ _G.C_Timer = {
 
 _G.C_AddOns = {
     GetAddOnMetadata = function(_addon, field)
-        if field == "Version" then return "1.0.4" end
+        if field == "Version" then return "1.0.5" end
         return nil
     end,
     IsAddOnLoaded = function(_addon) return true end,
 }
 _G.GetAddOnMetadata = _G.C_AddOns.GetAddOnMetadata
+
+_G.RaidWarningFrame = {}
+_G.ChatTypeInfo = { RAID_WARNING = { r = 1, g = 0.2, b = 0.2 } }
+_G.RaidNotice_AddMessage = function(frame, msg, chatTypeInfo)
+    table.insert(helper.raidNotices, msg)
+end
 
 _G.DEFAULT_CHAT_FRAME = {
     AddMessage = function(_self, msg)
@@ -240,6 +247,7 @@ end
 function helper.reset()
     helper.chatMessages = {}
     helper.playedSounds = {}
+    helper.raidNotices = {}
     helper.timers = {}
     helper.mockItemNames = {}
     helper.mockItemCounts = {}
@@ -251,7 +259,7 @@ end
 function helper.createNamespace(overrides)
     local ns = {
         addonName = "GoldFinder",
-        version = "1.0.4",
+        version = "1.0.5",
         db = {
             items = {},
             scans = {},

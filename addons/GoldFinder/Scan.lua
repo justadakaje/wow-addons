@@ -221,26 +221,54 @@ local function Finish(c, totalRows)
         ns.Good("Recorded prices for %d materials.", items)
     end
 
-    -- Trigger deal alerts if qualifying deals are detected
-    local deals = ns.FindDeals and ns.FindDeals()
-    if deals and #deals > 0 then
-        local top = deals[1]
-        local tier = top.tier or (ns.GetDealTier and ns.GetDealTier(top))
-        local isMegaSnipe = (tier and tier.id == "mega") or (ns.IsSnipeMode and ns.IsSnipeMode())
+    -- Trigger deal alerts if qualifying deals are detected.
+    -- Full scans (totalRows >= ANNOUNCE_ROWS or replicate snapshots) evaluate deals across the full database.
+    -- Small browse captures (e.g. posting auctions or searching single items) ONLY trigger alerts
+    -- if Live Snipe Mode is ACTIVE and one of the items in THIS CAPTURE is a qualifying snipe.
+    local isFullScan = (totalRows >= ANNOUNCE_ROWS) or (c.source == "replicate")
+    local snipeActive = ns.IsSnipeMode and ns.IsSnipeMode()
 
-        if isMegaSnipe and ns.PlaySnipeAlarm then
-            ns.PlaySnipeAlarm(top)
-        elseif ns.PlayDealSound then
-            ns.PlayDealSound()
+    if isFullScan then
+        local deals = ns.FindDeals and ns.FindDeals()
+        if deals and #deals > 0 then
+            local top = deals[1]
+            local tier = top.tier or (ns.GetDealTier and ns.GetDealTier(top))
+            local isMega = tier and (tier.id == "mega")
+
+            if isMega and ns.PlaySnipeAlarm then
+                ns.PlaySnipeAlarm(top)
+            else
+                if ns.PlayDealSound then
+                    ns.PlayDealSound()
+                end
+                if ns.IsChatAlertEnabled and ns.IsChatAlertEnabled() then
+                    local throttle = (ns.GetSoundThrottle and ns.GetSoundThrottle()) or 30
+                    if not ns.lastChatAlertTime or (now - ns.lastChatAlertTime) >= throttle then
+                        ns.lastChatAlertTime = now
+                        local topName = top.name or (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(top.itemID)) or ("Item " .. top.itemID)
+                        local pct = math.floor((top.below or 0) * 100 + 0.5)
+                        local profitStr = top.totalNetProfit and top.totalNetProfit > 0 and (", est. net +" .. ns.Money(top.totalNetProfit)) or ""
+                        local tierPrefix = (tier and tier.id == "great") and "|cff0070dd[GREAT DEAL]|r " or ""
+                        ns.Good("%sFound %d deal(s)! Top deal: %s (%d%% off%s)", tierPrefix, #deals, topName, pct, profitStr)
+                    end
+                end
+            end
         end
-
-        if ns.IsChatAlertEnabled and ns.IsChatAlertEnabled() then
-            local topName = top.name or (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(top.itemID)) or ("Item " .. top.itemID)
-            local pct = math.floor(top.below * 100 + 0.5)
-            local profitStr = top.totalNetProfit and top.totalNetProfit > 0 and (", est. net +" .. ns.Money(top.totalNetProfit)) or ""
-            local tierPrefix = (tier and tier.id == "mega") and "|cffa335ee[MEGA SNIPE]|r "
-                            or ((tier and tier.id == "great") and "|cff0070dd[GREAT DEAL]|r " or "")
-            ns.Good("%sFound %d deal(s)! Top deal: %s (%d%% off%s)", tierPrefix, #deals, topName, pct, profitStr)
+    elseif snipeActive then
+        -- Live Snipe Mode is active on background browse captures: only alert if an item in THIS capture qualifies as a snipe!
+        local deals = ns.FindDeals and ns.FindDeals()
+        if deals and #deals > 0 then
+            for _, d in ipairs(deals) do
+                if perItem[d.itemID] then
+                    local tier = d.tier or (ns.GetDealTier and ns.GetDealTier(d))
+                    if (tier and tier.id == "mega") or snipeActive then
+                        if ns.PlaySnipeAlarm then
+                            ns.PlaySnipeAlarm(d)
+                        end
+                        break
+                    end
+                end
+            end
         end
     end
 

@@ -47,7 +47,7 @@ function ns.GenerateDiagnosticReport()
     local author = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata("GoldFinder", "Author"))
         or (GetAddOnMetadata and GetAddOnMetadata("GoldFinder", "Author"))
         or "KenHenChan"
-    local version = ns.version or "1.0.4"
+    local version = ns.version or "1.0.5"
     local locale = (GetLocale and GetLocale()) or "unknown"
     local buildVersion, buildNum, buildDate, uiVersion
     if GetBuildInfo then
@@ -94,6 +94,7 @@ function ns.GenerateDiagnosticReport()
 
     local soundOn = ns.IsSoundAlertEnabled and ns.IsSoundAlertEnabled()
     local soundThrottle = ns.GetSoundThrottle and ns.GetSoundThrottle() or 30
+    local raidWarnOn = ns.IsRaidWarningAlertEnabled and ns.IsRaidWarningAlertEnabled()
     local chatTab = ns.IsDedicatedChatTabEnabled and ns.IsDedicatedChatTabEnabled()
     local tooltipOn = ns.IsTooltipEnabled and ns.IsTooltipEnabled()
     local sellHelper = ns.IsSellHelperEnabled and ns.IsSellHelperEnabled()
@@ -123,8 +124,8 @@ function ns.GenerateDiagnosticReport()
     lines[#lines + 1] = ("- **Thresholds:** Discount: %d%%, MinPrior: %d, MinProfit: %s, SpendCap: %s"):format(
         discount, minPrior, ns.Money(minProfit), (spendCap > 0) and ns.Money(spendCap) or "Unlimited")
     lines[#lines + 1] = ("- **Engine Settings:** Confidence: %s, ValuationModel: %s, FactionShare: %s"):format(conf:upper(), valModel:upper(), factionShare and "ON" or "OFF")
-    lines[#lines + 1] = ("- **Modules:** Sound: %s (%ds throttle), ChatTab: %s, Tooltip: %s, SellHelper: %s, BuyHelper: %s, MailCollector: %s, CostBasis: %s"):format(
-        soundOn and "ON" or "MUTED", soundThrottle, chatTab and "ON" or "OFF", tooltipOn and "ON" or "OFF", sellHelper and "ON" or "OFF", buyHelper and "ON" or "OFF", mailCollector and "ON" or "OFF", costBasis and "ON" or "OFF")
+    lines[#lines + 1] = ("- **Modules:** Sound: %s (%ds throttle), RaidWarning: %s, ChatTab: %s, Tooltip: %s, SellHelper: %s, BuyHelper: %s, MailCollector: %s, CostBasis: %s"):format(
+        soundOn and "ON" or "MUTED", soundThrottle, raidWarnOn and "ON" or "OFF", chatTab and "ON" or "OFF", tooltipOn and "ON" or "OFF", sellHelper and "ON" or "OFF", buyHelper and "ON" or "OFF", mailCollector and "ON" or "OFF", costBasis and "ON" or "OFF")
     lines[#lines + 1] = ("- **AH State:** IsShown=%s, SelectedTab=%s"):format(tostring(ahShown), tostring(ahSelectedTab))
 
     local scanDiag = ns.GetScanDiag and ns.GetScanDiag()
@@ -352,7 +353,7 @@ function ns.ShowInfoDialog()
         or (GetAddOnMetadata and GetAddOnMetadata("GoldFinder", "Author"))
         or "KenHenChan"
     metaText:SetText(("|cffffffffAuthor:|r %s      |cffffffffVersion:|r %s      |cffffffffLicense:|r MIT"):format(
-        author, ns.version or "1.0.4"))
+        author, ns.version or "1.0.5"))
 
     local engageHeader = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     engageHeader:SetPoint("TOPLEFT", 28, -108)

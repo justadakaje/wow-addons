@@ -220,17 +220,32 @@ function ns.SetSoundThrottle(sec)
 end
 
 function ns.PlayDealSound()
-    if not ns.IsSoundAlertEnabled() then return end
+    if not ns.IsSoundAlertEnabled() then return false end
     local now = GetServerTime()
     local throttle = ns.GetSoundThrottle()
-    if ns.lastSoundTime and (now - ns.lastSoundTime) < throttle then
-        return
+    if ns.lastAlertTime and (now - ns.lastAlertTime) < throttle then
+        return false
     end
+    ns.lastAlertTime = now
     ns.lastSoundTime = now
     local _, choice = ns.GetSoundChoice()
     local soundID = (choice and choice.id) or 888
     if type(PlaySound) == "function" then
         pcall(PlaySound, soundID)
+    end
+    return true
+end
+
+function ns.IsRaidWarningAlertEnabled()
+    local s = ns.db and ns.db.settings
+    if s and s.raidWarningAlert ~= nil then return s.raidWarningAlert end
+    return true
+end
+
+function ns.SetRaidWarningAlertEnabled(val)
+    if ns.db then
+        ns.db.settings = ns.db.settings or {}
+        ns.db.settings.raidWarningAlert = (val == true)
     end
 end
 
@@ -466,9 +481,21 @@ function ns.SetSnipeThreshold(copper)
 end
 
 function ns.PlaySnipeAlarm(deal)
-    -- High priority audio alarm (Raid Warning)
-    if PlaySound then
-        PlaySound(8959)
+    local now = GetServerTime()
+    local throttle = (ns.GetSoundThrottle and ns.GetSoundThrottle()) or 30
+
+    -- Throttle guard: prevent spamming alarms on every browse update
+    if ns.lastAlertTime and (now - ns.lastAlertTime) < throttle then
+        return false
+    end
+    ns.lastAlertTime = now
+    ns.lastSoundTime = now
+
+    -- Audio alarm: strictly honor mute / sound alert toggle
+    if ns.IsSoundAlertEnabled and ns.IsSoundAlertEnabled() then
+        if type(PlaySound) == "function" then
+            pcall(PlaySound, 8959)
+        end
     end
 
     if deal then
@@ -476,13 +503,20 @@ function ns.PlaySnipeAlarm(deal)
         local profit = deal.totalNetProfit or 0
         local pct = math.floor((deal.below or 0) * 100 + 0.5)
 
-        if RaidNotice_AddMessage and RaidWarningFrame and ChatTypeInfo and ChatTypeInfo["RAID_WARNING"] then
-            RaidNotice_AddMessage(RaidWarningFrame, ("MEGA SNIPE: %s (-%d%%, +%s)"):format(name, pct, ns.Money(profit)), ChatTypeInfo["RAID_WARNING"])
+        -- Visual Raid Warning banner: check toggle
+        if ns.IsRaidWarningAlertEnabled and ns.IsRaidWarningAlertEnabled() then
+            if RaidNotice_AddMessage and RaidWarningFrame and ChatTypeInfo and ChatTypeInfo["RAID_WARNING"] then
+                pcall(RaidNotice_AddMessage, RaidWarningFrame, ("MEGA SNIPE: %s (-%d%%, +%s)"):format(name, pct, ns.Money(profit)), ChatTypeInfo["RAID_WARNING"])
+            end
         end
 
-        ns.Good("|cffa335ee[MEGA SNIPE DETECTED]|r %s is listed at %s (%d%% below typical, est. profit: +%s)!",
-            deal.link or name, ns.Money(deal.now or deal.lowestNow or 0), pct, ns.Money(profit))
+        -- Chat alert: check toggle
+        if ns.IsChatAlertEnabled and ns.IsChatAlertEnabled() then
+            ns.Good("|cffa335ee[MEGA SNIPE DETECTED]|r %s is listed at %s (%d%% below typical, est. profit: +%s)!",
+                deal.link or name, ns.Money(deal.now or deal.lowestNow or 0), pct, ns.Money(profit))
+        end
     end
+    return true
 end
 
 
@@ -794,6 +828,7 @@ function ns.ApplyActiveProfile(profileKey)
     if s.factionShare == nil then s.factionShare = true end
     if s.snipeThreshold == nil then s.snipeThreshold = 1000000 end
     if s.dedicatedChatTab == nil then s.dedicatedChatTab = false end
+    if s.raidWarningAlert == nil then s.raidWarningAlert = true end
 
     -- Bind pointers to active profile
     db.settings = active.settings
@@ -875,6 +910,7 @@ function ns.ResetCurrentProfile()
                 factionShare = true,
                 snipeThreshold = 1000000,
                 dedicatedChatTab = false,
+                raidWarningAlert = true,
             },
             watchlist = {},
             shoppingLists = {},
@@ -1448,6 +1484,14 @@ SlashCmdList["GOLDFINDER"] = function(msg)
             ns.Print("Current audio throttle window: %d seconds.", ns.GetSoundThrottle())
             ns.Warn("Usage: /gf soundthrottle <seconds> (e.g. /gf soundthrottle 30, /gf soundthrottle 0)")
         end
+    elseif cmd == "raidwarning" or cmd == "rw" then
+        arg = arg and arg:lower() or ""
+        local val
+        if arg == "on" or arg == "1" or arg == "true" then val = true
+        elseif arg == "off" or arg == "0" or arg == "false" then val = false
+        else val = not ns.IsRaidWarningAlertEnabled() end
+        ns.SetRaidWarningAlertEnabled(val)
+        ns.Good("Mega Snipe Raid Warning banner %s.", val and "enabled" or "disabled")
     elseif cmd == "chat" then
         arg = arg and arg:lower() or ""
         local val
@@ -2103,6 +2147,7 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         ns.Print("  /gf minimap [on|off] - toggle minimap coin icon")
         ns.Print("  /gf sort             - toggle sort: profit vs discount")
         ns.Print("  /gf sound [on|off|auction|coins|whisper|raid|loot] - select alert sound kit")
+        ns.Print("  /gf rw [on|off]      - toggle on-screen Mega Snipe Raid Warning banner")
         ns.Print("  /gf soundthrottle <sec> - set audio alert cooldown throttle (e.g. 30, 0)")
         ns.Print("  /gf chat [on|off]    - toggle chat summary on deal find")
         ns.Print("  /gf minprofit <amt>  - set minimum net profit filter (e.g. 5g, 50s, 0)")

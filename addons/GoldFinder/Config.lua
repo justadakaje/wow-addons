@@ -253,6 +253,13 @@ local function RefreshControls()
         controls.chatTabCb:SetChecked(ct == true)
     end
 
+    -- n) Mega Snipe Raid Warning banner checkbox
+    if controls.raidWarningCb then
+        local rw = ns.IsRaidWarningAlertEnabled and ns.IsRaidWarningAlertEnabled()
+        if rw == nil then rw = true end
+        controls.raidWarningCb:SetChecked(rw == true)
+    end
+
     if statusText then
         statusText:SetText("|cff40ff40All settings saved and active|r")
     end
@@ -717,6 +724,21 @@ local function CreateConfigFrameOnce()
     )
     controls.throttleSlider:SetSize(250, 16)
     controls.throttleSlider:SetPoint("TOPLEFT", 28, -392)
+
+    -- Checkbox: Mega Snipe Raid Warning banner
+    controls.raidWarningCb = CreateCheckbox(
+        f,
+        "Show Mega Snipe Raid Warnings",
+        "Raid Warning Banner Alert",
+        "When enabled, high-urgency deals (70%+ off or massive profit) display an on-screen Raid Warning banner across your display.",
+        function(_, checked)
+            if ns.SetRaidWarningAlertEnabled then
+                ns.SetRaidWarningAlertEnabled(checked)
+            end
+            NotifySettingSaved("Mega Snipe Raid Warning banner " .. (checked and "enabled" or "disabled"))
+        end
+    )
+    controls.raidWarningCb:SetPoint("TOPLEFT", 330, -392)
 
     -----------------------------------------------------------------------
     -- Section 3: General & Database Settings
