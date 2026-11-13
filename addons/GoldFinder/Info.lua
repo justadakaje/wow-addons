@@ -47,7 +47,7 @@ function ns.GenerateDiagnosticReport()
     local author = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata("GoldFinder", "Author"))
         or (GetAddOnMetadata and GetAddOnMetadata("GoldFinder", "Author"))
         or "KenHenChan"
-    local version = ns.version or "1.0.6"
+    local version = ns.version or "2.0.0"
     local locale = (GetLocale and GetLocale()) or "unknown"
     local buildVersion, buildNum, buildDate, uiVersion
     if GetBuildInfo then

@@ -4,6 +4,26 @@ All notable changes to GoldFinder. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-11-13
+
+### Added
+
+- **Smart Buy Parity 2.0 & Disenchant EV ([#60](https://github.com/justadakaje/wow-addons/issues/60)):**
+  - Expanded `ns.CONVERSIONS` with Leatherworking armor/hide curing recipes (Salt / Deeprock Salt / Refined Deeprock Salt), Alchemy elemental transmutes (including 3x Elemental Fire), and Enchanting 3:1 Lesser-to-Greater Essence upgrades.
+  - Upgraded `BuyHelper` to support multi-recipe lookups per reagent/output and multi-quantity output division when evaluating crafting parity.
+  - Added expected value disenchant pricing (`ns.GetDisenchantValue`) with automatic 5% AH cut deduction onto item tooltips for uncommon armor and weapons.
+  - Added a non-tainting TradeSkill / Professions window profit margin overlay (`ns.EvaluateRecipeProfit` & `ns.InitTradeSkillOverlay`).
+- **Trade Chat Bark Scanner & Cross-Market Arbitrage ([#61](https://github.com/justadakaje/wow-addons/issues/61)):**
+  - Added a passive `CHAT_MSG_CHANNEL` listener for Trade, General, LFG, and World channels (`ns.ParseTradeBark`) with self-bark, WTB, over-threshold, and item-link price-spoof guards plus 300s per-seller cooldown and `/gf bark [on|off|list]`.
+  - Added `ns.FindCrossMarketDeals` and `/gf cross` to compare Neutral AH partitions (Booty Bay/Gadgetzan/Everlook at 15% Goblin AH cut) against Faction AH partitions (5% cut) in both arbitrage directions.
+- **Interactive 30-Day Price Chart Modal & LibSharedMedia-3.0 ([#62](https://github.com/justadakaje/wow-addons/issues/62)):**
+  - Added `ns.ShowPriceChartModal` (`Ctrl-Click` any deal row or `/gf chart <link|id>`): a draggable, Escape-closable 480x300 chart showing up to 30 sightings, 30-day Low/High/Median, 7-day EMA reference line, and hover bar tooltips.
+  - Added optional `LibSharedMedia-3.0` `"sound"` discovery and custom file playback across `Core.lua`, `Config.lua`, and `/gf sound [list|<name>]`.
+- **Multi-Alt Reagent Hub & Mailbox Expiration Watcher ([#63](https://github.com/justadakaje/wow-addons/issues/63)):**
+  - Indexed realm-wide character bag, bank, and mailbox inventories into `GoldFinderDB.realms[realm].characters[char]`.
+  - Surfaced realm-wide alt holdings in item tooltips, `FindShoppingDeals` shopping tooltips, and `/gf alts [link|id]`.
+  - Added mailbox expiration scanning (`ns.CheckAltMailExpirations`) to warn on login and `/gf alts` when any alt has mail attachments expiring within 3 days.
+
 ## [1.0.6] - 2026-11-12
 
 ### Added

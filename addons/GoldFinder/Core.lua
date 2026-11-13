@@ -185,21 +185,96 @@ ns.SOUND_CHOICES = {
     loot    = { name = "Loot Coin",       id = 120 },
 }
 
+local function GetLSM()
+    local libStub = _G.LibStub
+    if type(libStub) == "function" or (type(libStub) == "table" and libStub.GetLibrary) then
+        local ok, lsm = pcall(libStub, "LibSharedMedia-3.0", true)
+        if ok and lsm then return lsm end
+    end
+    return nil
+end
+
+function ns.GetLSMSoundPath(key)
+    if not key or key == "" then return nil end
+    local lsm = GetLSM()
+    if lsm and lsm.Fetch then
+        local ok, path = pcall(lsm.Fetch, lsm, "sound", key, true)
+        if ok and type(path) == "string" and path ~= "" then
+            return path
+        end
+    end
+    return nil
+end
+
+function ns.GetAvailableSounds()
+    local list = {}
+    local seen = {}
+    for k, info in pairs(ns.SOUND_CHOICES) do
+        list[#list + 1] = { key = k, name = info.name, id = info.id, isBuiltin = true }
+        seen[k:lower()] = true
+    end
+    local lsm = GetLSM()
+    if lsm and lsm.List then
+        local ok, names = pcall(lsm.List, lsm, "sound")
+        if ok and type(names) == "table" then
+            for _, name in ipairs(names) do
+                if type(name) == "string" and name ~= "" and name ~= "None" and not seen[name:lower()] then
+                    local path = ns.GetLSMSoundPath(name)
+                    if path then
+                        list[#list + 1] = { key = name, name = name, lsmPath = path, isBuiltin = false }
+                        seen[name:lower()] = true
+                    end
+                end
+            end
+        end
+    end
+    table.sort(list, function(a, b)
+        if a.isBuiltin ~= b.isBuiltin then return a.isBuiltin end
+        return (a.name or "") < (b.name or "")
+    end)
+    return list
+end
+
 function ns.GetSoundChoice()
     local s = ns.db and ns.db.settings
     local key = (s and s.soundName) or "auction"
-    return key, ns.SOUND_CHOICES[key] or ns.SOUND_CHOICES.auction
+    if ns.SOUND_CHOICES[key] then
+        return key, ns.SOUND_CHOICES[key]
+    end
+    local lsmPath = ns.GetLSMSoundPath(key)
+    if lsmPath then
+        return key, { name = key, lsmPath = lsmPath }
+    end
+    return "auction", ns.SOUND_CHOICES.auction
 end
 
 function ns.SetSoundChoice(key)
-    key = key and key:lower() or "auction"
-    if not ns.SOUND_CHOICES[key] then key = "auction" end
+    local rawKey = key
+    local lowerKey = key and key:lower() or "auction"
+    local info
+    if ns.SOUND_CHOICES[lowerKey] then
+        key = lowerKey
+        info = ns.SOUND_CHOICES[lowerKey]
+    else
+        local lsmPath = rawKey and ns.GetLSMSoundPath(rawKey)
+        if lsmPath then
+            key = rawKey
+            info = { name = rawKey, lsmPath = lsmPath }
+        else
+            key = "auction"
+            info = ns.SOUND_CHOICES.auction
+        end
+    end
     if ns.db then
         ns.db.settings = ns.db.settings or {}
         ns.db.settings.soundName = key
     end
-    local info = ns.SOUND_CHOICES[key]
-    if info and type(PlaySound) == "function" then
+    if info and info.lsmPath then
+        local psf = _G.PlaySoundFile
+        if type(psf) == "function" then
+            pcall(psf, info.lsmPath, "Master")
+        end
+    elseif info and info.id and type(PlaySound) == "function" then
         pcall(PlaySound, info.id)
     end
     return key, info
@@ -229,9 +304,16 @@ function ns.PlayDealSound()
     ns.lastAlertTime = now
     ns.lastSoundTime = now
     local _, choice = ns.GetSoundChoice()
-    local soundID = (choice and choice.id) or 888
-    if type(PlaySound) == "function" then
-        pcall(PlaySound, soundID)
+    if choice and choice.lsmPath then
+        local psf = _G.PlaySoundFile
+        if type(psf) == "function" then
+            pcall(psf, choice.lsmPath, "Master")
+        end
+    else
+        local soundID = (choice and choice.id) or 888
+        if type(PlaySound) == "function" then
+            pcall(PlaySound, soundID)
+        end
     end
     return true
 end
@@ -246,6 +328,19 @@ function ns.SetRaidWarningAlertEnabled(val)
     if ns.db then
         ns.db.settings = ns.db.settings or {}
         ns.db.settings.raidWarningAlert = (val == true)
+    end
+end
+
+function ns.IsBarkScannerEnabled()
+    local s = ns.db and ns.db.settings
+    if s and s.barkScanner ~= nil then return s.barkScanner end
+    return true
+end
+
+function ns.SetBarkScannerEnabled(val)
+    if ns.db then
+        ns.db.settings = ns.db.settings or {}
+        ns.db.settings.barkScanner = (val == true)
     end
 end
 
@@ -829,6 +924,7 @@ function ns.ApplyActiveProfile(profileKey)
     if s.snipeThreshold == nil then s.snipeThreshold = 1000000 end
     if s.dedicatedChatTab == nil then s.dedicatedChatTab = false end
     if s.raidWarningAlert == nil then s.raidWarningAlert = true end
+    if s.barkScanner == nil then s.barkScanner = true end
 
     -- Bind pointers to active profile
     db.settings = active.settings
@@ -911,6 +1007,7 @@ function ns.ResetCurrentProfile()
                 snipeThreshold = 1000000,
                 dedicatedChatTab = false,
                 raidWarningAlert = true,
+                barkScanner = true,
             },
             watchlist = {},
             shoppingLists = {},
@@ -989,10 +1086,12 @@ boot:SetScript("OnEvent", function(self, _, name)
             scans = db.scans or {},
             lifetimeScans = db.lifetimeScans or (db.scans and #db.scans) or 0,
             factions = {},
+            characters = {},
         }
     end
 
     local rData = db.realms[realm]
+    rData.characters = rData.characters or {}
     if db.settings and db.settings.factionShare == false then
         local fKey = (UnitFactionGroup and UnitFactionGroup("player")) or "Neutral"
         rData.factions = rData.factions or {}
@@ -1033,7 +1132,8 @@ function ns.SetFactionShareEnabled(val)
 
     local realm = ns.GetActiveRealm()
     ns.db.realms = ns.db.realms or {}
-    local rData = ns.db.realms[realm] or { items = {}, scans = {}, factions = {} }
+    local rData = ns.db.realms[realm] or { items = {}, scans = {}, factions = {}, characters = {} }
+    rData.characters = rData.characters or {}
     ns.db.realms[realm] = rData
 
     if val == false then
@@ -1179,6 +1279,238 @@ function ns.GetItemInventoryCount(itemID)
     end
     return 0
 end
+
+---------------------------------------------------------------------------
+-- Multi-Alt Reagent Hub & Mailbox Expiration Watcher (Theme 2 - v2.0, #63)
+
+function ns.GetCharacterStorage(charName, create)
+    if not ns.db then return nil end
+    local realm = ns.GetActiveRealm and ns.GetActiveRealm() or "Default"
+    ns.db.realms = ns.db.realms or {}
+    ns.db.realms[realm] = ns.db.realms[realm] or { items = {}, scans = {}, factions = {}, characters = {} }
+    local rData = ns.db.realms[realm]
+    rData.characters = rData.characters or {}
+
+    local cName = charName or (UnitName and UnitName("player")) or "Unknown"
+    if not rData.characters[cName] and create then
+        local classFile
+        if UnitClass then
+            local _, cf = UnitClass("player")
+            classFile = cf
+        end
+        rData.characters[cName] = {
+            faction = ns.GetActiveFaction and ns.GetActiveFaction() or "Neutral",
+            class = classFile or "WARRIOR",
+            bags = {},
+            bank = {},
+            mail = {},
+            mailEarliestExpiry = nil,
+            mailExpiringCount = 0,
+            lastScanned = 0,
+        }
+    end
+    return rData.characters[cName]
+end
+
+local function ScanContainerSlot(bag, slot, counts)
+    if C_Container and C_Container.GetContainerItemInfo then
+        local info = C_Container.GetContainerItemInfo(bag, slot)
+        if info and info.itemID and (info.stackCount or 0) > 0 then
+            counts[info.itemID] = (counts[info.itemID] or 0) + (info.stackCount or 1)
+        end
+    else
+        local gcii = _G.GetContainerItemInfo
+        if type(gcii) == "function" then
+            local _, itemCount, _, _, _, _, itemLink = gcii(bag, slot)
+            local itemID = itemLink and tonumber(itemLink:match("item:(%d+)"))
+            if itemID and (itemCount or 1) > 0 then
+                counts[itemID] = (counts[itemID] or 0) + (itemCount or 1)
+            end
+        end
+    end
+end
+
+local function ScanContainerRange(bags)
+    local counts = {}
+    local getNumSlots = (C_Container and C_Container.GetContainerNumSlots) or _G.GetContainerNumSlots
+    if type(getNumSlots) ~= "function" then return counts end
+    for _, bag in ipairs(bags) do
+        local numSlots = getNumSlots(bag) or 0
+        for slot = 1, numSlots do
+            ScanContainerSlot(bag, slot, counts)
+        end
+    end
+    return counts
+end
+
+function ns.ScanCharacterBags()
+    local charData = ns.GetCharacterStorage(nil, true)
+    if not charData then return nil end
+    local numBagSlots = _G.NUM_BAG_SLOTS or 4
+    local bags = {}
+    for b = 0, numBagSlots do
+        bags[#bags + 1] = b
+    end
+    charData.bags = ScanContainerRange(bags)
+    charData.lastScanned = GetServerTime and GetServerTime() or 0
+    return charData.bags
+end
+
+function ns.ScanCharacterBank()
+    local charData = ns.GetCharacterStorage(nil, true)
+    if not charData then return nil end
+    local numBagSlots = _G.NUM_BAG_SLOTS or 4
+    local numBankBags = _G.NUM_BANKBAGSLOTS or 7
+    local bankContainer = _G.BANK_CONTAINER or -1
+    local bags = { bankContainer }
+    for b = numBagSlots + 1, numBagSlots + numBankBags do
+        bags[#bags + 1] = b
+    end
+    charData.bank = ScanContainerRange(bags)
+    charData.lastScanned = GetServerTime and GetServerTime() or 0
+    return charData.bank
+end
+
+function ns.GetAltItemBreakdown(itemID)
+    if not itemID or not ns.db or not ns.db.realms then return 0, {} end
+    local realm = ns.GetActiveRealm and ns.GetActiveRealm() or "Default"
+    local rData = ns.db.realms[realm]
+    if not rData or type(rData.characters) ~= "table" then return 0, {} end
+
+    local currentChar = (UnitName and UnitName("player")) or "Unknown"
+    local total = 0
+    local breakdown = {}
+    for charName, data in pairs(rData.characters) do
+        if type(data) == "table" then
+            local bagQty = (data.bags and data.bags[itemID]) or 0
+            local bankQty = (data.bank and data.bank[itemID]) or 0
+            local mailQty = (data.mail and data.mail[itemID]) or 0
+            local charTotal = bagQty + bankQty + mailQty
+            if charTotal > 0 then
+                total = total + charTotal
+                breakdown[#breakdown + 1] = {
+                    charName = charName,
+                    isCurrent = (charName == currentChar),
+                    faction = data.faction or "Neutral",
+                    class = data.class or "WARRIOR",
+                    bags = bagQty,
+                    bank = bankQty,
+                    mail = mailQty,
+                    total = charTotal,
+                    lastScanned = data.lastScanned or 0,
+                }
+            end
+        end
+    end
+    table.sort(breakdown, function(a, b)
+        if a.isCurrent ~= b.isCurrent then return a.isCurrent end
+        if a.total ~= b.total then return a.total > b.total end
+        return a.charName < b.charName
+    end)
+    return total, breakdown
+end
+
+function ns.CheckAltMailExpirations(thresholdDays)
+    thresholdDays = thresholdDays or 3
+    if not ns.db or not ns.db.realms then return {} end
+    local realm = ns.GetActiveRealm and ns.GetActiveRealm() or "Default"
+    local rData = ns.db.realms[realm]
+    if not rData or type(rData.characters) ~= "table" then return {} end
+
+    local now = GetServerTime and GetServerTime() or 0
+    local warnings = {}
+    for charName, data in pairs(rData.characters) do
+        if type(data) == "table" and data.mailEarliestExpiry and data.mailExpiringCount and data.mailExpiringCount > 0 then
+            local elapsedDays = (now > 0 and data.lastMailScanned and data.lastMailScanned > 0)
+                and ((now - data.lastMailScanned) / 86400) or 0
+            local estDaysLeft = data.mailEarliestExpiry - elapsedDays
+            if estDaysLeft <= thresholdDays then
+                warnings[#warnings + 1] = {
+                    charName = charName,
+                    daysLeft = math.max(0, estDaysLeft),
+                    count = data.mailExpiringCount,
+                    faction = data.faction or "Neutral",
+                }
+            end
+        end
+    end
+    table.sort(warnings, function(a, b) return a.daysLeft < b.daysLeft end)
+    return warnings
+end
+
+-- Event watcher for bag/bank inventory updates and startup mail alerts
+local altScanPending = false
+local mailWarnedThisSession = false
+local altInvFrame = CreateFrame("Frame")
+altInvFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+altInvFrame:RegisterEvent("BAG_UPDATE_DELAYED")
+altInvFrame:RegisterEvent("BANKFRAME_OPENED")
+altInvFrame:RegisterEvent("PLAYERBANKSLOTS_CHANGED")
+altInvFrame:SetScript("OnEvent", function(_, event)
+    if event == "BANKFRAME_OPENED" or event == "PLAYERBANKSLOTS_CHANGED" then
+        ns.ScanCharacterBank()
+        return
+    end
+    if event == "PLAYER_ENTERING_WORLD" then
+        ns.ScanCharacterBags()
+        if not mailWarnedThisSession then
+            mailWarnedThisSession = true
+            local warnings = ns.CheckAltMailExpirations(3)
+            for _, w in ipairs(warnings) do
+                ns.Print("|cffff5555Mail Expiry Warning:|r %s has %d mail attachment(s) expiring in %.1f days!",
+                    w.charName, w.count, w.daysLeft)
+            end
+        end
+        return
+    end
+    if not altScanPending then
+        altScanPending = true
+        if C_Timer and C_Timer.After then
+            C_Timer.After(0.5, function()
+                altScanPending = false
+                ns.ScanCharacterBags()
+            end)
+        else
+            altScanPending = false
+            ns.ScanCharacterBags()
+        end
+    end
+end)
+
+---------------------------------------------------------------------------
+-- Trade Chat Bark Scanner Listener (Theme 3 - v2.0, #61)
+
+local barkThrottle = {}  -- ["sender:itemID"] = timestamp
+local barkFrame = CreateFrame("Frame")
+barkFrame:RegisterEvent("CHAT_MSG_CHANNEL")
+barkFrame:SetScript("OnEvent", function(_, _, msg, sender, _, _, _, _, _, _, channelBaseName)
+    if not ns.IsBarkScannerEnabled or not ns.IsBarkScannerEnabled() then return end
+    if not ns.ParseTradeBark then return end
+    local chLower = type(channelBaseName) == "string" and channelBaseName:lower() or ""
+    if not (chLower:find("trade") or chLower:find("general") or chLower:find("lookingforgroup") or chLower:find("world")) then
+        return
+    end
+    local bark = ns.ParseTradeBark(msg, sender, channelBaseName)
+    if not bark then return end
+
+    local throttleKey = ("%s:%d"):format(tostring(bark.sender or ""), tonumber(bark.itemID or 0))
+    local now = GetServerTime and GetServerTime() or 0
+    if barkThrottle[throttleKey] and (now - barkThrottle[throttleKey]) < 300 then
+        return
+    end
+    barkThrottle[throttleKey] = now
+
+    local savePct = math.floor((bark.discount or 0) * 100 + 0.5)
+    ns.Print("|cff33ff99[BARK DEAL]|r %s: %s for %s (%d%% below AH %s, +%s profit) [whisper %s]",
+        bark.sender or "?",
+        bark.itemLink or ("item:" .. tostring(bark.itemID)),
+        ns.Money(bark.price),
+        savePct,
+        ns.Money(bark.typical),
+        ns.Money(bark.netProfit),
+        bark.sender or "?")
+    if ns.PlayDealSound then ns.PlayDealSound() end
+end)
 
 ---------------------------------------------------------------------------
 -- Custom Categories & Material Groups (#39)
@@ -1454,23 +1786,30 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         ns.Good("Sorting deals by %s.", ns.GetSortBy() == "profit" and "Estimated Net Profit" or "Discount %")
         if ns.RefreshPanel then ns.RefreshPanel() end
     elseif cmd == "sound" then
-        arg = arg and arg:lower() or ""
-        if arg == "on" or arg == "1" or arg == "true" then
+        local rawArg = arg and arg:match("^%s*(.-)%s*$") or ""
+        local lowerArg = rawArg:lower()
+        if lowerArg == "on" or lowerArg == "1" or lowerArg == "true" then
             ns.SetSoundAlert(true)
             ns.Good("Deal audio chime enabled.")
-        elseif arg == "off" or arg == "0" or arg == "false" then
+        elseif lowerArg == "off" or lowerArg == "0" or lowerArg == "false" then
             ns.SetSoundAlert(false)
             ns.Good("Deal audio chime disabled.")
-        elseif ns.SOUND_CHOICES[arg] then
+        elseif lowerArg == "list" then
+            local list = ns.GetAvailableSounds and ns.GetAvailableSounds() or {}
+            ns.Print("Available Alert Sounds (%d):", #list)
+            for _, item in ipairs(list) do
+                ns.Print("  - %s (%s)", item.name or item.key, item.isBuiltin and "Built-in" or "LibSharedMedia-3.0")
+            end
+        elseif ns.SOUND_CHOICES[lowerArg] or (rawArg ~= "" and ns.GetLSMSoundPath and ns.GetLSMSoundPath(rawArg)) then
             ns.SetSoundAlert(true)
-            local _, info = ns.SetSoundChoice(arg)
+            local _, info = ns.SetSoundChoice(ns.SOUND_CHOICES[lowerArg] and lowerArg or rawArg)
             ns.Good("Deal audio chime set to: %s (enabled).", info.name)
-        elseif arg == "" then
+        elseif lowerArg == "" then
             local val = not ns.IsSoundAlertEnabled()
             ns.SetSoundAlert(val)
             ns.Good("Deal audio chime %s.", val and "enabled" or "disabled")
         else
-            ns.Warn("Usage: /gf sound [on|off|auction|coins|whisper|raid|loot]")
+            ns.Warn("Usage: /gf sound [on|off|list|auction|coins|whisper|raid|loot|<LibSharedMediaName>]")
         end
     elseif cmd == "soundthrottle" or cmd == "throttle" then
         local sec = tonumber(arg)
@@ -2099,6 +2438,85 @@ SlashCmdList["GOLDFINDER"] = function(msg)
             ns.Print("Usage: /gf merge <encoded_data_string>")
             ns.Print("Merges external scan data and price history into your local database.")
         end
+    elseif cmd == "bark" or cmd == "barks" then
+        local sub = (cmd == "barks") and "list" or (arg and arg:lower() or "list")
+        if sub == "on" then
+            ns.SetBarkScannerEnabled(true)
+            ns.Print("Trade Chat Bark Scanner is now |cff00ff00ON|r.")
+        elseif sub == "off" then
+            ns.SetBarkScannerEnabled(false)
+            ns.Print("Trade Chat Bark Scanner is now |cffff4444OFF|r.")
+        else
+            local list = ns.recentBarks or {}
+            ns.Print("Trade Chat Bark Scanner: %s (%d recent deal(s))",
+                ns.IsBarkScannerEnabled() and "|cff00ff00ON|r" or "|cffff4444OFF|r", #list)
+            for i = 1, math.min(10, #list) do
+                local b = list[i]
+                local savePct = math.floor((b.discount or 0) * 100 + 0.5)
+                ns.Print("  %d. %s: %s for %s (%d%% off, +%s) [%s]",
+                    i, b.sender or "?", b.itemLink or ("item:" .. tostring(b.itemID)),
+                    ns.Money(b.price), savePct, ns.Money(b.netProfit), b.channel or "Trade")
+            end
+        end
+    elseif cmd == "cross" then
+        local crossDeals = ns.FindCrossMarketDeals and ns.FindCrossMarketDeals() or {}
+        if #crossDeals == 0 then
+            ns.Print("No cross-market arbitrage deals found. Tip: scan both Faction AH and Neutral AH (Booty Bay/Gadgetzan/Everlook) with Faction Sharing enabled/partitioned.")
+        else
+            ns.Print("Cross-Market Arbitrage Opportunities (%d):", #crossDeals)
+            for i = 1, math.min(10, #crossDeals) do
+                local d = crossDeals[i]
+                ns.Print("  %d. %s: Buy %s (%s) -> Sell %s (%s, %d%% cut) = +%s (%d%% ROI)",
+                    i, d.name or ("Item " .. tostring(d.itemID)),
+                    d.buyMarket, ns.Money(d.buyPrice),
+                    d.sellMarket, ns.Money(d.sellTypical), d.ahCutPct or 5,
+                    ns.Money(d.netProfit), math.floor((d.roi or 0) * 100 + 0.5))
+            end
+        end
+    elseif cmd == "chart" then
+        local idStr = arg and arg:match("item:(%d+)") or arg and arg:match("^(%d+)")
+        local itemID = tonumber(idStr)
+        if itemID and ns.ShowPriceChartModal then
+            ns.ShowPriceChartModal(itemID)
+        else
+            ns.Print("Usage: /gf chart <itemID|itemLink>")
+        end
+    elseif cmd == "alts" then
+        local idStr = arg and arg:match("item:(%d+)") or arg and arg:match("^(%d+)")
+        local itemID = tonumber(idStr)
+        if itemID then
+            local total, rows = ns.GetAltItemBreakdown(itemID)
+            local iName = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID)) or ("Item " .. itemID)
+            ns.Print("Alt Inventory for %s (Realm Total: %d):", iName, total)
+            if #rows == 0 then
+                ns.Print("  None recorded on any character on this realm yet.")
+            else
+                for _, r in ipairs(rows) do
+                    ns.Print("  %s (%s): %d total (Bags: %d, Bank: %d, Mail: %d)",
+                        r.charName, r.faction, r.total, r.bags, r.bank, r.mail)
+                end
+            end
+        else
+            local realm = ns.GetActiveRealm and ns.GetActiveRealm() or "Default"
+            local chars = ns.db and ns.db.realms and ns.db.realms[realm] and ns.db.realms[realm].characters or {}
+            local count = 0
+            ns.Print("Tracked Characters on %s:", realm)
+            for cName, cData in pairs(chars) do
+                count = count + 1
+                local bagTotal, bankTotal, mailTotal = 0, 0, 0
+                for _, q in pairs(cData.bags or {}) do bagTotal = bagTotal + q end
+                for _, q in pairs(cData.bank or {}) do bankTotal = bankTotal + q end
+                for _, q in pairs(cData.mail or {}) do mailTotal = mailTotal + q end
+                ns.Print("  %s (%s): Bags %d | Bank %d | Mail %d items", cName, cData.faction or "?", bagTotal, bankTotal, mailTotal)
+            end
+            if count == 0 then
+                ns.Print("  No characters indexed yet. Open bags/bank/mailbox to record.")
+            end
+            local warnings = ns.CheckAltMailExpirations(3)
+            for _, w in ipairs(warnings) do
+                ns.Print("|cffff5555Mail Expiry Warning:|r %s has %d attachment(s) expiring in %.1f days!", w.charName, w.count, w.daysLeft)
+            end
+        end
     elseif cmd == "tour" then
         if ns.StartTour then ns.StartTour() end
     elseif cmd == "info" or cmd == "about" then
@@ -2177,6 +2595,10 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         ns.Print("  /gf cart [buy|clear] - open staging cart or execute batch buy")
         ns.Print("  /gf vendor [link]    - inspect trade NPC reagent prices")
         ns.Print("  /gf shopping          - view active shopping list fulfillment progress")
+        ns.Print("  /gf bark [on|off|list] - toggle Trade Chat Bark Scanner or view deals")
+        ns.Print("  /gf cross             - list Neutral vs. Faction AH arbitrage opportunities")
+        ns.Print("  /gf chart <link|id>   - open 30-day interactive price history chart")
+        ns.Print("  /gf alts [link|id]    - view multi-alt reagent inventory & mail expirations")
         ns.Print("  /gf tour             - start interactive feature onboarding walkthrough")
         ns.Print("  /gf info             - open About & System Diagnostics dashboard")
         ns.Print("  /gf bench            - run memory & calculation latency benchmark")

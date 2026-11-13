@@ -220,8 +220,11 @@ local function RefreshControlSet(ctrl)
         if not ns.IsSoundAlertEnabled() then
             soundKey = "none"
         else
-            soundKey = ns.GetSoundChoice()
-            if not ctrl.soundButtons[soundKey] then soundKey = "auction" end
+            local resolvedKey, choice = ns.GetSoundChoice()
+            soundKey = resolvedKey
+            if not ctrl.soundButtons[soundKey] then
+                soundKey = (choice and choice.lsmPath) and "__lsm__" or "auction"
+            end
         end
         SetButtonGroupActive(ctrl.soundButtons, soundKey)
     end
@@ -666,7 +669,12 @@ local function PopulateConfigControls(parent, isEmbedded)
             ns.Print("Audio alerts are muted (sound set to None). Select a sound kit to preview.")
         else
             local _, choice = ns.GetSoundChoice()
-            if choice and choice.id and type(PlaySound) == "function" then
+            if choice and choice.lsmPath then
+                local psf = _G.PlaySoundFile
+                if type(psf) == "function" then
+                    pcall(psf, choice.lsmPath, "Master")
+                end
+            elseif choice and choice.id and type(PlaySound) == "function" then
                 pcall(PlaySound, choice.id)
             end
         end

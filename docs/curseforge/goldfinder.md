@@ -32,10 +32,23 @@
 - **Smart Selling Popout Card:** When dragging an item into Blizzard's Sell tab (`ItemSellFrame` or `CommoditiesSellFrame`), GoldFinder docks a neat market evaluation card.
 - **Instant Price Autofill:** Displays historical median price, lowest current AH buyout, and market trajectory (Rising, Steady, Falling) with one-click quick-fill buttons: `[-1c Cut]`, `[Match]`, and `[Typical]`.
 
-### 🔨 Crafting Arbitrage & Undercut Detection
-- **Reagent Crafting Arbitrage:** Detects profitable crafting conversions (Smelting ores, Tailoring cloth bolts, Alchemy transmutes) where crafted output value exceeds total material input costs.
-- **Vendor Reagent Integration:** Injects fixed NPC vendor costs (Flux, Coal, Thread, Vials) to avoid overpaying on the AH.
+### 🔨 Smart Buy Parity 2.0, Crafting Arbitrage & Disenchant EV
+- **Reagent Crafting & TradeSkill Overlay:** Detects profitable crafting conversions (Smelting ores, Tailoring cloth bolts, Leatherworking cured hides, Alchemy transmutes including 3x Elemental Fire, and Enchanting 3:1 essence upgrades) and overlays net craft profit directly on the crafting window.
+- **Disenchant Expected Value (EV):** Appends net Disenchant EV (after 5% AH cut) onto tooltips for uncommon green weapons and armor when enchanting material market data is available.
+- **Vendor Reagent Integration:** Injects fixed NPC vendor costs (Flux, Coal, Salt, Deeprock Salt, Thread, Vials) to avoid overpaying on the AH.
 - **Active Undercut Monitor:** Cross-checks your active auctions (`C_AuctionHouse.GetOwnedAuctions()`) against current lowest browse prices on the `[ Undercuts ]` tab with 1-click cancel.
+
+### 📣 Trade Chat Bark Scanner & Cross-Market Arbitrage
+- **Real-Time Trade Bark Alerts:** Passively watches Trade, General, LFG, and World channels (`/gf bark`) to alert you when players WTS reagents below AH typical value (ignoring WTB spam and price-spoofing item names).
+- **Neutral vs. Faction AH Arbitrage:** Compare Neutral Auction House prices (15% Goblin cut) against your Faction AH prices (5% cut) in both directions via `/gf cross`.
+
+### 📈 Interactive 30-Day Price Charts & LibSharedMedia-3.0
+- **Interactive 30-Day Trend Modal:** `Ctrl-Click` any deal row or run `/gf chart <item>` to open a movable 30-day price chart displaying Low, High, Median, 7-day EMA, and per-sighting hover tooltips.
+- **LibSharedMedia-3.0 Custom Audio:** Automatically discovers custom `"sound"` packs registered through LibSharedMedia-3.0 alongside built-in sound kits (`/gf sound list`).
+
+### 🧳 Multi-Alt Reagent Hub & Mailbox Expiration Watcher
+- **Realm-Wide Alt Inventory:** Indexes bags, banks, and mailboxes across characters on your realm (`/gf alts`), surfacing per-alt holdings directly in tooltips and Shopping Quotas.
+- **3-Day Mail Expiration Alerts:** Alerts on login and `/gf alts` whenever any tracked alt has mailbox attachments with 3 days or less remaining.
 
 ### 📬 Mailbox Collector & Goblin P&L Accounting Ledger
 - **One-Click Deal Collector:** Adds a native `[ Collect Deals (N) ]` button to the mailbox to safely retrieve won items and record acquisition costs.
@@ -115,6 +128,11 @@ Full native translation and localized category filtering across 8 languages:
 | `/gf cart` | Opens the Multi-Item Quick-Buy Staging Cart |
 | `/gf snipe [on\|off]` | Toggles live background Snipe Mode |
 | `/gf info` or `/gf about` | Opens the Journalator-style project info and diagnostics dashboard |
+| `/gf chart <link\|id>` | Opens the interactive 30-day historical price chart modal |
+| `/gf bark [on\|off\|list]` | Toggles the Trade Chat Bark Scanner or lists recent bargains |
+| `/gf cross` | Lists Neutral AH (15% cut) vs. Faction AH (5% cut) arbitrage deals |
+| `/gf alts [link\|id]` | Shows realm-wide alt inventory breakdown and `<3d` mail expiry alerts |
+| `/gf sound [list\|<name>]` | Lists or selects built-in and `LibSharedMedia-3.0` alert sounds |
 | `/gf chat tab` | Toggles routing messages to a dedicated "GoldFinder" chat tab |
 | `/gf profile [export\|import]` | Opens the Base64 profile sharing dialog |
 | `/gf vacuum [days]` | Runs manual database compaction and pruning |

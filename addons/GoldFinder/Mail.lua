@@ -304,11 +304,60 @@ mailFrameEvents:RegisterEvent("MAIL_SHOW")
 mailFrameEvents:RegisterEvent("MAIL_INBOX_UPDATE")
 mailFrameEvents:RegisterEvent("MAIL_CLOSED")
 
+function ns.ScanCharacterMail()
+    if not ns.GetCharacterStorage then return nil end
+    local charData = ns.GetCharacterStorage(nil, true)
+    if not charData then return nil end
+    if type(GetInboxNumItems) ~= "function" then return charData.mail end
+
+    local counts = {}
+    local earliestExpiry = nil
+    local expiringCount = 0
+    local numItems = GetInboxNumItems() or 0
+    local maxAttach = _G.ATTACHMENTS_MAX_RECEIVE or 16
+    local getLink = _G.GetInboxItemLink or GetInboxItemLink
+    local getItem = _G.GetInboxItem
+
+    for i = 1, numItems do
+        local _, _, _, _, _, _, daysLeft, hasItem = GetInboxHeaderInfo(i)
+        if hasItem then
+            if daysLeft and (not earliestExpiry or daysLeft < earliestExpiry) then
+                earliestExpiry = daysLeft
+            end
+            if daysLeft and daysLeft <= 3 then
+                expiringCount = expiringCount + 1
+            end
+            for j = 1, maxAttach do
+                local link = (type(getLink) == "function") and getLink(i, j)
+                if link then
+                    local itemID = tonumber(link:match("item:(%d+)"))
+                    if itemID then
+                        local qty = 1
+                        if type(getItem) == "function" then
+                            local _, _, _, itemCount = getItem(i, j)
+                            if itemCount and itemCount > 0 then qty = itemCount end
+                        end
+                        counts[itemID] = (counts[itemID] or 0) + qty
+                    end
+                end
+            end
+        end
+    end
+
+    charData.mail = counts
+    charData.mailEarliestExpiry = earliestExpiry
+    charData.mailExpiringCount = expiringCount
+    charData.lastMailScanned = (GetServerTime and GetServerTime()) or 0
+    return counts
+end
+
 mailFrameEvents:SetScript("OnEvent", function(self, event)
     if event == "MAIL_SHOW" then
         CreateMailButtonOnce()
+        ns.ScanCharacterMail()
         UpdateCollectButton()
     elseif event == "MAIL_INBOX_UPDATE" then
+        ns.ScanCharacterMail()
         UpdateCollectButton()
     elseif event == "MAIL_CLOSED" then
         isCollecting = false

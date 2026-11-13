@@ -25,8 +25,13 @@ local function AddPriceLines(tip, itemID)
     local vInfo = ns.GetVendorReagent and ns.GetVendorReagent(itemID)
     local restockTarget = ns.GetRestockLevel and ns.GetRestockLevel(itemID)
     local advice = (MailFrame and MailFrame:IsShown() and ns.EvaluateExpiredAuction) and ns.EvaluateExpiredAuction(itemID)
+    local deNet = ns.GetDisenchantValue and ns.GetDisenchantValue(itemID)
+    local altTotal, altRows = 0, {}
+    if ns.GetAltItemBreakdown then
+        altTotal, altRows = ns.GetAltItemBreakdown(itemID)
+    end
 
-    if not hasHistory and not hasCost and not vInfo and not restockTarget and not advice then return end
+    if not hasHistory and not hasCost and not vInfo and not restockTarget and not advice and not deNet and not (altTotal and altTotal > 0) then return end
 
     local typical = nil
     tip:AddLine(" ")
@@ -91,11 +96,31 @@ local function AddPriceLines(tip, itemID)
         tip:AddDoubleLine("GoldFinder Safety Stock:", ("%s%d / %d target%s|r"):format(color, currentStock, restockTarget, statusTag), 1, 0.82, 0, 1, 1, 1)
     end
 
+    -- Disenchant Expected Value (Theme 1 - v2.0)
+    if deNet and deNet > 0 then
+        local latestAH = (hasHistory and rec.history[#rec.history].min) or nil
+        if latestAH and latestAH > 0 and deNet > latestAH then
+            local deProfit = deNet - latestAH
+            tip:AddDoubleLine("GoldFinder Disenchant EV:", ("%s |cff40ff40(+%s DE flip)|r"):format(ns.Money(deNet), ns.Money(deProfit)), 1, 0.82, 0, 1, 1, 1)
+        else
+            tip:AddDoubleLine("GoldFinder Disenchant EV:", ("%s (net after 5%% cut)"):format(ns.Money(deNet)), 1, 0.82, 0, 0.7, 0.85, 1)
+        end
+    end
+
     -- Mailbox expired auction relist advisor (#43)
     if advice then
         tip:AddLine(" ")
         tip:AddDoubleLine("GoldFinder Relist Advisor:", advice.tag, 1, 0.82, 0, advice.r, advice.g, advice.b)
         tip:AddLine(advice.reason, 0.85, 0.85, 0.85, true)
+    end
+
+    -- Multi-Alt Realm Inventory Hub (Theme 2 - v2.0, #63)
+    if altTotal and altTotal > 0 and altRows and #altRows > 0 then
+        tip:AddDoubleLine("GoldFinder Realm Inventory:", ("%d total across %d character(s)"):format(altTotal, #altRows), 1, 0.82, 0, 0.4, 0.8, 1)
+        for i = 1, math.min(4, #altRows) do
+            local r = altRows[i]
+            tip:AddDoubleLine("  " .. r.charName, ("%d (Bag:%d Bank:%d Mail:%d)"):format(r.total, r.bags, r.bank, r.mail), 0.75, 0.75, 0.75, 0.9, 0.9, 0.9)
+        end
     end
 end
 

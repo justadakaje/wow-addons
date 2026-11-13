@@ -38,11 +38,11 @@ function ns.HideBuyHelper()
 end
 
 ---------------------------------------------------------------------------
--- Conversion Lookups
+-- Conversion Lookups (Multi-Recipe Chains & Shared Reagents)
 ---------------------------------------------------------------------------
 
-local outputToConv = {}
-local reagentToConv = {}
+local outputToConvs = {}
+local reagentToConvs = {}
 local lookupsBuilt = false
 
 local function BuildConversionLookups()
@@ -52,16 +52,35 @@ local function BuildConversionLookups()
     local convs = ns.CONVERSIONS or {}
     for _, conv in ipairs(convs) do
         if conv.output and conv.output.itemID then
-            outputToConv[conv.output.itemID] = conv
+            outputToConvs[conv.output.itemID] = outputToConvs[conv.output.itemID] or {}
+            tinsert(outputToConvs[conv.output.itemID], conv)
         end
         if conv.reagents then
             for _, r in ipairs(conv.reagents) do
                 if r.itemID then
-                    reagentToConv[r.itemID] = conv
+                    reagentToConvs[r.itemID] = reagentToConvs[r.itemID] or {}
+                    tinsert(reagentToConvs[r.itemID], conv)
                 end
             end
         end
     end
+end
+
+local function ComputeConversionCost(conv)
+    local craftCost = 0
+    local mainReagent = conv.reagents and conv.reagents[1]
+    for _, r in ipairs(conv.reagents or {}) do
+        local rCost = r.fixedPrice
+            or (ns.GetVendorPrice and ns.GetVendorPrice(r.itemID))
+            or (ns.GetItemCurrentPrice and ns.GetItemCurrentPrice(r.itemID))
+            or (ns.GetItemTypicalPrice and ns.GetItemTypicalPrice(r.itemID))
+        if not rCost or rCost <= 0 then
+            return nil, mainReagent
+        end
+        craftCost = craftCost + (rCost * r.qty)
+    end
+    local outQty = math.max(1, (conv.output and conv.output.qty) or conv.outputQty or 1)
+    return math.floor(craftCost / outQty), mainReagent
 end
 
 ---------------------------------------------------------------------------
@@ -225,10 +244,10 @@ local function EvaluateParity(itemID)
 
     BuildConversionLookups()
 
-    local asOutput = outputToConv[itemID]
-    local asReagent = reagentToConv[itemID]
+    local asOutputs = outputToConvs[itemID]
+    local asReagents = reagentToConvs[itemID]
 
-    if not asOutput and not asReagent then
+    if (not asOutputs or #asOutputs == 0) and (not asReagents or #asReagents == 0) then
         ns.HideBuyHelper()
         return
     end
@@ -238,31 +257,58 @@ local function EvaluateParity(itemID)
 
     local currentPrice = ns.GetItemCurrentPrice and ns.GetItemCurrentPrice(itemID)
     local curName = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID))
+        or (C_Item and C_Item.GetItemInfo and C_Item.GetItemInfo(itemID))
         or (GetItemInfo and GetItemInfo(itemID))
         or ("Item " .. itemID)
 
     card.viewing:SetText(curName .. (currentPrice and currentPrice > 0 and (" (" .. ns.Money(currentPrice) .. ")") or ""))
 
-    -- Case 1: Player is viewing a finished good (e.g. Copper Bar, Bolt of Silk, Arcanite Bar)
-    if asOutput then
-        local conv = asOutput
-        local craftCost = 0
-        local hasAllReagentPrices = true
-        local mainReagent = conv.reagents[1]
-
-        for _, r in ipairs(conv.reagents) do
-            local rCost = r.fixedPrice or (ns.GetVendorPrice and ns.GetVendorPrice(r.itemID)) or (ns.GetItemCurrentPrice and ns.GetItemCurrentPrice(r.itemID)) or (ns.GetItemTypicalPrice and ns.GetItemTypicalPrice(r.itemID))
-            if not rCost or rCost <= 0 then
-                hasAllReagentPrices = false
-                break
+    -- Pick the best matching output conversion (lowest craft cost) and best reagent conversion (highest savings / profit)
+    local bestOutConv, bestUnitCraftCost, bestMainReagent = nil, nil, nil
+    if asOutputs then
+        for _, conv in ipairs(asOutputs) do
+            local unitCraftCost, mainReagent = ComputeConversionCost(conv)
+            if not bestOutConv then
+                bestOutConv, bestUnitCraftCost, bestMainReagent = conv, unitCraftCost, mainReagent
+            elseif unitCraftCost and (not bestUnitCraftCost or unitCraftCost < bestUnitCraftCost) then
+                bestOutConv, bestUnitCraftCost, bestMainReagent = conv, unitCraftCost, mainReagent
             end
-            craftCost = craftCost + (rCost * r.qty)
         end
+    end
 
-        local unitCraftCost = (conv.output.qty > 0) and math.floor(craftCost / conv.output.qty) or craftCost
+    local bestReagentConv, bestOutputPrice, bestRawCostForOne, bestOutSavings = nil, nil, nil, -1
+    if asReagents then
+        for _, conv in ipairs(asReagents) do
+            local outID = conv.output and conv.output.itemID
+            local outPrice = outID and ((ns.GetItemCurrentPrice and ns.GetItemCurrentPrice(outID)) or (ns.GetItemTypicalPrice and ns.GetItemTypicalPrice(outID)))
+            local reqQty = 1
+            for _, r in ipairs(conv.reagents or {}) do
+                if r.itemID == itemID then reqQty = r.qty; break end
+            end
+            local rawCost = currentPrice and (currentPrice * reqQty) or 0
+            local outQty = math.max(1, (conv.output and conv.output.qty) or conv.outputQty or 1)
+            local effOutPrice = outPrice and math.floor(outPrice * outQty) or nil
+            local savings = (effOutPrice and rawCost > 0) and (rawCost - effOutPrice) or 0
+            if not bestReagentConv or savings > bestOutSavings then
+                bestReagentConv = conv
+                bestOutputPrice = outPrice
+                bestRawCostForOne = rawCost
+                bestOutSavings = savings
+            end
+        end
+    end
+
+    -- Decide whether output-craft alert or reagent-buy-finished alert is stronger; prefer actionable alert!
+    local showOutputAlert = bestOutConv and bestUnitCraftCost and currentPrice and currentPrice > 0 and bestUnitCraftCost < math.floor(currentPrice * 0.85)
+    local showReagentAlert = bestReagentConv and bestOutputPrice and bestOutputPrice > 0 and bestRawCostForOne and bestRawCostForOne > 0 and bestOutputPrice < math.floor(bestRawCostForOne * 0.90)
+
+    if showOutputAlert or (bestOutConv and not showReagentAlert) then
+        local conv = bestOutConv
+        local unitCraftCost = bestUnitCraftCost
+        local mainReagent = bestMainReagent or (conv.reagents and conv.reagents[1])
         local rName = mainReagent and ((C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(mainReagent.itemID)) or (GetItemInfo and GetItemInfo(mainReagent.itemID)) or "raw reagents")
 
-        if hasAllReagentPrices and currentPrice and currentPrice > 0 and unitCraftCost < math.floor(currentPrice * 0.85) then
+        if showOutputAlert then
             local savingsPerUnit = currentPrice - unitCraftCost
             local pct = math.floor((savingsPerUnit / currentPrice) * 100 + 0.5)
 
@@ -273,38 +319,29 @@ local function EvaluateParity(itemID)
             card.switchBtn:SetText("Search " .. (rName:sub(1, 14)))
             card.switchBtn:Show()
         else
-            card.compLine:SetText(("|cff40ff40[Competitive]:|r Crafting costs %s."):format(hasAllReagentPrices and ns.Money(unitCraftCost) or "unknown"))
+            card.compLine:SetText(("|cff40ff40[Competitive]:|r Crafting costs %s."):format(unitCraftCost and ns.Money(unitCraftCost) or "unknown"))
             card.savings:SetText("Current finished item price is reasonable compared to raw materials.")
             card.switchBtn:Hide()
         end
-
-    -- Case 2: Player is viewing a raw reagent (e.g. Copper Ore, Silk Cloth)
-    elseif asReagent then
-        local conv = asReagent
-        local outputPrice = (ns.GetItemCurrentPrice and ns.GetItemCurrentPrice(conv.output.itemID)) or (ns.GetItemTypicalPrice and ns.GetItemTypicalPrice(conv.output.itemID))
+    elseif bestReagentConv then
+        local conv = bestReagentConv
+        local outputPrice = bestOutputPrice
+        local outQty = math.max(1, (conv.output and conv.output.qty) or conv.outputQty or 1)
+        local effOutputPrice = outputPrice and (outputPrice * outQty) or nil
+        local rawCostForOne = bestRawCostForOne or 0
         local outName = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(conv.output.itemID)) or (GetItemInfo and GetItemInfo(conv.output.itemID)) or "finished item"
 
-        -- Calculate raw cost required to produce 1 output
-        local reqQty = 1
-        for _, r in ipairs(conv.reagents) do
-            if r.itemID == itemID then
-                reqQty = r.qty
-                break
-            end
-        end
-
-        local rawCostForOne = currentPrice and (currentPrice * reqQty) or 0
-
-        if outputPrice and outputPrice > 0 and rawCostForOne > 0 and outputPrice < math.floor(rawCostForOne * 0.90) then
-            local savingsAmt = rawCostForOne - outputPrice
-            card.compLine:SetText(("|cffff4040[Do Not Craft]:|r %s is selling for %s."):format(outName, ns.Money(outputPrice)))
+        if showReagentAlert and effOutputPrice then
+            local savingsAmt = rawCostForOne - effOutputPrice
+            local outLabel = (outQty > 1) and ("%dx %s"):format(outQty, outName) or outName
+            card.compLine:SetText(("|cffff4040[Do Not Craft]:|r %s sells for %s."):format(outLabel, ns.Money(effOutputPrice)))
             card.savings:SetText(("|cff40ff40Save %s|r: Buying pre-crafted %s is cheaper than crafting from raw materials!"):format(ns.Money(savingsAmt), outName))
             card.targetAltID = conv.output.itemID
             card.targetAltName = outName
             card.switchBtn:SetText("Search " .. (outName:sub(1, 14)))
             card.switchBtn:Show()
         else
-            card.compLine:SetText(("|cff40ff40[Parity Normal]:|r Finished %s is %s."):format(outName, outputPrice and ns.Money(outputPrice) or "unknown"))
+            card.compLine:SetText(("|cff40ff40[Parity Normal]:|r Finished %s is %s."):format(outName, effOutputPrice and ns.Money(effOutputPrice) or "unknown"))
             card.savings:SetText("Raw material prices align with finished market value.")
             card.switchBtn:Hide()
         end
@@ -402,5 +439,146 @@ buyWatcher:SetScript("OnEvent", function(self, event, arg1)
             helperCard.userMoved = nil
         end
         currentItemID = nil
+    end
+end)
+
+---------------------------------------------------------------------------
+-- TradeSkill / Crafting Window Profit Margin Overlay (Theme 1 - v2.0)
+---------------------------------------------------------------------------
+
+function ns.GetConversionLookups()
+    BuildConversionLookups()
+    return outputToConvs, reagentToConvs
+end
+
+function ns.EvaluateRecipeProfit(outputItemID, outputQty, reagents)
+    if not outputItemID then return nil, "No output item selected." end
+    if type(reagents) ~= "table" or #reagents == 0 then
+        return nil, "No reagent list available for this recipe."
+    end
+
+    local outPrice = (ns.GetItemCurrentPrice and ns.GetItemCurrentPrice(outputItemID))
+        or (ns.GetItemTypicalPrice and ns.GetItemTypicalPrice(outputItemID))
+    if not outPrice or outPrice <= 0 then
+        return nil, "No AH market history recorded for crafted output."
+    end
+
+    local totalCost = 0
+    for _, r in ipairs(reagents) do
+        local qty = math.max(1, r.qty or r.quantity or 1)
+        local rCost = r.fixedPrice
+            or (ns.GetVendorPrice and ns.GetVendorPrice(r.itemID))
+            or (ns.GetItemCurrentPrice and ns.GetItemCurrentPrice(r.itemID))
+            or (ns.GetItemTypicalPrice and ns.GetItemTypicalPrice(r.itemID))
+        if not rCost or rCost <= 0 then
+            local rName = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(r.itemID)) or ("Item " .. tostring(r.itemID))
+            return nil, ("Missing AH price data for reagent %s."):format(rName)
+        end
+        totalCost = totalCost + (rCost * qty)
+    end
+
+    if totalCost <= 0 then
+        return nil, "Reagent cost cannot be computed."
+    end
+
+    outputQty = math.max(1, outputQty or 1)
+    local gross = outPrice * outputQty
+    local netOutput = math.floor(gross * 0.95)
+    local netProfit = netOutput - totalCost
+    local roi = netProfit / totalCost
+
+    return {
+        cost = totalCost,
+        gross = gross,
+        netOutput = netOutput,
+        netProfit = netProfit,
+        roi = roi,
+    }
+end
+
+local tradeSkillBadge = nil
+local currentRecipeID = nil
+
+local function GetOrCreateTradeSkillBadge(parentFrame)
+    if tradeSkillBadge and tradeSkillBadge:GetParent() == parentFrame then
+        return tradeSkillBadge
+    end
+    if not parentFrame then return nil end
+
+    -- Non-interactive read-only FontString anchored away from secure Create buttons (zero taint)
+    local fs = parentFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    fs:SetPoint("BOTTOMLEFT", parentFrame, "BOTTOMLEFT", 18, 12)
+    fs:SetJustifyH("LEFT")
+    fs:SetText("")
+    tradeSkillBadge = fs
+    return fs
+end
+
+local function UpdateTradeSkillBadge(recipeID)
+    if not recipeID then return end
+    currentRecipeID = recipeID
+
+    local profFrame = _G.ProfessionsFrame
+    local tsFrame = _G.TradeSkillFrame
+    local hostFrame = (profFrame and profFrame.IsShown and profFrame:IsShown() and profFrame)
+        or (tsFrame and tsFrame.IsShown and tsFrame:IsShown() and tsFrame)
+    if not hostFrame then return end
+
+    local fs = GetOrCreateTradeSkillBadge(hostFrame)
+    if not fs then return end
+
+    local schematic = C_TradeSkillUI and C_TradeSkillUI.GetRecipeSchematic and C_TradeSkillUI.GetRecipeSchematic(recipeID, false)
+    if not schematic or not schematic.outputItemID then
+        fs:SetText("")
+        return
+    end
+
+    local reagents = {}
+    if type(schematic.reagentSlotSchematics) == "table" then
+        for _, slot in ipairs(schematic.reagentSlotSchematics) do
+            if slot.required and slot.reagents and slot.reagents[1] and slot.reagents[1].itemID then
+                reagents[#reagents + 1] = {
+                    itemID = slot.reagents[1].itemID,
+                    qty = slot.quantityRequired or 1,
+                }
+            end
+        end
+    end
+
+    local outQty = schematic.quantityMin or 1
+    local res, reason = ns.EvaluateRecipeProfit(schematic.outputItemID, outQty, reagents)
+    if not res then
+        fs:SetText("|cff888888GoldFinder Margin: " .. (reason or "No AH data") .. "|r")
+        return
+    end
+
+    local pct = math.floor((res.roi or 0) * 100 + 0.5)
+    local color = res.netProfit >= 0 and "|cff40ff40" or "|cffff4040"
+    local sign = res.netProfit >= 0 and "+" or ""
+    fs:SetText(("|cffffd100GoldFinder Craft Margin:|r %s%s%s (%+d%% ROI)|r  |cffaaaaaa[Cost: %s]|r"):format(
+        color, sign, ns.Money(res.netProfit), pct, ns.Money(res.cost)))
+end
+
+local tradeSkillHooked = false
+function ns.InitTradeSkillOverlay()
+    if tradeSkillHooked then return end
+    tradeSkillHooked = true
+
+    if C_TradeSkillUI and C_TradeSkillUI.GetRecipeSchematic then
+        hooksecurefunc(C_TradeSkillUI, "GetRecipeSchematic", function(recipeID)
+            if recipeID and recipeID ~= currentRecipeID then
+                UpdateTradeSkillBadge(recipeID)
+            end
+        end)
+    end
+end
+
+local tsWatcher = CreateFrame("Frame")
+tsWatcher:RegisterEvent("TRADE_SKILL_SHOW")
+tsWatcher:RegisterEvent("TRADE_SKILL_DATA_SOURCE_CHANGED")
+tsWatcher:SetScript("OnEvent", function()
+    ns.InitTradeSkillOverlay()
+    if currentRecipeID then
+        UpdateTradeSkillBadge(currentRecipeID)
     end
 end)

@@ -149,6 +149,10 @@ local function MakeRow(anchor, font, clickable)
                     else
                         ns.Bad("Failed to cancel auction: %s", tostring(err))
                     end
+                elseif IsControlKeyDown and IsControlKeyDown() then
+                    if ns.ShowPriceChartModal and self.deal and self.deal.itemID then
+                        ns.ShowPriceChartModal(self.deal.itemID)
+                    end
                 elseif IsAltKeyDown() then
                     if ns.AddToCart then
                         ns.AddToCart(self.deal, self.deal.qty or 1)
@@ -1025,6 +1029,16 @@ ShowRowTip = function(row)
         tip:AddLine("Shopping Target Quota", 0, 0.8, 1)
         tip:AddDoubleLine("Target Quota", tostring(d.target), 1, 0.82, 0, 1, 1, 1)
         tip:AddDoubleLine("In Bags / Bank", tostring(d.acquired), 1, 0.82, 0, 1, 1, 1)
+        if d.altTotal and d.altTotal > (d.acquired or 0) then
+            tip:AddDoubleLine("Realm Total (All Alts)", tostring(d.altTotal), 1, 0.82, 0, 0.4, 0.8, 1)
+            if d.altBreakdown then
+                for _, altRow in ipairs(d.altBreakdown) do
+                    if not altRow.isCurrent then
+                        tip:AddDoubleLine("  Alt: " .. altRow.charName, ("%d (Bag:%d Bank:%d Mail:%d)"):format(altRow.total, altRow.bags, altRow.bank, altRow.mail), 0.7, 0.7, 0.7, 0.85, 0.85, 0.85)
+                    end
+                end
+            end
+        end
         local pctFulfilled = d.target > 0 and math.floor((d.acquired / d.target) * 100) or 100
         local remColor = (d.remaining == 0) and {0.25, 1, 0.25} or {1, 0.82, 0}
         tip:AddDoubleLine("Remaining Needed", ("%d (%d%% fulfilled)"):format(d.remaining, pctFulfilled), 1, 0.82, 0, remColor[1], remColor[2], remColor[3])
@@ -1035,6 +1049,7 @@ ShowRowTip = function(row)
         tip:AddLine(" ")
         tip:AddLine("Left-Click: open item in Buy view.", 0.4, 0.8, 1, true)
         tip:AddLine("Shift-Click: direct Quick-Buy batch.", 0.4, 0.8, 1, true)
+        tip:AddLine("Ctrl-Click: Open 30-Day Price History Chart.", 0.4, 0.8, 1, true)
         tip:AddLine("Type /gf unbuy <item> to remove from shopping list.", 0.6, 0.6, 0.6, true)
         tip:Show()
     if ns.ShowSparkline then
@@ -1124,6 +1139,7 @@ ShowRowTip = function(row)
     tip:AddLine(" ")
     tip:AddDoubleLine("Watchlist:", ns.IsWatched(d.itemID) and "|cffffd100Starred|r" or "|cff888888Not starred|r", 1, 0.82, 0, 1, 1, 1)
     tip:AddLine("Left-Click: open in Buy. Shift-Click: direct Quick-Buy commodity.", 0.4, 0.8, 1, true)
+    tip:AddLine("Ctrl-Click: Open 30-Day Price History Chart.", 0.4, 0.8, 1, true)
     tip:AddLine("Alt-Click: Stage deal into Multi-Item Cart.", 0.25, 1, 0.5, true)
     tip:AddLine("Right-Click or click star: toggle Watchlist.", 0.4, 0.8, 1, true)
     tip:AddLine("Alt+Right-Click: Blacklist/ignore item from deals.", 0.8, 0.45, 0.45, true)

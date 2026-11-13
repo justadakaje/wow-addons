@@ -290,7 +290,138 @@ ns.CONVERSIONS = {
     { name = "Bolt of Silk",       category = "cloth",  output = { itemID = 4305, qty = 1 }, reagents = { { itemID = 4306, qty = 4 } } },
     { name = "Bolt of Mageweave",  category = "cloth",  output = { itemID = 4339, qty = 1 }, reagents = { { itemID = 4338, qty = 4 } } },
     { name = "Bolt of Runecloth",  category = "cloth",  output = { itemID = 14048, qty = 1 }, reagents = { { itemID = 14047, qty = 5 } } },
+
+    -- Leatherworking Upgrades & Cured Hides
+    { name = "Craft Medium Leather", category = "leather", output = { itemID = 2319, qty = 1 },  reagents = { { itemID = 2318, qty = 4 } } },
+    { name = "Craft Heavy Leather",  category = "leather", output = { itemID = 4234, qty = 1 },  reagents = { { itemID = 2319, qty = 5 } } },
+    { name = "Craft Thick Leather",  category = "leather", output = { itemID = 4304, qty = 1 },  reagents = { { itemID = 4234, qty = 5 } } },
+    { name = "Craft Rugged Leather", category = "leather", output = { itemID = 8170, qty = 1 },  reagents = { { itemID = 4304, qty = 6 } } },
+    { name = "Cure Light Hide",      category = "leather", output = { itemID = 4231, qty = 1 },  reagents = { { itemID = 783, qty = 1 },  { itemID = 2888, qty = 1 } } },
+    { name = "Cure Medium Hide",     category = "leather", output = { itemID = 4233, qty = 1 },  reagents = { { itemID = 4232, qty = 1 }, { itemID = 2888, qty = 1 } } },
+    { name = "Cure Heavy Hide",      category = "leather", output = { itemID = 4236, qty = 1 },  reagents = { { itemID = 4235, qty = 1 }, { itemID = 2888, qty = 3 } } },
+    { name = "Cure Thick Hide",      category = "leather", output = { itemID = 8172, qty = 1 },  reagents = { { itemID = 8169, qty = 1 }, { itemID = 7071, qty = 1 } } },
+    { name = "Cure Rugged Hide",     category = "leather", output = { itemID = 15407, qty = 1 }, reagents = { { itemID = 8171, qty = 1 }, { itemID = 15409, qty = 1 } } },
+
+    -- Alchemy Elemental Transmutes
+    { name = "Transmute Earth to Water",  category = "other", output = { itemID = 7080, qty = 1 }, reagents = { { itemID = 7076, qty = 1 } } },
+    { name = "Transmute Water to Air",    category = "other", output = { itemID = 7082, qty = 1 }, reagents = { { itemID = 7080, qty = 1 } } },
+    { name = "Transmute Undeath to Water",category = "other", output = { itemID = 7080, qty = 1 }, reagents = { { itemID = 12808, qty = 1 } } },
+    { name = "Transmute Life to Earth",   category = "other", output = { itemID = 7076, qty = 1 }, reagents = { { itemID = 12803, qty = 1 } } },
+    { name = "Transmute Elemental Fire",  category = "other", output = { itemID = 7068, qty = 3 }, reagents = { { itemID = 7077, qty = 1 } } },
+
+    -- Enchanting Essence Upgrades (3 Lesser -> 1 Greater)
+    { name = "Greater Magic Essence",   category = "other", output = { itemID = 10939, qty = 1 }, reagents = { { itemID = 10938, qty = 3 } } },
+    { name = "Greater Astral Essence",  category = "other", output = { itemID = 11082, qty = 1 }, reagents = { { itemID = 10998, qty = 3 } } },
+    { name = "Greater Mystic Essence",  category = "other", output = { itemID = 11135, qty = 1 }, reagents = { { itemID = 11134, qty = 3 } } },
+    { name = "Greater Nether Essence",  category = "other", output = { itemID = 11175, qty = 1 }, reagents = { { itemID = 11174, qty = 3 } } },
+    { name = "Greater Eternal Essence", category = "other", output = { itemID = 16203, qty = 1 }, reagents = { { itemID = 16202, qty = 3 } } },
 }
+
+---------------------------------------------------------------------------
+-- Disenchant Expected Value Engine (Theme 1 - GoldFinder v2.0)
+-- Verified Classic item IDs cross-checked against QuestieDB_Vanilla.toc.
+
+local DE_BRACKETS = {
+    { minLvl = 5,  maxLvl = 15, dust = { id = 10940, avgQty = 1.5 }, essence = { id = 10938, avgQty = 1.5 }, shard = nil },
+    { minLvl = 16, maxLvl = 20, dust = { id = 10940, avgQty = 2.5 }, essence = { id = 10939, avgQty = 1.5 }, shard = { id = 10978, avgQty = 1.0 } },
+    { minLvl = 21, maxLvl = 25, dust = { id = 10940, avgQty = 4.0 }, essence = { id = 10998, avgQty = 1.5 }, shard = { id = 10978, avgQty = 1.0 } },
+    { minLvl = 26, maxLvl = 30, dust = { id = 11083, avgQty = 1.5 }, essence = { id = 11082, avgQty = 1.5 }, shard = { id = 11084, avgQty = 1.0 } },
+    { minLvl = 31, maxLvl = 35, dust = { id = 11083, avgQty = 3.5 }, essence = { id = 11134, avgQty = 1.5 }, shard = { id = 11138, avgQty = 1.0 } },
+    { minLvl = 36, maxLvl = 40, dust = { id = 11137, avgQty = 1.5 }, essence = { id = 11135, avgQty = 1.5 }, shard = { id = 11139, avgQty = 1.0 } },
+    { minLvl = 41, maxLvl = 45, dust = { id = 11137, avgQty = 3.5 }, essence = { id = 11174, avgQty = 1.5 }, shard = { id = 11177, avgQty = 1.0 } },
+    { minLvl = 46, maxLvl = 50, dust = { id = 11176, avgQty = 1.5 }, essence = { id = 11175, avgQty = 1.5 }, shard = { id = 11178, avgQty = 1.0 } },
+    { minLvl = 51, maxLvl = 55, dust = { id = 11176, avgQty = 3.5 }, essence = { id = 16202, avgQty = 1.5 }, shard = { id = 14343, avgQty = 1.0 } },
+    { minLvl = 56, maxLvl = 65, dust = { id = 16204, avgQty = 2.0 }, essence = { id = 16203, avgQty = 1.5 }, shard = { id = 14344, avgQty = 1.0 } },
+}
+
+local function GetItemInfoCompat(itemID)
+    if C_Item and C_Item.GetItemInfo then
+        local name, link, quality, iLevel, _, _, _, _, _, _, _, classID = C_Item.GetItemInfo(itemID)
+        if name then return name, link, quality, iLevel, classID end
+    end
+    if GetItemInfo then
+        local name, link, quality, iLevel, _, _, _, _, _, _, _, classID = GetItemInfo(itemID)
+        if name then return name, link, quality, iLevel, classID end
+    end
+    return nil
+end
+
+function ns.GetDisenchantValue(itemID)
+    if not itemID then return nil, "No item ID provided." end
+    local _, _, quality, iLevel, classID = GetItemInfoCompat(itemID)
+    if not classID and C_Item and C_Item.GetItemInfoInstant then
+        classID = select(6, C_Item.GetItemInfoInstant(itemID))
+    end
+
+    if quality ~= 2 then
+        return nil, "Only Uncommon (green) gear can be estimated cleanly."
+    end
+    if classID ~= 2 and classID ~= 4 then
+        return nil, "Only armor and weapons can be disenchanted."
+    end
+    if not iLevel or iLevel < 5 then
+        return nil, "Item level too low to disenchant."
+    end
+
+    local bracket = nil
+    for _, b in ipairs(DE_BRACKETS) do
+        if iLevel >= b.minLvl and iLevel <= b.maxLvl then
+            bracket = b
+            break
+        end
+    end
+    if not bracket and iLevel > 65 then
+        bracket = DE_BRACKETS[#DE_BRACKETS]
+    end
+    if not bracket then
+        return nil, "No disenchant table matches this item level."
+    end
+
+    local isWeapon = (classID == 2)
+    local wDust    = isWeapon and 0.20 or 0.75
+    local wEssence = isWeapon and 0.75 or 0.20
+    local wShard   = bracket.shard and 0.05 or 0.0
+
+    local ev = 0
+    local knownMaterials = 0
+    local breakdown = {}
+
+    local function AddComponent(entry, weight)
+        if not entry or weight <= 0 then return end
+        local unitPrice = (ns.GetItemTypicalPrice and ns.GetItemTypicalPrice(entry.id))
+            or (ns.GetItemCurrentPrice and ns.GetItemCurrentPrice(entry.id))
+        if unitPrice and unitPrice > 0 then
+            knownMaterials = knownMaterials + 1
+            local contribution = unitPrice * entry.avgQty * weight
+            ev = ev + contribution
+            breakdown[#breakdown + 1] = {
+                itemID = entry.id,
+                chance = weight,
+                avgQty = entry.avgQty,
+                unitPrice = unitPrice,
+                contribution = contribution,
+            }
+        end
+    end
+
+    AddComponent(bracket.dust, wDust)
+    AddComponent(bracket.essence, wEssence)
+    AddComponent(bracket.shard, wShard)
+
+    if knownMaterials == 0 or ev <= 0 then
+        return nil, "Insufficient enchanting material price history to estimate disenchant value."
+    end
+
+    local expectedGross = math.floor(ev + 0.5)
+    local expectedNet = math.floor(expectedGross * 0.95)
+    return expectedNet, nil, {
+        expectedGross = expectedGross,
+        expectedNet = expectedNet,
+        breakdown = breakdown,
+        iLevel = iLevel,
+        isWeapon = isWeapon,
+    }
+end
 
 function ns.GetItemTypicalPrice(itemID)
     local db = ns.db
@@ -486,6 +617,11 @@ function ns.FindShoppingDeals()
                 below = (typical - currentPrice) / typical
             end
 
+            local altTotal, altBreakdown = 0, {}
+            if ns.GetAltItemBreakdown then
+                altTotal, altBreakdown = ns.GetAltItemBreakdown(itemID)
+            end
+
             local deal = {
                 isShopping      = true,
                 itemID          = itemID,
@@ -497,6 +633,8 @@ function ns.FindShoppingDeals()
                 target          = targetQty,
                 acquired        = acquired,
                 remaining       = remaining,
+                altTotal        = altTotal,
+                altBreakdown    = altBreakdown,
                 maxUnitPrice    = maxPrice,
                 totalCost       = totalCost,
                 netUnitProfit   = (typical > (currentPrice or 0)) and (typical - (currentPrice or 0)) or 0,
@@ -713,4 +851,205 @@ function ns.DealDetails(status)
         { "Need more history", tostring(status.needMore) },
         { "Not seen in " .. FRESH_SECONDS / 60 .. " min", tostring(status.stale) },
     }
+end
+
+---------------------------------------------------------------------------
+-- Trade Chat Bark Scanner (Theme 3 - GoldFinder v2.0)
+---------------------------------------------------------------------------
+
+ns.recentBarks = ns.recentBarks or {}
+local MAX_BARKS = 25
+
+function ns.ParseTradeBark(message, sender, channelName)
+    if type(message) ~= "string" or message == "" then
+        return nil, "Empty message."
+    end
+    local myName = UnitName and UnitName("player")
+    if sender and myName then
+        local shortSender = sender:match("^([^%-]+)") or sender
+        if shortSender == myName then
+            return nil, "Ignoring self message."
+        end
+    end
+
+    local lower = message:lower()
+    -- Ignore buyers / LFG / WTB spam
+    if lower:find("%f[%a]wtb%f[%A]") or lower:find("%f[%a]lf%f[%A]") or lower:find("looking for") then
+        return nil, "Message is a buy or group request."
+    end
+
+    -- Extract first WoW item link & ID
+    local itemLink = message:match("(|c%x+|Hitem:%d+:[^|]*|h%[[^%]]+%]|h|r)")
+        or message:match("(|Hitem:%d+:[^|]*|h%[[^%]]+%]|h)")
+    local itemID = tonumber(message:match("|Hitem:(%d+):"))
+    if not itemID then
+        return nil, "No item link found."
+    end
+
+    -- Strip item links and WoW formatting codes before parsing numbers so item names cannot spoof prices
+    local clean = message
+    clean = clean:gsub("|c%x+|Hitem:[^|]*|h%[[^%]]+%]|h|r", " ")
+    clean = clean:gsub("|Hitem:[^|]*|h%[[^%]]+%]|h", " ")
+    clean = clean:gsub("|c%x%x%x%x%x%x%x%x", " "):gsub("|r", " ")
+    local cleanLower = clean:lower()
+
+    -- Parse price in copper (e.g. "15g 50s", "15.5g", "15g", "500s")
+    local copper = nil
+    local gPart, sPart = cleanLower:match("(%d+)%s*g%s*(%d+)%s*s")
+    if gPart and sPart then
+        copper = (tonumber(gPart) * 10000) + (tonumber(sPart) * 100)
+    else
+        local gFloat = cleanLower:match("(%d+%.%d+)%s*g")
+        if gFloat then
+            copper = math.floor(tonumber(gFloat) * 10000 + 0.5)
+        else
+            local gOnly = cleanLower:match("(%d+)%s*g")
+            if gOnly then
+                copper = tonumber(gOnly) * 10000
+            else
+                local sOnly = cleanLower:match("(%d+)%s*s")
+                if sOnly then
+                    copper = tonumber(sOnly) * 100
+                end
+            end
+        end
+    end
+
+    if not copper or copper <= 0 then
+        return nil, "No valid asking price parsed."
+    end
+
+    -- Must have either WTS/selling/each wording or a direct link+price
+    local hasSellHint = lower:find("%f[%a]wts%f[%A]") or lower:find("selling") or lower:find("sale") or lower:find("%d+%s*[gs]")
+    if not hasSellHint then
+        return nil, "No selling indicator."
+    end
+
+    local typical = ns.GetItemTypicalPrice and ns.GetItemTypicalPrice(itemID)
+    if not typical or typical <= 0 then
+        return nil, "No typical AH price recorded for this item."
+    end
+
+    local ratio = (ns.GetDealRatio and ns.GetDealRatio()) or 0.70
+    if copper > typical * ratio then
+        return nil, "Asking price is not below deal threshold."
+    end
+
+    local netProfit = math.floor(typical * 0.95) - copper
+    if netProfit <= 0 then
+        return nil, "Net profit after 5% AH cut is non-positive."
+    end
+
+    local rec = {
+        itemID    = itemID,
+        itemLink  = itemLink or ((C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID)) or ("Item " .. itemID)),
+        sender    = sender or "Unknown",
+        channel   = channelName or "Trade",
+        price     = copper,
+        typical   = typical,
+        discount  = 1 - (copper / typical),
+        netProfit = netProfit,
+        time      = (GetServerTime and GetServerTime()) or time(),
+    }
+
+    table.insert(ns.recentBarks, 1, rec)
+    while #ns.recentBarks > MAX_BARKS do
+        table.remove(ns.recentBarks)
+    end
+    return rec
+end
+
+---------------------------------------------------------------------------
+-- Neutral AH vs. Faction AH Cross-Market Arbitrage (Theme 3 - GoldFinder v2.0)
+---------------------------------------------------------------------------
+
+local function PartitionStats(rec)
+    if not rec or not rec.history or #rec.history == 0 then return nil, nil end
+    local h = rec.history
+    local latest = h[#h].min
+    if not latest or latest <= 0 then return nil, nil end
+    local vals = {}
+    for i = 1, #h do
+        if h[i].min and h[i].min > 0 then
+            vals[#vals + 1] = h[i].min
+        end
+    end
+    local typical = (ns.CalculateBaseline and ns.CalculateBaseline(vals)) or Median(vals) or latest
+    return latest, typical
+end
+
+function ns.FindCrossMarketDeals()
+    local deals = {}
+    if not ns.db or not ns.db.realms then return deals end
+
+    local realm = (ns.GetActiveRealm and ns.GetActiveRealm()) or "Default"
+    local rData = ns.db.realms[realm]
+    if not rData or not rData.factions then return deals end
+
+    local neutralData = rData.factions["Neutral"]
+    if not neutralData or not neutralData.items then
+        return deals
+    end
+
+    local activeFaction = (ns.GetActiveFaction and ns.GetActiveFaction()) or "Horde"
+    if activeFaction == "Neutral" then
+        activeFaction = (rData.factions["Horde"] and "Horde") or (rData.factions["Alliance"] and "Alliance") or nil
+    end
+    local factionData = activeFaction and rData.factions[activeFaction]
+    if not factionData or not factionData.items then
+        return deals
+    end
+
+    local minProfit = (ns.GetMinProfit and ns.GetMinProfit()) or 0
+
+    for itemID, fRec in pairs(factionData.items) do
+        local nRec = neutralData.items[itemID]
+        if nRec and not (ns.IsBlacklisted and ns.IsBlacklisted(itemID)) then
+            local fNow, fTyp = PartitionStats(fRec)
+            local nNow, nTyp = PartitionStats(nRec)
+            if fNow and fTyp and nNow and nTyp then
+                -- Route A: Buy on Neutral AH -> Sell on Faction AH (5% cut)
+                local factionNetReturn = math.floor(fTyp * 0.95)
+                local neutralToFactionProfit = factionNetReturn - nNow
+
+                -- Route B: Buy on Faction AH -> Sell on Neutral AH (15% Goblin cut)
+                local neutralNetReturn = math.floor(nTyp * 0.85)
+                local factionToNeutralProfit = neutralNetReturn - fNow
+
+                if neutralToFactionProfit > 0 and neutralToFactionProfit >= minProfit and neutralToFactionProfit >= factionToNeutralProfit then
+                    local name = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID)) or fRec.name or nRec.name or ("Item " .. itemID)
+                    deals[#deals + 1] = {
+                        itemID      = itemID,
+                        name        = name,
+                        buyMarket   = "Neutral",
+                        sellMarket  = activeFaction,
+                        buyPrice    = nNow,
+                        sellTypical = fTyp,
+                        ahCutPct    = 5,
+                        netProfit   = neutralToFactionProfit,
+                        roi         = neutralToFactionProfit / nNow,
+                    }
+                elseif factionToNeutralProfit > 0 and factionToNeutralProfit >= minProfit then
+                    local name = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID)) or fRec.name or nRec.name or ("Item " .. itemID)
+                    deals[#deals + 1] = {
+                        itemID      = itemID,
+                        name        = name,
+                        buyMarket   = activeFaction,
+                        sellMarket  = "Neutral",
+                        buyPrice    = fNow,
+                        sellTypical = nTyp,
+                        ahCutPct    = 15,
+                        netProfit   = factionToNeutralProfit,
+                        roi         = factionToNeutralProfit / fNow,
+                    }
+                end
+            end
+        end
+    end
+
+    table.sort(deals, function(a, b)
+        return (a.netProfit or 0) > (b.netProfit or 0)
+    end)
+
+    return deals
 end

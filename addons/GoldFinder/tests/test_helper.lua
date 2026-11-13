@@ -96,7 +96,13 @@ _G.C_Item = {
     GetItemInfoInstant = function(itemID)
         return itemID, "item", "parts", 1, 1, 7, 0
     end,
+    GetItemIconByID = function(_itemID)
+        return 134400
+    end,
 }
+
+_G.IsControlKeyDown = function() return false end
+_G.UISpecialFrames = _G.UISpecialFrames or {}
 
 _G.GetItemInfo = function(itemID)
     local name = helper.mockItemNames[itemID] or ("Item " .. tostring(itemID))
@@ -242,31 +248,38 @@ local function CreateMockFrame(frameType, name, parent, template)
     function f:GetParent() return f.parent end
     function f:GetName() return f.name end
     function f:CreateFontString()
-        return {
-            SetFontObject = function() end,
-            SetPoint = function() end,
-            ClearAllPoints = function() end,
-            SetText = function(fs, text) fs.text = text end,
-            GetText = function(fs) return fs.text or "" end,
-            SetTextColor = function() end,
-            SetJustifyH = function() end,
-            SetJustifyV = function() end,
-            SetWidth = function() end,
-            SetHeight = function() end,
-            GetStringWidth = function() return 50 end,
-        }
+        local fs = { shown = true }
+        function fs:SetFontObject() end
+        function fs:SetPoint() end
+        function fs:ClearAllPoints() end
+        function fs:SetText(text) fs.text = text end
+        function fs:GetText() return fs.text or "" end
+        function fs:SetTextColor() end
+        function fs:SetJustifyH() end
+        function fs:SetJustifyV() end
+        function fs:SetWidth() end
+        function fs:SetHeight() end
+        function fs:GetStringWidth() return 50 end
+        function fs:Show() fs.shown = true end
+        function fs:Hide() fs.shown = false end
+        function fs:IsShown() return fs.shown end
+        return fs
     end
     function f:CreateTexture()
-        return {
-            SetTexture = function() end,
-            SetColorTexture = function() end,
-            SetAllPoints = function() end,
-            SetPoint = function() end,
-            SetSize = function() end,
-            SetWidth = function() end,
-            SetHeight = function() end,
-            SetVertexColor = function() end,
-        }
+        local tex = { shown = true }
+        function tex:SetTexture() end
+        function tex:SetColorTexture() end
+        function tex:SetAllPoints() end
+        function tex:ClearAllPoints() end
+        function tex:SetPoint() end
+        function tex:SetSize() end
+        function tex:SetWidth() end
+        function tex:SetHeight() end
+        function tex:SetVertexColor() end
+        function tex:Show() tex.shown = true end
+        function tex:Hide() tex.shown = false end
+        function tex:IsShown() return tex.shown end
+        return tex
     end
     if name and _G then
         _G[name] = f
@@ -308,7 +321,7 @@ end
 function helper.createNamespace(overrides)
     local ns = {
         addonName = "GoldFinder",
-        version = "1.0.6",
+        version = "2.0.0",
         db = {
             items = {},
             scans = {},
