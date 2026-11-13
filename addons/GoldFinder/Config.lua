@@ -1,24 +1,27 @@
 -- GoldFinder -- Config
--- Graphical options & configuration panel (#36).
+-- Graphical options & configuration panel (#36, #58).
 -- Provides interactive controls for discount threshold, scan count, profit floors,
 -- spend caps, confidence rating filters, audio alert selection and throttle,
 -- cross-faction sharing, and minimap button display.
--- Supports standalone window (UIParent) and Blizzard Settings / Interface Options category registration.
+-- Hybrid Architecture (#58): Context-aware invocation
+--   - Native embedded settings inside Blizzard Game Options AddOns tab (smooth scroll canvas).
+--   - Standalone floating dialog (UIParent) when opened at the Auction House to avoid closing the AH.
 
 local ADDON, ns = ...
 
 local configFrame = nil
+local blizzardPanel = nil
+local allControlSets = {}
 local isRefreshing = false
-local statusText = nil
 
 local function NotifySettingSaved(desc)
-    if statusText and desc then
-        statusText:SetText(("|cff40ff40Saved: %s|r"):format(desc))
+    if not desc then return end
+    for _, ctrl in ipairs(allControlSets) do
+        if ctrl.statusText then
+            ctrl.statusText:SetText(("|cff40ff40Saved: %s|r"):format(desc))
+        end
     end
 end
-
--- Slider and control references for programmatic refresh
-local controls = {}
 
 local function CreateCheckbox(parent, label, tooltipTitle, tooltipText, onClick)
     local cb = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
@@ -140,130 +143,153 @@ local function SetButtonGroupActive(buttons, activeKey)
     end
 end
 
-local function RefreshControls()
-    if not configFrame then return end
-    isRefreshing = true
+local function RefreshControlSet(ctrl)
+    if not ctrl then return end
 
     -- Profile persistence state (HUD Edit Mode style)
-    if controls.charProfileCb and controls.profileNameText then
+    if ctrl.charProfileCb and ctrl.profileNameText then
         local isChar = ns.IsCharacterSpecificProfile and ns.IsCharacterSpecificProfile()
-        controls.charProfileCb:SetChecked(isChar == true)
+        ctrl.charProfileCb:SetChecked(isChar == true)
         if isChar then
             local charName = ns.GetCharacterName and ns.GetCharacterName() or "Character"
-            controls.profileNameText:SetText(("|cff40ff40%s (Character-Specific)|r"):format(charName))
+            ctrl.profileNameText:SetText(("|cff40ff40%s (Character-Specific)|r"):format(charName))
         else
-            controls.profileNameText:SetText("|cffffd100Default (Account-Wide)|r")
+            ctrl.profileNameText:SetText("|cffffd100Default (Account-Wide)|r")
         end
-        local parent = controls.charProfileCb:GetParent()
+        local parent = ctrl.charProfileCb:GetParent()
         if parent then
-            local tw = (controls.charProfileCb.text and controls.charProfileCb.text:GetStringWidth()) or 0
+            local tw = (ctrl.charProfileCb.text and ctrl.charProfileCb.text:GetStringWidth()) or 0
             if tw > 0 then
-                controls.charProfileCb:ClearAllPoints()
-                controls.charProfileCb:SetPoint("RIGHT", parent, "RIGHT", -(tw + 12), 0)
+                ctrl.charProfileCb:ClearAllPoints()
+                ctrl.charProfileCb:SetPoint("RIGHT", parent, "RIGHT", -(tw + 12), 0)
             end
         end
     end
 
     -- a) Discount threshold slider (5% - 50%)
-    local ratio = ns.GetDealRatio()
-    local discount = math.floor((1 - ratio) * 100 + 0.5)
-    discount = math.max(5, math.min(50, discount))
-    controls.discountSlider:SetValue(discount)
-    controls.discountSlider.UpdateDisplay(discount)
+    if ctrl.discountSlider then
+        local ratio = ns.GetDealRatio()
+        local discount = math.floor((1 - ratio) * 100 + 0.5)
+        discount = math.max(5, math.min(50, discount))
+        ctrl.discountSlider:SetValue(discount)
+        ctrl.discountSlider.UpdateDisplay(discount)
+    end
 
     -- b) Minimum scans slider (1 - 20)
-    local minScans = ns.GetMinPrior()
-    minScans = math.max(1, math.min(20, minScans))
-    controls.minScansSlider:SetValue(minScans)
-    controls.minScansSlider.UpdateDisplay(minScans)
+    if ctrl.minScansSlider then
+        local minScans = ns.GetMinPrior()
+        minScans = math.max(1, math.min(20, minScans))
+        ctrl.minScansSlider:SetValue(minScans)
+        ctrl.minScansSlider.UpdateDisplay(minScans)
+    end
 
     -- c) Minimum profit floor slider (0 - 10g, step 1s)
-    local minProfit = ns.GetMinProfit()
-    local profitGold = math.min(10, minProfit / 10000)
-    controls.minProfitSlider:SetValue(profitGold)
-    controls.minProfitSlider.UpdateDisplay(profitGold)
+    if ctrl.minProfitSlider then
+        local minProfit = ns.GetMinProfit()
+        local profitGold = math.min(10, minProfit / 10000)
+        ctrl.minProfitSlider:SetValue(profitGold)
+        ctrl.minProfitSlider.UpdateDisplay(profitGold)
+    end
 
     -- d) Spend cap slider (0 - 100g, step 10s)
-    local maxSpend = ns.GetMaxQuickBuySpend()
-    local spendGold = math.min(100, maxSpend / 10000)
-    controls.spendCapSlider:SetValue(spendGold)
-    controls.spendCapSlider.UpdateDisplay(spendGold)
+    if ctrl.spendCapSlider then
+        local maxSpend = ns.GetMaxQuickBuySpend()
+        local spendGold = math.min(100, maxSpend / 10000)
+        ctrl.spendCapSlider:SetValue(spendGold)
+        ctrl.spendCapSlider.UpdateDisplay(spendGold)
+    end
 
     -- e) Confidence filter
-    local conf = ns.GetMinConfidence()
-    if conf == "moderate" then conf = "med" end
-    if not controls.confButtons[conf] then conf = "any" end
-    SetButtonGroupActive(controls.confButtons, conf)
+    if ctrl.confButtons then
+        local conf = ns.GetMinConfidence()
+        if conf == "moderate" then conf = "med" end
+        if not ctrl.confButtons[conf] then conf = "any" end
+        SetButtonGroupActive(ctrl.confButtons, conf)
+    end
 
     -- e2) Valuation Baseline Engine (#38)
-    if controls.valModelButtons then
+    if ctrl.valModelButtons then
         local valModel = ns.GetValuationModel()
-        if not controls.valModelButtons[valModel] then valModel = "median" end
-        SetButtonGroupActive(controls.valModelButtons, valModel)
+        if not ctrl.valModelButtons[valModel] then valModel = "median" end
+        SetButtonGroupActive(ctrl.valModelButtons, valModel)
     end
 
     -- f) Alert sound picker
-    local soundKey
-    if not ns.IsSoundAlertEnabled() then
-        soundKey = "none"
-    else
-        soundKey = ns.GetSoundChoice()
-        if not controls.soundButtons[soundKey] then soundKey = "auction" end
+    if ctrl.soundButtons then
+        local soundKey
+        if not ns.IsSoundAlertEnabled() then
+            soundKey = "none"
+        else
+            soundKey = ns.GetSoundChoice()
+            if not ctrl.soundButtons[soundKey] then soundKey = "auction" end
+        end
+        SetButtonGroupActive(ctrl.soundButtons, soundKey)
     end
-    SetButtonGroupActive(controls.soundButtons, soundKey)
 
     -- g) Sound throttle slider (5s - 120s)
-    local throttle = ns.GetSoundThrottle()
-    throttle = math.max(5, math.min(120, throttle))
-    controls.throttleSlider:SetValue(throttle)
-    controls.throttleSlider.UpdateDisplay(throttle)
+    if ctrl.throttleSlider then
+        local throttle = ns.GetSoundThrottle()
+        throttle = math.max(5, math.min(120, throttle))
+        ctrl.throttleSlider:SetValue(throttle)
+        ctrl.throttleSlider.UpdateDisplay(throttle)
+    end
 
     -- h) Cross-faction share checkbox
-    local fShare = ns.IsFactionShareEnabled()
-    controls.crossFactionCb:SetChecked(fShare == true)
+    if ctrl.crossFactionCb then
+        local fShare = ns.IsFactionShareEnabled()
+        ctrl.crossFactionCb:SetChecked(fShare == true)
+    end
 
     -- i) Minimap button checkbox
-    local mShown = (ns.IsMinimapButtonShown and ns.IsMinimapButtonShown())
-    controls.minimapCb:SetChecked(mShown == true)
+    if ctrl.minimapCb then
+        local mShown = (ns.IsMinimapButtonShown and ns.IsMinimapButtonShown())
+        ctrl.minimapCb:SetChecked(mShown == true)
+    end
 
     -- j) Sell helper checkbox
-    if controls.sellHelperCb then
+    if ctrl.sellHelperCb then
         local sEnabled = ns.IsSellHelperEnabled and ns.IsSellHelperEnabled()
         if sEnabled == nil then sEnabled = true end
-        controls.sellHelperCb:SetChecked(sEnabled == true)
+        ctrl.sellHelperCb:SetChecked(sEnabled == true)
     end
 
     -- k) Mailbox collector checkbox (#40)
-    if controls.mailCollectorCb then
+    if ctrl.mailCollectorCb then
         local mc = ns.IsMailCollectorEnabled and ns.IsMailCollectorEnabled()
         if mc == nil then mc = true end
-        controls.mailCollectorCb:SetChecked(mc == true)
+        ctrl.mailCollectorCb:SetChecked(mc == true)
     end
 
     -- l) Cost basis tooltip checkbox (#42)
-    if controls.costBasisCb then
+    if ctrl.costBasisCb then
         local cb = ns.IsCostBasisTooltipEnabled and ns.IsCostBasisTooltipEnabled()
         if cb == nil then cb = true end
-        controls.costBasisCb:SetChecked(cb == true)
+        ctrl.costBasisCb:SetChecked(cb == true)
     end
 
     -- m) Dedicated chat tab checkbox
-    if controls.chatTabCb then
+    if ctrl.chatTabCb then
         local ct = ns.IsDedicatedChatTabEnabled and ns.IsDedicatedChatTabEnabled()
-        controls.chatTabCb:SetChecked(ct == true)
+        ctrl.chatTabCb:SetChecked(ct == true)
     end
 
     -- n) Mega Snipe Raid Warning banner checkbox
-    if controls.raidWarningCb then
+    if ctrl.raidWarningCb then
         local rw = ns.IsRaidWarningAlertEnabled and ns.IsRaidWarningAlertEnabled()
         if rw == nil then rw = true end
-        controls.raidWarningCb:SetChecked(rw == true)
+        ctrl.raidWarningCb:SetChecked(rw == true)
     end
 
-    if statusText then
-        statusText:SetText("|cff40ff40All settings saved and active|r")
+    if ctrl.statusText then
+        ctrl.statusText:SetText("|cff40ff40All settings saved and active|r")
     end
+end
 
+local function RefreshControls()
+    isRefreshing = true
+    for _, ctrl in ipairs(allControlSets) do
+        RefreshControlSet(ctrl)
+    end
     isRefreshing = false
 end
 
@@ -271,11 +297,10 @@ local function ResetDefaults()
     if ns.ResetCurrentProfile then
         ns.ResetCurrentProfile()
     else
-        -- Set core settings
-        ns.SetDealRatio(0.70)  -- 30% discount
-        ns.SetMinPrior(3)      -- 3 scans
-        ns.SetMinProfit(0)     -- 0c (disabled)
-        ns.SetMaxQuickBuySpend(500000) -- 50g cap
+        ns.SetDealRatio(0.70)
+        ns.SetMinPrior(3)
+        ns.SetMinProfit(0)
+        ns.SetMaxQuickBuySpend(500000)
         ns.SetMinConfidence("any")
         ns.SetValuationModel("median")
         ns.SetSoundAlert(true)
@@ -297,72 +322,27 @@ local function ResetDefaults()
         if ns.SetDedicatedChatTab then
             ns.SetDedicatedChatTab(false)
         end
+        if ns.SetRaidWarningAlertEnabled then
+            ns.SetRaidWarningAlertEnabled(true)
+        end
     end
 
     RefreshControls()
-    NotifySettingSaved("Active profile settings restored to defaults")
+    NotifySettingSaved("Restored default settings")
     if ns.RefreshPanel then ns.RefreshPanel() end
     ns.Good("GoldFinder: Active profile options restored to default values.")
 end
 
-local function CreateConfigFrameOnce()
-    if configFrame then return configFrame end
-
-    local template = BackdropTemplateMixin and "BackdropTemplate" or nil
-    local f = CreateFrame("Frame", "GoldFinderConfigFrame", UIParent, template)
-    f:Hide()
-    f:SetSize(620, 700)
-    f:SetPoint("CENTER", UIParent, "CENTER", 0, 20)
-    f:SetFrameStrata("DIALOG")
-    f:SetToplevel(true)
-    f:EnableMouse(true)
-    f:SetMovable(true)
-    f:RegisterForDrag("LeftButton")
-    f:SetScript("OnDragStart", f.StartMoving)
-    f:SetScript("OnDragStop", f.StopMovingOrSizing)
-    f:SetClampedToScreen(true)
-
-    f:SetBackdrop({
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-        tile = true, tileSize = 32, edgeSize = 32,
-        insets = { left = 8, right = 8, top = 8, bottom = 8 }
-    })
-    if f.SetBackdropColor then
-        f:SetBackdropColor(0, 0, 0, 1)
-    end
-
-    local solidBg = f:CreateTexture(nil, "BACKGROUND", nil, -8)
-    solidBg:SetPoint("TOPLEFT", 6, -6)
-    solidBg:SetPoint("BOTTOMRIGHT", -6, 6)
-    solidBg:SetColorTexture(0.08, 0.08, 0.10, 0.98)
-
-    tinsert(UISpecialFrames, "GoldFinderConfigFrame")
-
-    -- Title Bar Header Texture & Text
-    local headerTex = f:CreateTexture(nil, "ARTWORK")
-    headerTex:SetTexture("Interface\\DialogFrame\\UI-DialogBox-Header")
-    headerTex:SetSize(320, 64)
-    headerTex:SetPoint("TOP", 0, 12)
-
-    local titleText = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    titleText:SetPoint("TOP", headerTex, "TOP", 0, -14)
-    titleText:SetText("GoldFinder Options")
-
-    local subText = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    subText:SetPoint("TOP", 0, -30)
-    subText:SetText("Tune market deal filters, notification sounds, and database settings.")
-
-    local closeBtn = CreateFrame("Button", nil, f, "UIPanelCloseButton")
-    closeBtn:SetPoint("TOPRIGHT", -6, -6)
-    closeBtn:SetScript("OnClick", function() f:Hide() end)
+local function PopulateConfigControls(parent, isEmbedded)
+    local ctrl = {}
+    local offsetY = isEmbedded and 38 or 0
 
     -----------------------------------------------------------------------
     -- Section 0: Profile Persistence & Scope (HUD Edit Mode Style)
     -----------------------------------------------------------------------
-    local profPanel = CreateFrame("Frame", nil, f, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    local profPanel = CreateFrame("Frame", nil, parent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     profPanel:SetSize(564, 30)
-    profPanel:SetPoint("TOPLEFT", 28, -48)
+    profPanel:SetPoint("TOPLEFT", 28, -48 + offsetY)
     profPanel:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -378,12 +358,11 @@ local function CreateConfigFrameOnce()
     profLabel:SetPoint("LEFT", 10, 0)
     profLabel:SetText("Active Profile:")
 
-    controls.profileNameText = profPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    controls.profileNameText:SetPoint("LEFT", profLabel, "RIGHT", 6, 0)
-    controls.profileNameText:SetText("|cffffd100Default (Account-Wide)|r")
+    ctrl.profileNameText = profPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    ctrl.profileNameText:SetPoint("LEFT", profLabel, "RIGHT", 6, 0)
+    ctrl.profileNameText:SetText("|cffffd100Default (Account-Wide)|r")
 
-    -- Checkbox: Character-Specific Settings (matching HUD Edit Mode's "Character Specific Layout")
-    controls.charProfileCb = CreateCheckbox(
+    ctrl.charProfileCb = CreateCheckbox(
         profPanel,
         "Character-Specific Settings",
         "Character-Specific Profile",
@@ -396,15 +375,13 @@ local function CreateConfigFrameOnce()
             NotifySettingSaved(checked and "Using Character-Specific Profile" or "Using Account-Wide Profile")
         end
     )
-    -- Align checkbox so its label text stays fully within the right border of profPanel
-    local cbTextWidth = (controls.charProfileCb.text and controls.charProfileCb.text:GetStringWidth()) or 0
+    local cbTextWidth = (ctrl.charProfileCb.text and ctrl.charProfileCb.text:GetStringWidth()) or 0
     if not cbTextWidth or cbTextWidth <= 0 then cbTextWidth = 145 end
-    controls.charProfileCb:SetPoint("RIGHT", profPanel, "RIGHT", -(cbTextWidth + 12), 0)
+    ctrl.charProfileCb:SetPoint("RIGHT", profPanel, "RIGHT", -(cbTextWidth + 12), 0)
 
-    -- Button: Copy Profile
     local copyProfBtn = CreateFrame("Button", nil, profPanel, "UIPanelButtonTemplate")
     copyProfBtn:SetSize(86, 20)
-    copyProfBtn:SetPoint("RIGHT", controls.charProfileCb, "LEFT", -12, 0)
+    copyProfBtn:SetPoint("RIGHT", ctrl.charProfileCb, "LEFT", -12, 0)
     copyProfBtn:SetText("Copy From...")
     copyProfBtn:SetScript("OnClick", function()
         local isChar = ns.IsCharacterSpecificProfile and ns.IsCharacterSpecificProfile()
@@ -452,18 +429,17 @@ local function CreateConfigFrameOnce()
         GameTooltip:Show()
     end)
     copyProfBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
-    controls.copyProfBtn = copyProfBtn
+    ctrl.copyProfBtn = copyProfBtn
 
     -----------------------------------------------------------------------
     -- Section 1: Deal Finding & Market Filters
     -----------------------------------------------------------------------
-    local sec1 = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    sec1:SetPoint("TOPLEFT", 24, -86)
+    local sec1 = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    sec1:SetPoint("TOPLEFT", 24, -86 + offsetY)
     sec1:SetText("|cffffd100Deal Thresholds & Market Filters|r")
 
-    -- a) Discount Threshold slider (5% to 50%, step 1%)
-    controls.discountSlider = CreateSlider(
-        f,
+    ctrl.discountSlider = CreateSlider(
+        parent,
         "Discount Threshold",
         5, 50, 1,
         function(val) return ("%d%% below typical"):format(val) end,
@@ -477,15 +453,15 @@ local function CreateConfigFrameOnce()
                 if ns.db.settings then ns.db.settings.discountThreshold = val / 100 end
             end
             NotifySettingSaved(("Discount threshold set to %d%%"):format(val))
+            RefreshControls()
             if ns.RefreshPanel then ns.RefreshPanel() end
         end
     )
-    controls.discountSlider:SetSize(250, 16)
-    controls.discountSlider:SetPoint("TOPLEFT", 28, -114)
+    ctrl.discountSlider:SetSize(250, 16)
+    ctrl.discountSlider:SetPoint("TOPLEFT", 28, -114 + offsetY)
 
-    -- b) Minimum Sighting Count slider (1 to 20, step 1)
-    controls.minScansSlider = CreateSlider(
-        f,
+    ctrl.minScansSlider = CreateSlider(
+        parent,
         "Minimum Prior Scans",
         1, 20, 1,
         function(val) return ("%d %s"):format(val, val == 1 and "scan" or "scans") end,
@@ -498,15 +474,15 @@ local function CreateConfigFrameOnce()
                 if ns.db.settings then ns.db.settings.minScans = val end
             end
             NotifySettingSaved(("Minimum prior scans set to %d"):format(val))
+            RefreshControls()
             if ns.RefreshPanel then ns.RefreshPanel() end
         end
     )
-    controls.minScansSlider:SetSize(250, 16)
-    controls.minScansSlider:SetPoint("TOPLEFT", 330, -114)
+    ctrl.minScansSlider:SetSize(250, 16)
+    ctrl.minScansSlider:SetPoint("TOPLEFT", 330, -114 + offsetY)
 
-    -- c) Minimum Profit Floor input/slider (0 to 10g, step 0.01g = 1s)
-    controls.minProfitSlider = CreateSlider(
-        f,
+    ctrl.minProfitSlider = CreateSlider(
+        parent,
         "Minimum Profit Floor",
         0, 10, 0.01,
         function(val)
@@ -525,15 +501,15 @@ local function CreateConfigFrameOnce()
             end
             local desc = (val <= 0) and "Profit floor disabled" or ("Min profit floor set to " .. ns.Money(copper))
             NotifySettingSaved(desc)
+            RefreshControls()
             if ns.RefreshPanel then ns.RefreshPanel() end
         end
     )
-    controls.minProfitSlider:SetSize(250, 16)
-    controls.minProfitSlider:SetPoint("TOPLEFT", 28, -166)
+    ctrl.minProfitSlider:SetSize(250, 16)
+    ctrl.minProfitSlider:SetPoint("TOPLEFT", 28, -166 + offsetY)
 
-    -- d) Buyout Spend Cap input/slider (0 to 100g, step 0.1g = 10s)
-    controls.spendCapSlider = CreateSlider(
-        f,
+    ctrl.spendCapSlider = CreateSlider(
+        parent,
         "Quick-Buy Spend Cap",
         0, 100, 0.1,
         function(val)
@@ -552,27 +528,27 @@ local function CreateConfigFrameOnce()
             end
             local desc = (val <= 0) and "Spend cap unlimited" or ("Spend cap set to " .. ns.Money(copper))
             NotifySettingSaved(desc)
+            RefreshControls()
             if ns.RefreshPanel then ns.RefreshPanel() end
         end
     )
-    controls.spendCapSlider:SetSize(250, 16)
-    controls.spendCapSlider:SetPoint("TOPLEFT", 330, -166)
+    ctrl.spendCapSlider:SetSize(250, 16)
+    ctrl.spendCapSlider:SetPoint("TOPLEFT", 330, -166 + offsetY)
 
-    -- e) Sighting Confidence Filter (Any, Medium+, High Only)
-    local confLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    confLabel:SetPoint("TOPLEFT", 28, -210)
+    local confLabel = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    confLabel:SetPoint("TOPLEFT", 28, -210 + offsetY)
     confLabel:SetText("Sighting Confidence Rating Filter:")
 
-    controls.confButtons = {}
+    ctrl.confButtons = {}
     local confOptions = {
         { key = "any",  label = "Any (All Sightings)",  tip = "Display all deals, including first-time and single-scan sightings.", width = 175 },
         { key = "med",  label = "Medium+ (3+ Scans)",   tip = "Require at least 3 historical sightings or consistent market stability.", width = 175 },
         { key = "high", label = "High Only (5+ Scans)", tip = "Strict requirement: 5+ sightings with tight price dispersion.", width = 175 },
     }
     for i, opt in ipairs(confOptions) do
-        local btn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        local btn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
         btn:SetSize(opt.width, 22)
-        btn:SetPoint("TOPLEFT", 28 + (i - 1) * 188, -228)
+        btn:SetPoint("TOPLEFT", 28 + (i - 1) * 188, -228 + offsetY)
         btn.rawLabel = opt.label
         btn:SetText(opt.label)
         btn:SetScript("OnClick", function()
@@ -581,7 +557,7 @@ local function CreateConfigFrameOnce()
                 ns.db.minConfidence = opt.key
                 if ns.db.settings then ns.db.settings.minConfidence = opt.key end
             end
-            SetButtonGroupActive(controls.confButtons, opt.key)
+            RefreshControls()
             NotifySettingSaved("Confidence rating set to " .. opt.label)
             if ns.RefreshPanel then ns.RefreshPanel() end
         end)
@@ -592,29 +568,28 @@ local function CreateConfigFrameOnce()
             GameTooltip:Show()
         end)
         btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
-        controls.confButtons[opt.key] = btn
+        ctrl.confButtons[opt.key] = btn
     end
 
-    -- f) Valuation Baseline Engine (#38)
-    local valModelLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    valModelLabel:SetPoint("TOPLEFT", 28, -258)
+    local valModelLabel = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    valModelLabel:SetPoint("TOPLEFT", 28, -258 + offsetY)
     valModelLabel:SetText("Valuation Baseline Engine:")
 
-    controls.valModelButtons = {}
+    ctrl.valModelButtons = {}
     local valModelOptions = {
         { key = "median",  label = "Median (Default)", tip = "Standard statistical median. Best for most markets; immune to extreme single-listing spikes and 1c bait.", width = 175 },
         { key = "trimmed", label = "Trimmed Mean",     tip = "Discards top & bottom 10% outlier prices, averaging the middle 80%. Balances stability with distribution.", width = 175 },
         { key = "ema",     label = "7-Day EMA",        tip = "7-period Exponential Moving Average. Weights recent auction scans higher for volatile or shifting markets.", width = 175 },
     }
     for i, opt in ipairs(valModelOptions) do
-        local btn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        local btn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
         btn:SetSize(opt.width, 22)
-        btn:SetPoint("TOPLEFT", 28 + (i - 1) * 188, -276)
+        btn:SetPoint("TOPLEFT", 28 + (i - 1) * 188, -276 + offsetY)
         btn.rawLabel = opt.label
         btn:SetText(opt.label)
         btn:SetScript("OnClick", function()
             ns.SetValuationModel(opt.key)
-            SetButtonGroupActive(controls.valModelButtons, opt.key)
+            RefreshControls()
             NotifySettingSaved("Valuation baseline set to " .. opt.label)
             if ns.RefreshPanel then ns.RefreshPanel() end
         end)
@@ -625,21 +600,21 @@ local function CreateConfigFrameOnce()
             GameTooltip:Show()
         end)
         btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
-        controls.valModelButtons[opt.key] = btn
+        ctrl.valModelButtons[opt.key] = btn
     end
 
     -----------------------------------------------------------------------
     -- Section 2: Audio Alerts & Cooldown
     -----------------------------------------------------------------------
-    local sec2 = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    sec2:SetPoint("TOPLEFT", 24, -312)
+    local sec2 = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    sec2:SetPoint("TOPLEFT", 24, -312 + offsetY)
     sec2:SetText("|cffffd100Audio Alerts & Cooldown|r")
 
-    local soundLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    soundLabel:SetPoint("TOPLEFT", 28, -332)
+    local soundLabel = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    soundLabel:SetPoint("TOPLEFT", 28, -332 + offsetY)
     soundLabel:SetText("Deal Found Alert Sound:")
 
-    controls.soundButtons = {}
+    ctrl.soundButtons = {}
     local soundOptions = {
         { key = "auction", label = "Auction", width = 66 },
         { key = "coins",   label = "Coins",   width = 62 },
@@ -650,9 +625,9 @@ local function CreateConfigFrameOnce()
     }
     local curX = 28
     for _, opt in ipairs(soundOptions) do
-        local btn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        local btn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
         btn:SetSize(opt.width, 22)
-        btn:SetPoint("TOPLEFT", curX, -350)
+        btn:SetPoint("TOPLEFT", curX, -350 + offsetY)
         btn.rawLabel = opt.label
         btn:SetText(opt.label)
         curX = curX + opt.width + 6
@@ -677,15 +652,14 @@ local function CreateConfigFrameOnce()
                 end
                 NotifySettingSaved("Audio alert set to " .. opt.label)
             end
-            SetButtonGroupActive(controls.soundButtons, opt.key)
+            RefreshControls()
         end)
-        controls.soundButtons[opt.key] = btn
+        ctrl.soundButtons[opt.key] = btn
     end
 
-    -- [ Test Sound ] button
-    local testBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    local testBtn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
     testBtn:SetSize(110, 22)
-    testBtn:SetPoint("TOPLEFT", curX + 10, -350)
+    testBtn:SetPoint("TOPLEFT", curX + 10, -350 + offsetY)
     testBtn:SetText("Test Sound")
     testBtn:SetScript("OnClick", function()
         if not ns.IsSoundAlertEnabled() then
@@ -705,9 +679,8 @@ local function CreateConfigFrameOnce()
     end)
     testBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    -- g) Sound Throttle slider (5s to 120s)
-    controls.throttleSlider = CreateSlider(
-        f,
+    ctrl.throttleSlider = CreateSlider(
+        parent,
         "Audio Throttle Cooldown",
         5, 120, 5,
         function(val) return ("%d seconds"):format(val) end,
@@ -720,14 +693,14 @@ local function CreateConfigFrameOnce()
                 if ns.db.settings then ns.db.settings.soundThrottle = val end
             end
             NotifySettingSaved(("Audio cooldown set to %ds"):format(val))
+            RefreshControls()
         end
     )
-    controls.throttleSlider:SetSize(250, 16)
-    controls.throttleSlider:SetPoint("TOPLEFT", 28, -392)
+    ctrl.throttleSlider:SetSize(250, 16)
+    ctrl.throttleSlider:SetPoint("TOPLEFT", 28, -392 + offsetY)
 
-    -- Checkbox: Mega Snipe Raid Warning banner
-    controls.raidWarningCb = CreateCheckbox(
-        f,
+    ctrl.raidWarningCb = CreateCheckbox(
+        parent,
         "Show Mega Snipe Raid Warnings",
         "Raid Warning Banner Alert",
         "When enabled, high-urgency deals (70%+ off or massive profit) display an on-screen Raid Warning banner across your display.",
@@ -736,20 +709,20 @@ local function CreateConfigFrameOnce()
                 ns.SetRaidWarningAlertEnabled(checked)
             end
             NotifySettingSaved("Mega Snipe Raid Warning banner " .. (checked and "enabled" or "disabled"))
+            RefreshControls()
         end
     )
-    controls.raidWarningCb:SetPoint("TOPLEFT", 330, -392)
+    ctrl.raidWarningCb:SetPoint("TOPLEFT", 330, -392 + offsetY)
 
     -----------------------------------------------------------------------
     -- Section 3: General & Database Settings
     -----------------------------------------------------------------------
-    local sec3 = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    sec3:SetPoint("TOPLEFT", 24, -434)
+    local sec3 = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    sec3:SetPoint("TOPLEFT", 24, -434 + offsetY)
     sec3:SetText("|cffffd100Database & Interface Settings|r")
 
-    -- h) Checkbox: Cross-Faction Market Data Sharing
-    controls.crossFactionCb = CreateCheckbox(
-        f,
+    ctrl.crossFactionCb = CreateCheckbox(
+        parent,
         "Cross-Faction Market Data Sharing",
         "Cross-Faction Market Sharing",
         "When enabled, auction history is shared across Horde and Alliance characters on this realm. When disabled, market data is partitioned by faction.",
@@ -760,13 +733,13 @@ local function CreateConfigFrameOnce()
                 if ns.db.settings then ns.db.settings.factionShare = checked end
             end
             NotifySettingSaved("Cross-faction sharing " .. (checked and "enabled" or "disabled"))
+            RefreshControls()
         end
     )
-    controls.crossFactionCb:SetPoint("TOPLEFT", 28, -456)
+    ctrl.crossFactionCb:SetPoint("TOPLEFT", 28, -456 + offsetY)
 
-    -- i) Checkbox: Show Selling Tab Price Helper
-    controls.sellHelperCb = CreateCheckbox(
-        f,
+    ctrl.sellHelperCb = CreateCheckbox(
+        parent,
         "Enable Sell Tab Price Helper",
         "Selling Price Helper",
         "When enabled, docks market pricing suggestions and quick undercut buttons alongside the Auction House Sell tab.",
@@ -775,13 +748,13 @@ local function CreateConfigFrameOnce()
                 ns.SetSellHelperEnabled(checked)
             end
             NotifySettingSaved("Sell tab price helper " .. (checked and "enabled" or "disabled"))
+            RefreshControls()
         end
     )
-    controls.sellHelperCb:SetPoint("TOPLEFT", 330, -456)
+    ctrl.sellHelperCb:SetPoint("TOPLEFT", 330, -456 + offsetY)
 
-    -- j) Checkbox: Show Minimap Button
-    controls.minimapCb = CreateCheckbox(
-        f,
+    ctrl.minimapCb = CreateCheckbox(
+        parent,
         "Show Minimap Button",
         "Minimap Coin Button",
         "Display the GoldFinder coin button around the minimap ring.",
@@ -794,13 +767,13 @@ local function CreateConfigFrameOnce()
                 GoldFinderDB.minimap.hide = not checked
             end
             NotifySettingSaved("Minimap button " .. (checked and "shown" or "hidden"))
+            RefreshControls()
         end
     )
-    controls.minimapCb:SetPoint("TOPLEFT", 28, -484)
+    ctrl.minimapCb:SetPoint("TOPLEFT", 28, -484 + offsetY)
 
-    -- k) Checkbox: Output to 'GoldFinder' Chat Tab
-    controls.chatTabCb = CreateCheckbox(
-        f,
+    ctrl.chatTabCb = CreateCheckbox(
+        parent,
         "Output to 'GoldFinder' Chat Tab",
         "Dedicated Chat Window Tab",
         "When enabled, creates and routes all GoldFinder deal notifications, audio alarms, and system output to a dedicated 'GoldFinder' chat tab instead of General chat.",
@@ -809,13 +782,13 @@ local function CreateConfigFrameOnce()
                 ns.SetDedicatedChatTab(checked)
             end
             NotifySettingSaved("Dedicated chat tab " .. (checked and "enabled" or "disabled"))
+            RefreshControls()
         end
     )
-    controls.chatTabCb:SetPoint("TOPLEFT", 330, -484)
+    ctrl.chatTabCb:SetPoint("TOPLEFT", 330, -484 + offsetY)
 
-    -- l) Checkbox: Mailbox Deal Collector (#40)
-    controls.mailCollectorCb = CreateCheckbox(
-        f,
+    ctrl.mailCollectorCb = CreateCheckbox(
+        parent,
         "Enable Mailbox Deal Collector",
         "Mailbox Deal Collector",
         "When enabled, places a one-click 'Collect Deals' button on the Mailbox to automatically pick up won auction materials and sales payments while logging cost basis.",
@@ -824,13 +797,13 @@ local function CreateConfigFrameOnce()
                 ns.SetMailCollector(checked)
             end
             NotifySettingSaved("Mailbox deal collector " .. (checked and "enabled" or "disabled"))
+            RefreshControls()
         end
     )
-    controls.mailCollectorCb:SetPoint("TOPLEFT", 28, -512)
+    ctrl.mailCollectorCb:SetPoint("TOPLEFT", 28, -512 + offsetY)
 
-    -- m) Checkbox: Cost Basis on Tooltips (#42)
-    controls.costBasisCb = CreateCheckbox(
-        f,
+    ctrl.costBasisCb = CreateCheckbox(
+        parent,
         "Show Cost Basis on Item Tooltips",
         "Cost Basis Tooltip Overlay",
         "When enabled, displays your average purchase cost basis and unrealized profit margin on bag, bank, and inventory item tooltips.",
@@ -839,14 +812,14 @@ local function CreateConfigFrameOnce()
                 ns.SetCostBasisTooltip(checked)
             end
             NotifySettingSaved("Cost basis tooltips " .. (checked and "enabled" or "disabled"))
+            RefreshControls()
         end
     )
-    controls.costBasisCb:SetPoint("TOPLEFT", 330, -512)
+    ctrl.costBasisCb:SetPoint("TOPLEFT", 330, -512 + offsetY)
 
-    -- n) Button: Create Custom Material Group (#39)
-    local newGroupBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    local newGroupBtn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
     newGroupBtn:SetSize(260, 24)
-    newGroupBtn:SetPoint("TOPLEFT", 28, -548)
+    newGroupBtn:SetPoint("TOPLEFT", 28, -548 + offsetY)
     newGroupBtn:SetText("+ New Material Group")
     newGroupBtn:SetScript("OnClick", function()
         if ns.ShowCreateGroupDialog then
@@ -862,13 +835,12 @@ local function CreateConfigFrameOnce()
     end)
     newGroupBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    -- o) Button: Open Goblin Ledger (#41)
-    local openLedgerBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    local openLedgerBtn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
     openLedgerBtn:SetSize(260, 24)
-    openLedgerBtn:SetPoint("TOPLEFT", 330, -548)
+    openLedgerBtn:SetPoint("TOPLEFT", 330, -548 + offsetY)
     openLedgerBtn:SetText("Open Goblin P&L Ledger")
     openLedgerBtn:SetScript("OnClick", function()
-        f:Hide()
+        if not isEmbedded and configFrame then configFrame:Hide() end
         if ns.OpenLedger then
             ns.OpenLedger()
         end
@@ -882,13 +854,12 @@ local function CreateConfigFrameOnce()
     end)
     openLedgerBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    -- p) Button: Open Staging Cart (#47)
-    local openCartBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    local openCartBtn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
     openCartBtn:SetSize(260, 24)
-    openCartBtn:SetPoint("TOPLEFT", 28, -580)
+    openCartBtn:SetPoint("TOPLEFT", 28, -580 + offsetY)
     openCartBtn:SetText("Open Staging Cart")
     openCartBtn:SetScript("OnClick", function()
-        f:Hide()
+        if not isEmbedded and configFrame then configFrame:Hide() end
         if ns.OpenCart then
             ns.OpenCart()
         end
@@ -902,10 +873,9 @@ local function CreateConfigFrameOnce()
     end)
     openCartBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    -- q) Button: Compact & Vacuum Database (#50)
-    local vacuumBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    local vacuumBtn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
     vacuumBtn:SetSize(260, 24)
-    vacuumBtn:SetPoint("TOPLEFT", 330, -580)
+    vacuumBtn:SetPoint("TOPLEFT", 330, -580 + offsetY)
     vacuumBtn:SetText("Compact & Vacuum DB")
     vacuumBtn:SetScript("OnClick", function()
         if ns.VacuumDatabase then
@@ -928,10 +898,9 @@ local function CreateConfigFrameOnce()
     end)
     vacuumBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    -- r) Button: Profile Import / Export (#48)
-    local profileBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    local profileBtn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
     profileBtn:SetSize(260, 24)
-    profileBtn:SetPoint("TOPLEFT", 28, -612)
+    profileBtn:SetPoint("TOPLEFT", 28, -612 + offsetY)
     profileBtn:SetText("Profile Import / Export")
     profileBtn:SetScript("OnClick", function()
         if ns.ShowProfileDialog then
@@ -947,10 +916,9 @@ local function CreateConfigFrameOnce()
     end)
     profileBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    -- s) Button: Replay Feature Tour (#51)
-    local tourBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    local tourBtn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
     tourBtn:SetSize(260, 24)
-    tourBtn:SetPoint("TOPLEFT", 330, -612)
+    tourBtn:SetPoint("TOPLEFT", 330, -612 + offsetY)
     tourBtn:SetText("Replay Feature Tour")
     tourBtn:SetScript("OnClick", function()
         if ns.StartTour then
@@ -967,11 +935,10 @@ local function CreateConfigFrameOnce()
     tourBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     -----------------------------------------------------------------------
-    -- Section 4: Action Buttons at Bottom
+    -- Section 4: Action & Status Bar
     -----------------------------------------------------------------------
-    local resetBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    local resetBtn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
     resetBtn:SetSize(120, 24)
-    resetBtn:SetPoint("BOTTOMLEFT", 28, 20)
     resetBtn:SetText("Reset Defaults")
     resetBtn:SetScript("OnClick", ResetDefaults)
     resetBtn:SetScript("OnEnter", function(self)
@@ -982,9 +949,8 @@ local function CreateConfigFrameOnce()
     end)
     resetBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    local infoBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    local infoBtn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
     infoBtn:SetSize(110, 24)
-    infoBtn:SetPoint("LEFT", resetBtn, "RIGHT", 8, 0)
     infoBtn:SetText("About / Info")
     infoBtn:SetScript("OnClick", function()
         if ns.ShowInfoDialog then
@@ -1000,81 +966,253 @@ local function CreateConfigFrameOnce()
     end)
     infoBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    local saveCloseBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    saveCloseBtn:SetSize(120, 24)
-    saveCloseBtn:SetPoint("BOTTOMRIGHT", -28, 20)
-    saveCloseBtn:SetText("Save & Close")
-    saveCloseBtn:SetScript("OnClick", function()
-        f:Hide()
-        if ns.RefreshPanel then ns.RefreshPanel() end
-        ns.Good("GoldFinder: Settings saved and applied.")
-    end)
-    saveCloseBtn:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText("Save & Close", 1, 0.82, 0)
-        GameTooltip:AddLine("Confirm all active settings and close the configuration window.", 1, 1, 1, true)
-        GameTooltip:AddLine("All choices are immediately active and persist across sessions.", 0.7, 0.7, 0.7)
-        GameTooltip:Show()
-    end)
-    saveCloseBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    local statusLbl = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    statusLbl:SetText("|cff40ff40All settings saved and active|r")
 
-    statusText = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    statusText:SetPoint("LEFT", infoBtn, "RIGHT", 10, 0)
-    statusText:SetPoint("RIGHT", saveCloseBtn, "LEFT", -10, 0)
-    statusText:SetJustifyH("CENTER")
-    statusText:SetText("|cff40ff40All settings saved and active|r")
+    if isEmbedded then
+        resetBtn:SetPoint("TOPLEFT", 28, -610 + offsetY)
+        infoBtn:SetPoint("LEFT", resetBtn, "RIGHT", 8, 0)
+        statusLbl:SetPoint("LEFT", infoBtn, "RIGHT", 12, 0)
+        statusLbl:SetPoint("RIGHT", parent, "RIGHT", -24, 0)
+        statusLbl:SetJustifyH("LEFT")
+    else
+        resetBtn:SetPoint("BOTTOMLEFT", 28, 20)
+        infoBtn:SetPoint("LEFT", resetBtn, "RIGHT", 8, 0)
 
-    f:SetScript("OnShow", RefreshControls)
+        local saveCloseBtn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+        saveCloseBtn:SetSize(120, 24)
+        saveCloseBtn:SetPoint("BOTTOMRIGHT", -28, 20)
+        saveCloseBtn:SetText("Save & Close")
+        saveCloseBtn:SetScript("OnClick", function()
+            parent:Hide()
+            if ns.RefreshPanel then ns.RefreshPanel() end
+            ns.Good("GoldFinder: Settings saved and applied.")
+        end)
+        saveCloseBtn:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText("Save & Close", 1, 0.82, 0)
+            GameTooltip:AddLine("Confirm all active settings and close the configuration window.", 1, 1, 1, true)
+            GameTooltip:AddLine("All choices are immediately active and persist across sessions.", 0.7, 0.7, 0.7)
+            GameTooltip:Show()
+        end)
+        saveCloseBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+        statusLbl:SetPoint("LEFT", infoBtn, "RIGHT", 10, 0)
+        statusLbl:SetPoint("RIGHT", saveCloseBtn, "LEFT", -10, 0)
+        statusLbl:SetJustifyH("CENTER")
+    end
+
+    ctrl.statusText = statusLbl
+    return ctrl
+end
+
+local function CreateConfigFrameOnce()
+    if configFrame then return configFrame end
+
+    local template = BackdropTemplateMixin and "BackdropTemplate" or nil
+    local f = CreateFrame("Frame", "GoldFinderConfigFrame", UIParent, template)
+    f:Hide()
+    f:SetSize(620, 700)
+    f:SetPoint("CENTER", UIParent, "CENTER", 0, 20)
+    f:SetFrameStrata("DIALOG")
+    f:SetToplevel(true)
+    f:EnableMouse(true)
+    f:SetMovable(true)
+    f:RegisterForDrag("LeftButton")
+    f:SetScript("OnDragStart", f.StartMoving)
+    f:SetScript("OnDragStop", f.StopMovingOrSizing)
+    f:SetClampedToScreen(true)
+
+    f:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+        tile = true, tileSize = 32, edgeSize = 32,
+        insets = { left = 8, right = 8, top = 8, bottom = 8 }
+    })
+    if f.SetBackdropColor then
+        f:SetBackdropColor(0, 0, 0, 1)
+    end
+
+    local solidBg = f:CreateTexture(nil, "BACKGROUND", nil, -8)
+    solidBg:SetPoint("TOPLEFT", 6, -6)
+    solidBg:SetPoint("BOTTOMRIGHT", -6, 6)
+    solidBg:SetColorTexture(0.08, 0.08, 0.10, 0.98)
+
+    tinsert(UISpecialFrames, "GoldFinderConfigFrame")
+
+    local headerTex = f:CreateTexture(nil, "ARTWORK")
+    headerTex:SetTexture("Interface\\DialogFrame\\UI-DialogBox-Header")
+    headerTex:SetSize(320, 64)
+    headerTex:SetPoint("TOP", 0, 12)
+
+    local titleText = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    titleText:SetPoint("TOP", headerTex, "TOP", 0, -14)
+    titleText:SetText("GoldFinder Options")
+
+    local subText = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    subText:SetPoint("TOP", 0, -30)
+    subText:SetText("Tune market deal filters, notification sounds, and database settings.")
+
+    local closeBtn = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+    closeBtn:SetPoint("TOPRIGHT", -6, -6)
+    closeBtn:SetScript("OnClick", function() f:Hide() end)
+
+    local standaloneControls = PopulateConfigControls(f, false)
+    tinsert(allControlSets, standaloneControls)
+
+    f:SetScript("OnShow", function()
+        RefreshControls()
+    end)
 
     configFrame = f
     return configFrame
 end
 
-function ns.OpenConfig()
+function ns.OpenStandaloneConfig()
     local f = CreateConfigFrameOnce()
     if f then
         RefreshControls()
         f:Show()
         f:Raise()
     end
+    return f
+end
+
+function ns.OpenBlizzardSettings()
+    -- 1. Try modern Dragonflight / Forever Settings API
+    if Settings and Settings.OpenToCategory then
+        local catID
+        if ns.settingsCategory then
+            if type(ns.settingsCategory.GetID) == "function" then
+                catID = ns.settingsCategory:GetID()
+            else
+                catID = ns.settingsCategory
+            end
+        end
+        local ok = pcall(function()
+            Settings.OpenToCategory(catID or "GoldFinder")
+        end)
+        if ok then return true end
+    end
+
+    -- 2. Try SettingsPanel directly
+    local settingsPanel = _G.SettingsPanel
+    if settingsPanel and settingsPanel.OpenToCategory and ns.settingsCategory then
+        local catID = (type(ns.settingsCategory.GetID) == "function") and ns.settingsCategory:GetID() or ns.settingsCategory
+        local ok = pcall(function()
+            settingsPanel:OpenToCategory(catID)
+        end)
+        if ok then return true end
+    end
+
+    -- 3. Try Classic InterfaceOptionsFrame
+    if InterfaceOptionsFrame_OpenToCategory and ns.blizzardSettingsPanel then
+        local ok = pcall(function()
+            InterfaceOptionsFrame_OpenToCategory(ns.blizzardSettingsPanel)
+            InterfaceOptionsFrame_OpenToCategory(ns.blizzardSettingsPanel)
+        end)
+        if ok then return true end
+    end
+
+    return false
+end
+
+function ns.OpenConfig(mode)
+    if mode == "standalone" or mode == "float" or mode == true then
+        return ns.OpenStandaloneConfig()
+    elseif mode == "blizzard" or mode == "game" then
+        if not ns.OpenBlizzardSettings() then
+            return ns.OpenStandaloneConfig()
+        end
+        return true
+    end
+
+    -- Context-aware Hybrid Auto-Detection (#58):
+    -- If Auction House is active, opening Blizzard Settings closes AH (AUCTION_HOUSE_CLOSED).
+    -- Therefore, open floating standalone dialog to preserve player's auction session.
+    local isAHOpen = false
+    if AuctionHouseFrame and AuctionHouseFrame.IsShown and AuctionHouseFrame:IsShown() then
+        isAHOpen = true
+    elseif AuctionFrame and AuctionFrame.IsShown and AuctionFrame:IsShown() then
+        isAHOpen = true
+    end
+
+    if isAHOpen then
+        return ns.OpenStandaloneConfig()
+    else
+        -- Away from AH: open Blizzard Game Options AddOns tab directly
+        if not ns.OpenBlizzardSettings() then
+            return ns.OpenStandaloneConfig()
+        end
+        return true
+    end
 end
 
 ns.RefreshControls = RefreshControls
 
-function ns.ToggleConfig()
+function ns.ToggleConfig(mode)
+    local settingsPanel = _G.SettingsPanel
     if configFrame and configFrame:IsShown() then
         configFrame:Hide()
+    elseif settingsPanel and settingsPanel:IsShown() and ns.settingsCategory then
+        if _G.HideUIPanel then
+            _G.HideUIPanel(settingsPanel)
+        else
+            settingsPanel:Hide()
+        end
     else
-        ns.OpenConfig()
+        ns.OpenConfig(mode)
     end
 end
 
 local function RegisterAddonSettings()
-    local blizzardPanel = CreateFrame("Frame", "GoldFinderBlizzardSettingsPanel")
+    if blizzardPanel then return end
+
+    blizzardPanel = CreateFrame("Frame", "GoldFinderBlizzardSettingsPanel")
     blizzardPanel.name = "GoldFinder"
+    ns.blizzardSettingsPanel = blizzardPanel
 
     local title = blizzardPanel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOPLEFT", 16, -16)
-    title:SetText("GoldFinder")
+    title:SetText("GoldFinder Options")
 
     local sub = blizzardPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
-    sub:SetText("Auction House Arbitrage & Deal Finder")
+    sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
+    sub:SetText("Auction House Arbitrage, Deal Filters & Market Intelligence")
 
-    local desc = blizzardPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    desc:SetPoint("TOPLEFT", sub, "BOTTOMLEFT", 0, -12)
-    desc:SetPoint("RIGHT", blizzardPanel, "RIGHT", -16, 0)
-    desc:SetJustifyH("LEFT")
-    desc:SetText("GoldFinder monitors market prices and highlights underpriced commodities, crafting reagent conversions, and active undercuts.\n\nClick the button below to open the complete graphical options window.")
+    local sep = blizzardPanel:CreateTexture(nil, "ARTWORK")
+    sep:SetHeight(1)
+    sep:SetPoint("TOPLEFT", sub, "BOTTOMLEFT", 0, -8)
+    sep:SetPoint("RIGHT", blizzardPanel, "RIGHT", -26, 0)
+    sep:SetColorTexture(0.3, 0.3, 0.35, 0.8)
 
-    local openBtn = CreateFrame("Button", nil, blizzardPanel, "UIPanelButtonTemplate")
-    openBtn:SetSize(220, 26)
-    openBtn:SetPoint("TOPLEFT", desc, "BOTTOMLEFT", 0, -20)
-    openBtn:SetText("Open GoldFinder Options")
-    openBtn:SetScript("OnClick", function()
-        if ns.OpenConfig then
-            ns.OpenConfig()
+    local scrollFrame = CreateFrame("ScrollFrame", "GoldFinderSettingsScrollFrame", blizzardPanel, "UIPanelScrollFrameTemplate")
+    scrollFrame:SetPoint("TOPLEFT", 0, -56)
+    scrollFrame:SetPoint("BOTTOMRIGHT", -26, 12)
+
+    local scrollChild = CreateFrame("Frame", "GoldFinderSettingsScrollChild", scrollFrame)
+    scrollChild:SetSize(600, 660)
+    scrollFrame:SetScrollChild(scrollChild)
+
+    scrollFrame:EnableMouseWheel(true)
+    scrollFrame:SetScript("OnMouseWheel", function(self, delta)
+        local current = self:GetVerticalScroll() or 0
+        local step = 35
+        local new = current - (delta * step)
+        local maxScroll = (self.GetVerticalScrollRange and self:GetVerticalScrollRange()) or 0
+        if new < 0 then
+            new = 0
+        elseif new > maxScroll then
+            new = maxScroll
         end
+        self:SetVerticalScroll(new)
+    end)
+
+    local embeddedControls = PopulateConfigControls(scrollChild, true)
+    tinsert(allControlSets, embeddedControls)
+
+    blizzardPanel:SetScript("OnShow", function()
+        RefreshControls()
     end)
 
     if Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory then

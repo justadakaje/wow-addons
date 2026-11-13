@@ -10,6 +10,7 @@ helper.raidNotices = {}
 helper.timers = {}
 helper.mockItemNames = {}
 helper.mockItemCounts = {}
+helper.createdFrames = {}
 helper.currentTime = 1000
 helper.currentServerTime = 1700000000
 helper.playerMoney = 5000000 -- 500g
@@ -77,6 +78,14 @@ _G.GetMoney = function()
     return helper.playerMoney
 end
 
+_G.UnitName = function(_unit)
+    return "Tester"
+end
+
+_G.GetRealmName = function()
+    return "TestRealm"
+end
+
 _G.C_Item = {
     GetItemNameByID = function(itemID)
         return helper.mockItemNames[itemID] or ("Item " .. tostring(itemID))
@@ -120,7 +129,7 @@ _G.C_Timer = {
 
 _G.C_AddOns = {
     GetAddOnMetadata = function(_addon, field)
-        if field == "Version" then return "1.0.5" end
+        if field == "Version" then return "1.0.6" end
         return nil
     end,
     IsAddOnLoaded = function(_addon) return true end,
@@ -164,6 +173,7 @@ _G.SOUNDKIT = {
 }
 
 _G.SlashCmdList = {}
+_G.UISpecialFrames = {}
 
 local function CreateMockFrame(frameType, name, parent, template)
     local f = {
@@ -177,6 +187,9 @@ local function CreateMockFrame(frameType, name, parent, template)
         shown = true,
         width = 0,
         height = 0,
+        checked = false,
+        value = 0,
+        scrollVal = 0,
     }
     function f:SetScript(handler, fn) f.scripts[handler] = fn end
     function f:GetScript(handler) return f.scripts[handler] end
@@ -200,10 +213,39 @@ local function CreateMockFrame(frameType, name, parent, template)
     function f:EnableMouse() end
     function f:SetMovable() end
     function f:RegisterForDrag() end
+    function f:SetBackdrop() end
+    function f:SetBackdropColor() end
+    function f:SetBackdropBorderColor() end
+    function f:SetFrameStrata() end
+    function f:SetToplevel() end
+    function f:SetClampedToScreen() end
+    function f:SetScrollChild(c) f.scrollChild = c end
+    function f:EnableMouseWheel() end
+    function f:GetVerticalScroll() return f.scrollVal or 0 end
+    function f:SetVerticalScroll(v) f.scrollVal = v end
+    function f:GetVerticalScrollRange() return 200 end
+    function f:SetChecked(val) f.checked = (val == true or val == 1) end
+    function f:GetChecked() return f.checked end
+    function f:SetValue(v) f.value = v end
+    function f:GetValue() return f.value end
+    function f:SetMinMaxValues(minV, maxV) f.minV = minV; f.maxV = maxV end
+    function f:SetValueStep(s) f.step = s end
+    function f:SetObeyStepOnDrag() end
+    function f:SetText(t) f.text = t end
+    function f:GetText() return f.text or "" end
+    function f:LockHighlight() f.lockedHighlight = true end
+    function f:UnlockHighlight() f.lockedHighlight = false end
+    function f:Raise() end
+    function f:StartMoving() end
+    function f:StopMovingOrSizing() end
+    function f:ClearAllPoints() f.points = {} end
+    function f:GetParent() return f.parent end
+    function f:GetName() return f.name end
     function f:CreateFontString()
         return {
             SetFontObject = function() end,
             SetPoint = function() end,
+            ClearAllPoints = function() end,
             SetText = function(fs, text) fs.text = text end,
             GetText = function(fs) return fs.text or "" end,
             SetTextColor = function() end,
@@ -221,16 +263,22 @@ local function CreateMockFrame(frameType, name, parent, template)
             SetAllPoints = function() end,
             SetPoint = function() end,
             SetSize = function() end,
+            SetWidth = function() end,
+            SetHeight = function() end,
             SetVertexColor = function() end,
         }
     end
     if name and _G then
         _G[name] = f
     end
+    table.insert(helper.createdFrames, f)
     return f
 end
 
 _G.CreateFrame = CreateMockFrame
+
+_G.InterfaceOptions_AddCategory = function(panel) helper.lastAddedCategory = panel end
+_G.InterfaceOptionsFrame_OpenToCategory = function(panel) helper.lastOpenedCategory = panel end
 
 -------------------------------------------------------------------------------
 -- Module Loading & Namespace Setup
@@ -251,6 +299,7 @@ function helper.reset()
     helper.timers = {}
     helper.mockItemNames = {}
     helper.mockItemCounts = {}
+    helper.createdFrames = {}
     helper.currentTime = 1000
     helper.currentServerTime = 1700000000
     helper.playerMoney = 5000000
@@ -259,7 +308,7 @@ end
 function helper.createNamespace(overrides)
     local ns = {
         addonName = "GoldFinder",
-        version = "1.0.5",
+        version = "1.0.6",
         db = {
             items = {},
             scans = {},

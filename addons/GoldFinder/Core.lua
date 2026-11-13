@@ -1410,10 +1410,11 @@ SlashCmdList["GOLDFINDER"] = function(msg)
     cmd = cmd and cmd:lower() or ""
 
     if cmd == "config" or cmd == "options" or cmd == "opt" or cmd == "settings" then
+        local sub = arg and arg:lower():match("^(%S+)")
         if ns.OpenConfig then
-            ns.OpenConfig()
+            ns.OpenConfig(sub)
         elseif ns.ToggleConfig then
-            ns.ToggleConfig()
+            ns.ToggleConfig(sub)
         end
     elseif cmd == "trace" or cmd == "debug" then
         ns.debugTrace = not ns.debugTrace
@@ -2138,7 +2139,7 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         local maxSpendStr = (maxSpend > 0) and ns.Money(maxSpend) or "none (no limit)"
         ns.Print("  - Quick-Buy max spend cap: %s", maxSpendStr)
         ns.Print("Commands:")
-        ns.Print("  /gf config           - open graphical options & configuration panel")
+        ns.Print("  /gf config [float|game] - open options panel (context-aware: embedded away from AH, floating at AH)")
         ns.Print("  /gf ratio <5-95>     - set discount percentage threshold")
         ns.Print("  /gf minscans <1-20>  - set minimum prior scans required")
         ns.Print("  /gf minconf <any|med|high> - filter deals by sighting confidence rating")

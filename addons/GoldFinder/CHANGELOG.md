@@ -4,6 +4,21 @@ All notable changes to GoldFinder. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.6] - 2026-11-12
+
+### Added
+
+- **Native Embedded Settings in Blizzard Game Options ([#58](https://github.com/justadakaje/wow-addons/issues/58)):**
+  - Implemented a complete embedded options canvas directly within `Game Options > AddOns > GoldFinder` (`GoldFinderBlizzardSettingsPanel`), eliminating awkward window stacking.
+  - Added a smooth vertical scroll viewport (`UIPanelScrollFrameTemplate`) with mousewheel support displaying all profile toggles, deal thresholds, audio chimes, database utilities, and action buttons.
+- **Context-Aware Hybrid Options Invocation:**
+  - When opening options away from the Auction House (`/gf options`, `/gf config`, or right-clicking the minimap coin), GoldFinder automatically opens Blizzard Settings directly to the GoldFinder AddOns category (`Settings.OpenToCategory` / `InterfaceOptionsFrame_OpenToCategory`).
+  - When opening options from the GoldFinder Auction House tab (`[ Options ]` button), GoldFinder automatically opens the floating standalone dialog (`GoldFinderConfigFrame`), preventing `AUCTION_HOUSE_CLOSED` from interrupting active browsing or auction sales.
+- **Explicit Slash Command Modifiers:**
+  - Added support for `/gf config [float|game]` and `/gf options [standalone|blizzard]` allowing players to explicitly choose between the floating dialog and native Game Options.
+- **Bi-Directional Multi-Canvas State Synchronization:**
+  - Real-time synchronization across all active control sets: modifying a slider, checkbox, or button in either canvas immediately updates both displays and persists to the active profile.
+
 ## [1.0.5] - 2026-11-12
 
 ### Fixed

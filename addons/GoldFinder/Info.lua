@@ -47,7 +47,7 @@ function ns.GenerateDiagnosticReport()
     local author = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata("GoldFinder", "Author"))
         or (GetAddOnMetadata and GetAddOnMetadata("GoldFinder", "Author"))
         or "KenHenChan"
-    local version = ns.version or "1.0.5"
+    local version = ns.version or "1.0.6"
     local locale = (GetLocale and GetLocale()) or "unknown"
     local buildVersion, buildNum, buildDate, uiVersion
     if GetBuildInfo then
@@ -353,7 +353,7 @@ function ns.ShowInfoDialog()
         or (GetAddOnMetadata and GetAddOnMetadata("GoldFinder", "Author"))
         or "KenHenChan"
     metaText:SetText(("|cffffffffAuthor:|r %s      |cffffffffVersion:|r %s      |cffffffffLicense:|r MIT"):format(
-        author, ns.version or "1.0.5"))
+        author, ns.version or "1.0.6"))
 
     local engageHeader = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     engageHeader:SetPoint("TOPLEFT", 28, -108)
