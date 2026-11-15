@@ -30,7 +30,9 @@ Pushing a release tag publishes that one addon. The workflow is
 | Tag prefix | Addon |
 | --- | --- |
 | `goldfinder-v` | `addons/GoldFinder` |
-| `adventurerplates-v` | `addons/AdventurerPlates` |
+| `adventurerplates-v` | `addons/AdventurerPlates` (discontinued reference) |
+
+> **Note:** `BiSGearFinder` has listing copy in [curseforge/bisgearfinder.md](curseforge/bisgearfinder.md), and is not yet wired into `.github/workflows/release.yml`. For the standalone developer toolkit bundle (MCP server + API reference + `ForeverProbe`, not a CurseForge addon zip), use `scripts/package-devkit.ps1` (see [copilot-devkit.md](copilot-devkit.md)).
 
 - **Use `-`, never `/`** in a tag: the packager puts the tag in the file name.
 - A tag containing **`beta`** uploads as Beta; **`alpha`** as Alpha; neither
@@ -49,8 +51,8 @@ Pushing a release tag publishes that one addon. The workflow is
    uploads to CurseForge with the addon's `CHANGELOG.md` as the file's
    changelog.
 
-Development-only files are kept out by each addon's `.pkgmeta` and by
-`#@do-not-package@` blocks in its `.toc` — e.g. AdventurerPlates' `Probe.lua`.
+Development-only files (such as `tests/` and `.busted`) are kept out by each addon's `.pkgmeta` (also stripped by `scripts/package-addon.ps1`) and by
+`#@do-not-package@` blocks in `.toc` files — e.g. AdventurerPlates' `Probe.lua`.
 
 ## Verified before the first real release (2026-09-28)
 

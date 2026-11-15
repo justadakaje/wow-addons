@@ -1,6 +1,6 @@
 # wow-addons
 
-Personal World of Warcraft addon development — QoL/interface improvements, plus an in-progress Auction House gold-opportunity tool.
+World of Warcraft addon monorepo centered on **WoW: Forever** (1.60.1, Interface `16001`) alongside multi-client Classic/Retail support — featuring AH gold-making tools, BiS gear lookup, client API probing, and an AI developer Copilot package (`mcp/` + `reference/`).
 
 ## Layout
 
@@ -13,31 +13,44 @@ wow-addons/
       <AddonName>.toc        # and/or <AddonName>_<Client>.toc for multi-client addons
       *.lua
       Knowledge/              # curated, sourced data only — see AGENTS.md
-      tests/                  # optional, per-addon
+      tests/                  # optional, per-addon Busted specs
+  .claude/skills/             # repo-local AI agent skills (wow-addon-partner)
+  docs/                       # build measurements, release & Copilot DevKit guides, CurseForge pages
+  mcp/                        # wow-api MCP server (verified build signatures, enums & events)
+  reference/                  # dumped API JSON/Markdown reference from ForeverProbe
   scripts/
     link-addons.ps1           # symlinks addons/* into your local WoW install(s)
+    run-tests.ps1             # Luacheck + Busted test runner (also run-tests.sh)
+    check-toc.js              # validates .toc Interface headers, LoadOnDemand & file paths
+    check-lua.js              # Lua 5.1 syntax verification across addons/
+    package-addon.ps1         # builds clean release zip using .pkgmeta
+    package-devkit.ps1        # builds standalone WoW: Forever Addon Copilot DevKit zip
   .github/workflows/
-    validate.yml               # structure checks on push/PR
-  AGENTS.md                    # working rules for any AI agent (or human) touching this repo
-  HANDOFF.md                   # research/status log from planning conversations — read this first
+    validate.yml              # syntax, .toc & test checks on push/PR
+    release.yml               # tagged addon zip & CurseForge release automation
+  AGENTS.md                   # working rules for AI agents and contributors
 ```
 
 ## Local dev setup
 
-1. Clone the repo (already done — this is `D:\Code\GitHub\wow-addons`).
-2. Run `scripts/link-addons.ps1 -WowPath "<path to your Interface\AddOns folder>"` to symlink every addon in `addons/` into your live WoW install. Symlinks mean you edit in the repo and test in-game with no copy step, and removing an addon from the game is just deleting the symlink — nothing destructive.
-3. For addons that use the WoW API, this repo assumes the `wow-api` MCP server is attached in Claude Desktop or Claude Code (the npm package is `wow-api-mcp-server`, source in `mcp/`) so API calls are verified against real signatures rather than guessed. See `AGENTS.md`.
+1. Clone the repo (`git clone https://github.com/justadakaje/wow-addons.git`).
+2. Run `scripts/link-addons.ps1 -WowPath "<path to your Interface\AddOns folder>"` to symlink every addon in `addons/` into your live WoW install. Symlinks let you edit in the repo and reload in-game with no copy step.
+3. Verify edits before committing:
+   - `node scripts/check-toc.js addons` and `node scripts/check-lua.js addons`
+   - `powershell -ExecutionPolicy Bypass -File scripts/run-tests.ps1` (runs `luacheck` + `busted`)
+4. **WoW: Forever Addon Copilot (`wow-api` MCP):** Build and attach the local MCP server in `mcp/` so AI coding assistants verify `C_*` APIs, events, and enums against live build `70862` captures instead of guessing. See [docs/copilot-devkit.md](docs/copilot-devkit.md) for standalone setup, or run `scripts/package-devkit.ps1` to bundle a portable zip for fellow addon developers.
 
 ## Addons
 
-| Addon | Client(s) | Status |
-| --- | --- | --- |
-| AddonSmokeTest | Classic Era (20506), Forever (16001) | Proof-of-life, working |
-| ForeverProbe | Forever (16001) | Read-only API/event capture, working |
-| AdventurerPlates | Forever (16001) | Discontinued — kept as a reference implementation for Chomp pull-only comms and 3D model rendering. Last version v0.3.2; sharing tested by two players on build 70009 |
-| GoldFinder | Forever (16001) | v0.2.0 — finds underpriced materials, with net profit after the 5% AH cut, configurable thresholds, price trends, tooltip prices and CSV export. CurseForge still has v0.1.0 |
-| AdventurerPlates | Forever (16001) | v0.3.0 — card, editor and sharing built; sharing untested with a second player |
-| GoldFinder | Multi-Client (Forever 16001, Retail, Classic Era, MoP) | v0.2.0 (v0.3.0 in prep) — AH deal scanner, net profit calc, sub-tabs & search |
+| Addon | Client(s) | Status | Link |
+| --- | --- | --- | --- |
+| **GoldFinder** | Multi-Client (Forever `16001`, Retail, Classic Era, MoP) | `v2.0.0` — AH deal & snipe scanner, crafting arbitrage, Disenchant EV, Bark/Cross-Market, Goblin Ledger P&L, 30-day charts, Multi-Alt Hub, TradeSkill overlay (CurseForge ID `1715781`) | [README](addons/GoldFinder/README.md) |
+| **BiSGearFinder** | Forever (`16001`) | `v0.1.0` — Class/spec Best-in-Slot browser (`/bgf`, `/bis`) with dungeon/raid/craft filters and optional `GoldFinder` `[ BiS BoEs ]` bridge | [README](addons/BiSGearFinder/README.md) |
+| **MeridianScout** | Forever (`16001`) | Read-only character state, active/completed quests, bind, and observed flight node exporter (`/meridianscout`) | [README](addons/MeridianScout/README.md) |
+| **ForeverProbe** | Forever (`16001`) | `v0.7.0` — Read-only Blizzard API, event & housing capture (`/fprobe`, `/fpevents`, `/fphouse`) powering `reference/` & `mcp/` | [README](addons/ForeverProbe/README.md) |
+| **AddonSmokeTest** | Classic Era (`20506`), Forever (`16001`) | `v0.0.1` — Minimal proof-of-life (`/smoketest`) | [TOC](addons/AddonSmokeTest/AddonSmokeTest.toc) |
+| **AdventurerPlates** | Forever (`16001`) | Discontinued (`v0.3.2`) — Reference implementation for Chomp pull-only comms and 3D model rendering; two-player sharing verified on build 70009 | [README](addons/AdventurerPlates/README.md) |
+| **AdventurerPlatesPortrait** | Forever (`16001`) | Shelved (`v0.1.0`) — Original minimal portrait prototype superseded by `AdventurerPlates` | [TOC](addons/AdventurerPlatesPortrait/AdventurerPlatesPortrait.toc) |
 
 ### GoldFinder Live Preview
 
@@ -45,4 +58,4 @@ wow-addons/
 
 ## Related repos
 
-- [GoldCopilot](https://github.com/stryker-max/GoldCopilot) (fork target, upstream: `stryker-max/GoldCopilot`) — MoP Classic port planned. Not yet forked. Kept as its own fork rather than folded into this monorepo, to preserve upstream history and MIT attribution and to allow pulling upstream fixes.
+- [GoldCopilot](https://github.com/stryker-max/GoldCopilot) (fork target, upstream: `stryker-max/GoldCopilot`) — MoP Classic port planned. Kept as its own fork rather than folded into this monorepo, to preserve upstream history and MIT attribution and to allow pulling upstream fixes.

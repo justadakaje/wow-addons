@@ -128,10 +128,7 @@ on this client*.
 
 ## Status
 
-**Built, syntax-checked, not yet run in game.** The portrait original has been
-run and its model portrait confirmed rendering on build 69913, which is what
-justified making the portrait the hero element here — but this specific layout
-has not been seen on screen yet.
+**Discontinued reference (`v0.3.2`).** Active development on this addon has stopped; it remains in the repository as a working reference implementation for Chomp pull-only comms and 3D model rendering. Two-player sharing was tested live on WoW: Forever build 70009 (see [docs/facts-build-70009.md](../../docs/facts-build-70009.md)).
 
 ## Client support
 

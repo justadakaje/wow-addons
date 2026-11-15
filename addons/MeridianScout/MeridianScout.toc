@@ -1,0 +1,5 @@
+## Interface: 16001
+## Title: Meridian Scout
+## Notes: Export character quest progress, bind and observed taxi routes.
+## SavedVariablesPerCharacter: MeridianScoutFlights
+MeridianScout.lua

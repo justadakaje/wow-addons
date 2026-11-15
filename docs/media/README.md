@@ -44,7 +44,7 @@ Nothing automates the copy, so it drifts. Rebuild it from this table:
 | `../posts/confidently-wrong.md` | `sources/04-post-confidently-wrong.md` | **Yes** |
 | `../posts/forever-api-surface.md` | `sources/05-post-forever-api-surface.md` | **Yes** |
 | `../../AGENTS.md` | `sources/06-working-rules.md` | **Yes** |
-| `../../HANDOFF.md` | `sources/07-handoff-state.md` | **Yes** |
+| `../../HANDOFF.md` *(local, gitignored)* | `sources/07-handoff-state.md` | **Yes (if present locally)** |
 | `../../addons/AdventurerPlates/Probe.lua` | `sources/08-probe-source.md` | **Yes** |
 | `../../addons/AdventurerPlates/Core.lua` | `sources/09-migration-source.md` | **Yes** |
 | `../../addons/AdventurerPlates/Share.lua` | `sources/10-transport-source.md` | **Yes** |
@@ -152,3 +152,5 @@ Consistent with the policy in `../README.md`:
 Git cannot delta-compress either, so committing them would bloat every clone
 of this repo permanently in exchange for files that already live somewhere
 addressable.
+
+- **Raw concept art (`docs/media/**/concept-art/`):** Intermediate exploration JPEGs (under `twitch-badges/concept-art/` and `twitch-banners/concept-art/`) are gitignored so only finalized assets remain tracked.

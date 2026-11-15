@@ -12,7 +12,12 @@ while building the addons is findable without replaying a chat transcript.
 
 | Path | What it is |
 | --- | --- |
-| `facts-build-69913.md` | **Start here.** Every measured fact about WoW: Forever build 69913, in one place. |
+| `facts-build-69913.md` | **Start here.** Measured facts about WoW: Forever build 69913, in one place. |
+| `facts-build-70009.md` | Measured facts from build 70009 (combat log, addons, Chomp sharing test). |
+| `copilot-devkit.md` | Setup and sharing guide for the standalone WoW: Forever Addon Copilot DevKit (`wow-api` MCP + `reference/` + `ForeverProbe`). |
+| `releasing.md` | How `.pkgmeta`, `#@do-not-package@`, `package-addon.ps1`, and `release.yml` build and publish zips. |
+| `goldfinder-backlog.md` | Shipped milestone history and GitHub Issues backlog pointer for GoldFinder. |
+| `curseforge/` | CurseForge listing copy (`goldfinder.md`, `bisgearfinder.md`, `adventurer-plates.md`). |
 | `posts/` | Published blog posts, as the Markdown they were written from. |
 | `media/` | Podcast and video production notes for the recorded sessions. |
 | `content-pack.md` | Release order for the five artifacts from one session, and what blocks what. |
@@ -21,7 +26,7 @@ while building the addons is findable without replaying a chat transcript.
 
 ## `facts-build-69913.md`
 
-The condensed, checkable version of what `HANDOFF.md` records in prose: API
+The condensed, checkable version of our local working notes (local `HANDOFF.md` is gitignored): API
 surface, the crash model, measured wire-format numbers, namespace coverage,
 model widget support, auction house findings, and an explicit list of claims
 that are **not** true.
@@ -31,8 +36,7 @@ a useful shape — every figure traceable, and a blocklist of plausible-sounding
 falsehoods. That makes it the fastest way to sanity-check a claim about this
 client without re-deriving it.
 
-Where this file and `HANDOFF.md` disagree, `HANDOFF.md` is the working document
-and wins on anything about *current project state*. This file wins on
+Where this file and local working notes (`HANDOFF.md`, gitignored) disagree, local working notes reflect *current in-progress state* while this file wins on
 *measurements*, because it was compiled from the saved probe output directly.
 
 ## `posts/`

@@ -20,7 +20,7 @@ checked, because the record is versioned. That is the whole design.
   ──────────                        ──────────                 ─────────────
   facts-build-69913.md  ──────┬───► (already curated)  ──────► /content-pack
   .toc / CHANGELOG /          │                                      │
-  README / HANDOFF /          └───► session-digest.js ──┐            │
+  README / local HANDOFF /    └───► session-digest.js ──┐            │
   commit bodies                        (JSON)           │            ▼
                                                         ├──► check-content-pack.js   (written)
                                                         └──► check-episode.js        (spoken)
@@ -44,7 +44,7 @@ falsehood there blocks it in written *and* spoken content with no code change.
 **A digest is the cheap mechanical version, for sessions that do not have a fact
 sheet yet.** `session-digest.js` takes a commit range and emits the same shape
 automatically: commits with author-local timestamps and bodies, per-addon `.toc`
-metadata, changelog sections, the vendored-library license table, named HANDOFF
+metadata, changelog sections, the vendored-library license table, local HANDOFF
 sections verbatim, release state, and a vocabulary block the gate builds its
 allowlists from.
 
@@ -127,7 +127,7 @@ One line, written while the fix is in hand. The digest collects them into
 diff and being handed one.
 
 Everything else the pipeline needs, this repo already does: a Keep a Changelog
-file, `X-` fields in the `.toc`, a handoff with named sections, and commit bodies
+file, `X-` fields in the `.toc`, local handoff notes with named sections, and commit bodies
 that explain rather than restate. That is why it works at all.
 
 ## What neither gate can do
@@ -155,7 +155,7 @@ and it is the more important half of both.
   stuff" commits produces a thin pack, correctly.
 - **Concurrent sessions.** Two agents on one branch means a digest can miss
   commits landing after it ran, and a file read early in a session can be stale
-  by the end. `HANDOFF.md` already warns about this; it has happened twice,
+  by the end. Local working notes (`HANDOFF.md`, gitignored) already warn about this; it has happened twice,
   including to the session that wrote this file. Re-digest before generating.
 - **Rules drifting into censorship.** If the gate starts blocking true
   statements, the fix is a better digest or a more precise blocklist entry, not a
