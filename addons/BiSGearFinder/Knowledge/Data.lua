@@ -23,6 +23,7 @@ local BIS_DATABASE = {
         classes   = { "WARRIOR", "SHAMAN", "HUNTER" },
         roles     = { "DPS" },
         source    = "WORLD_DROP",
+        icon      = 132941,
         note      = "+7 Axe/Dagger/Sword Skill -- Mandatory #1 Fury Warrior BiS throughout Classic",
     },
     [12640] = {
@@ -34,6 +35,7 @@ local BIS_DATABASE = {
         classes   = { "WARRIOR", "PALADIN" },
         roles     = { "DPS" },
         source    = "CRAFTED_BLACKSMITHING",
+        icon      = 133120,
         note      = "2% Hit, 2% Crit -- Undisputed #1 Warrior DPS Helm through Phase 5",
     },
     [15062] = {
@@ -45,6 +47,7 @@ local BIS_DATABASE = {
         classes   = { "ROGUE", "WARRIOR", "HUNTER", "DRUID" },
         roles     = { "DPS" },
         source    = "CRAFTED_LEATHERWORKING",
+        icon      = 134591,
         note      = "1% Hit, 46 AP (Set: +2% Hit) -- Top pre-raid melee DPS legs",
     },
     [15063] = {
@@ -56,6 +59,7 @@ local BIS_DATABASE = {
         classes   = { "ROGUE", "WARRIOR", "HUNTER", "DRUID" },
         roles     = { "DPS" },
         source    = "CRAFTED_LEATHERWORKING",
+        icon      = 132943,
         note      = "1% Crit, 28 AP (Set: +2% Hit) -- Top pre-raid melee DPS gloves",
     },
     [18510] = {
@@ -67,6 +71,7 @@ local BIS_DATABASE = {
         classes   = { "PRIEST", "DRUID", "PALADIN", "SHAMAN" },
         roles     = { "HEALER" },
         source    = "CRAFTED_LEATHERWORKING",
+        icon      = 133767,
         note      = "+42 Healing, 10 Int/Stam -- #1 Pre-Raid healing cloak in the game",
     },
     [15050] = {
@@ -78,6 +83,7 @@ local BIS_DATABASE = {
         classes   = { "HUNTER", "SHAMAN" },
         roles     = { "DPS" },
         source    = "CRAFTED_LEATHERWORKING",
+        icon      = 132640,
         note      = "50 AP, 12 Fire Res (Set: +1% Hit, 28 AP) -- Pre-raid BiS Hunter/Enhancement chest",
     },
     [15051] = {
@@ -89,6 +95,7 @@ local BIS_DATABASE = {
         classes   = { "HUNTER", "SHAMAN" },
         roles     = { "DPS" },
         source    = "CRAFTED_LEATHERWORKING",
+        icon      = 135041,
         note      = "40 AP (Set: +1% Hit, 28 AP) -- Pre-raid BiS Hunter/Enhancement shoulders",
     },
     [15052] = {
@@ -100,6 +107,7 @@ local BIS_DATABASE = {
         classes   = { "HUNTER", "SHAMAN" },
         roles     = { "DPS" },
         source    = "CRAFTED_LEATHERWORKING",
+        icon      = 134584,
         note      = "54 AP, 13 Fire Res (Set: +1% Hit, 28 AP) -- Pre-raid BiS Hunter legs",
     },
     [15060] = {
@@ -111,6 +119,7 @@ local BIS_DATABASE = {
         classes   = { "HUNTER", "SHAMAN" },
         roles     = { "DPS" },
         source    = "CRAFTED_LEATHERWORKING",
+        icon      = 132537,
         note      = "1% Hit, 28 AP -- 4-piece set bonus activator for physical mail",
     },
     [14136] = {
@@ -122,6 +131,7 @@ local BIS_DATABASE = {
         classes   = { "MAGE", "WARLOCK", "PRIEST" },
         roles     = { "CASTER" },
         source    = "CRAFTED_TAILORING",
+        icon      = 132688,
         note      = "+40 Frost/Shadow Damage -- Top pre-raid caster robe before Bloodvine",
     },
     [12639] = {
@@ -133,6 +143,7 @@ local BIS_DATABASE = {
         classes   = { "WARRIOR", "PALADIN" },
         roles     = { "TANK" },
         source    = "CRAFTED_BLACKSMITHING",
+        icon      = 132669,
         note      = "1% Crit, 1% Parry, Immune to Disarm -- Pre-raid BiS Protection tank gloves",
     },
     [11926] = {
@@ -144,6 +155,7 @@ local BIS_DATABASE = {
         classes   = { "WARRIOR", "HUNTER", "SHAMAN" },
         roles     = { "DPS" },
         source    = "CRAFTED_BLACKSMITHING",
+        icon      = 132539,
         note      = "2% Crit, 8 Strength -- High-impact physical crit mail chest",
     },
     [14616] = {
@@ -155,6 +167,7 @@ local BIS_DATABASE = {
         classes   = { "HUNTER", "SHAMAN", "WARRIOR" },
         roles     = { "DPS" },
         source    = "DUNGEON_DROP",
+        icon      = 132643,
         note      = "1% Hit, 9 Str, 9 Agi, 10 Stam -- Rare Scholomance BoE mail hit boots",
     },
 
@@ -170,6 +183,7 @@ local BIS_DATABASE = {
         classes   = { "ROGUE", "WARRIOR" },
         roles     = { "DPS" },
         source    = "WORLD_DROP",
+        icon      = 135338,
         note      = "2.80 Speed, 1% Crit, +7 Str -- Premier pre-raid 1H sword for Rogues and Fury Warriors",
     },
     [871] = {
@@ -181,6 +195,7 @@ local BIS_DATABASE = {
         classes   = { "SHAMAN", "WARRIOR" },
         roles     = { "DPS" },
         source    = "WORLD_DROP",
+        icon      = 132389,
         note      = "1.50 Speed, Extra Attack Proc -- Legendary offhand for Enhancement Shamans & Fury Warriors",
     },
     [942] = {
@@ -192,6 +207,7 @@ local BIS_DATABASE = {
         classes   = { "MAGE" },
         roles     = { "CASTER" },
         source    = "WORLD_DROP",
+        icon      = 133385,
         note      = "+21 Frost Spell Damage, 1% Freeze Proc -- BiS Frost Mage ring into raiding",
     },
     [873] = {
@@ -203,6 +219,7 @@ local BIS_DATABASE = {
         classes   = { "MAGE", "WARLOCK", "PRIEST", "DRUID" },
         roles     = { "CASTER", "HEALER" },
         source    = "WORLD_DROP",
+        icon      = 135150,
         note      = "+26 Spell Damage/Healing -- Definitive leveling & bracket caster staff",
     },
     [943] = {
@@ -214,6 +231,7 @@ local BIS_DATABASE = {
         classes   = { "DRUID" },
         roles     = { "TANK" },
         source    = "WORLD_DROP",
+        icon      = 135145,
         note      = "+260 Armor, 10 Defense, 11 Stamina -- Undisputed #1 Feral Bear Tank staff all of Classic",
     },
     [14554] = {
@@ -225,6 +243,7 @@ local BIS_DATABASE = {
         classes   = { "WARRIOR", "PALADIN" },
         roles     = { "DPS" },
         source    = "WORLD_DROP",
+        icon      = 134589,
         note      = "On-Use: +100 AP for 30s -- Top-tier burst plate legs for Fury Warriors",
     },
     [14555] = {
@@ -236,6 +255,7 @@ local BIS_DATABASE = {
         classes   = { "WARRIOR", "ROGUE" },
         roles     = { "TANK", "DPS" },
         source    = "WORLD_DROP",
+        icon      = 135641,
         note      = "1.30 Speed, Flame Proc -- Highest threat generation dagger for Protection Tanks",
     },
     [1168] = {
@@ -247,6 +267,7 @@ local BIS_DATABASE = {
         classes   = { "PALADIN", "WARRIOR" },
         roles     = { "TANK" },
         source    = "WORLD_DROP",
+        icon      = 134952,
         note      = "AoE Fire & Life Drain Procs -- Gold-standard farming shield for AoE Paladins & Warriors",
     },
     [1728] = {
@@ -258,6 +279,7 @@ local BIS_DATABASE = {
         classes   = { "WARRIOR", "ROGUE" },
         roles     = { "TANK", "DPS" },
         source    = "WORLD_DROP",
+        icon      = 135350,
         note      = "2.90 Speed, Fiery Blast Proc, Glowing Model -- Legendary prestige weapon",
     },
     [2243] = {
@@ -269,6 +291,7 @@ local BIS_DATABASE = {
         classes   = { "SHAMAN", "PALADIN", "DRUID", "PRIEST" },
         roles     = { "HEALER", "CASTER" },
         source    = "WORLD_DROP",
+        icon      = 133075,
         note      = "Proc: Next spell cast within 4s is instant -- High-utility hybrid caster mace",
     },
     [1980] = {
@@ -280,6 +303,7 @@ local BIS_DATABASE = {
         classes   = { "WARLOCK", "PRIEST" },
         roles     = { "CASTER" },
         source    = "WORLD_DROP",
+        icon      = 133382,
         note      = "+14 Shadow Spell Damage -- Premium leveling & twink ring for Warlocks/Spriests",
     },
     [2164] = {
@@ -291,6 +315,7 @@ local BIS_DATABASE = {
         classes   = { "ROGUE" },
         roles     = { "DPS" },
         source    = "WORLD_DROP",
+        icon      = 135630,
         note      = "1.80 Speed, Bleed Damage Proc -- Strong mid-level Rogue dagger",
     },
     [1982] = {
@@ -302,6 +327,7 @@ local BIS_DATABASE = {
         classes   = { "ROGUE" },
         roles     = { "DPS" },
         source    = "WORLD_DROP",
+        icon      = 135642,
         note      = "1.80 Speed, Armor Reduction Proc -- Level 39 bracket twink / leveling dagger",
     },
     [2825] = {
@@ -313,6 +339,7 @@ local BIS_DATABASE = {
         classes   = { "HUNTER", "WARRIOR", "ROGUE" },
         roles     = { "DPS" },
         source    = "WORLD_DROP",
+        icon      = 135384,
         note      = "2.70 Speed, Fire Damage Proc -- Level 39 twink & leveling Hunter bow",
     },
     [14552] = {
@@ -324,6 +351,7 @@ local BIS_DATABASE = {
         classes   = { "WARRIOR", "PALADIN" },
         roles     = { "TANK" },
         source    = "WORLD_DROP",
+        icon      = 135035,
         note      = "10 Defense, 300 Armor -- Heavy defensive mail shoulders for leveling tanks",
     },
     [2245] = {
@@ -335,6 +363,7 @@ local BIS_DATABASE = {
         classes   = { "SHAMAN", "PALADIN" },
         roles     = { "HEALER" },
         source    = "WORLD_DROP",
+        icon      = 133139,
         note      = "+29 Healing, 13 Int, 13 Spirit -- High-value hybrid mail healing helm",
     },
     [14558] = {
@@ -346,6 +375,7 @@ local BIS_DATABASE = {
         classes   = { "MAGE", "WARLOCK", "PRIEST", "DRUID", "PALADIN", "SHAMAN" },
         roles     = { "CASTER", "HEALER" },
         source    = "WORLD_DROP",
+        icon      = 133285,
         note      = "+18 Spell Damage/Healing, 10 Int -- Rare caster neck drop before raid BiS",
     },
     [13102] = {
@@ -357,6 +387,7 @@ local BIS_DATABASE = {
         classes   = { "PRIEST", "MAGE", "WARLOCK", "DRUID" },
         roles     = { "HEALER", "CASTER" },
         source    = "WORLD_DROP",
+        icon      = 133372,
         note      = "+29 Healing, MP5 -- Leveling & bracket healing cloth helm",
     },
     [13385] = {
@@ -368,6 +399,7 @@ local BIS_DATABASE = {
         classes   = { "PALADIN", "PRIEST", "MAGE", "WARLOCK", "DRUID", "SHAMAN" },
         roles     = { "HEALER", "CASTER" },
         source    = "WORLD_DROP",
+        icon      = 132647,
         note      = "+8 All Stats, 100 Armor -- Versatile defensive hybrid caster offhand",
     },
     [870] = {
@@ -379,6 +411,7 @@ local BIS_DATABASE = {
         classes   = { "WARRIOR", "PALADIN" },
         roles     = { "DPS" },
         source    = "WORLD_DROP",
+        icon      = 132398,
         note      = "2.90 Speed, Fire Strike Proc -- Iconic mid-level leveling axe",
     },
     [812] = {
@@ -390,6 +423,7 @@ local BIS_DATABASE = {
         classes   = { "DRUID", "MAGE", "PRIEST", "WARLOCK", "SHAMAN" },
         roles     = { "CASTER", "HEALER" },
         source    = "WORLD_DROP",
+        icon      = 135144,
         note      = "15 Stam, 15 Int, 15 Nature Res -- Classic durable caster staff",
     },
     [13047] = {
@@ -401,6 +435,7 @@ local BIS_DATABASE = {
         classes   = { "DRUID", "PALADIN", "SHAMAN", "PRIEST" },
         roles     = { "HEALER", "DPS" },
         source    = "WORLD_DROP",
+        icon      = 133116,
         note      = "2.40 Speed, Root & Nature Damage Proc",
     },
     [14557] = {
@@ -412,6 +447,7 @@ local BIS_DATABASE = {
         classes   = { "WARRIOR", "PALADIN" },
         roles     = { "TANK" },
         source    = "WORLD_DROP",
+        icon      = "Interface\\Icons\\INV_Misc_Horn_03",
         note      = "Proc: +250 Armor to party for 30s -- Collector & utility tank trinket",
     },
 
@@ -427,6 +463,7 @@ local BIS_DATABASE = {
         classes   = { "ROGUE" },
         roles     = { "DPS" },
         source    = "WORLD_DROP",
+        icon      = 135633,
         note      = "1.90 Speed, Bleed Damage Proc -- #1 Level 19 Twink Rogue Dagger in WoW",
     },
     [1482] = {
@@ -438,6 +475,7 @@ local BIS_DATABASE = {
         classes   = { "ROGUE", "WARRIOR", "PALADIN" },
         roles     = { "DPS" },
         source    = "DUNGEON_DROP",
+        icon      = 135346,
         note      = "2.70 Speed, Shadow Damage Proc -- Holy grail level 19 Twink 1H sword (SFK drop)",
     },
     [1121] = {
@@ -449,6 +487,7 @@ local BIS_DATABASE = {
         classes   = { "ROGUE", "DRUID", "HUNTER" },
         roles     = { "DPS" },
         source    = "WORLD_DROP",
+        icon      = 132540,
         note      = "8 Agility, 3 Strength -- Absolute #1 Level 19 Twink physical DPS boots",
     },
     [10413] = {
@@ -460,6 +499,7 @@ local BIS_DATABASE = {
         classes   = { "ROGUE", "DRUID", "HUNTER", "SHAMAN" },
         roles     = { "DPS" },
         source    = "DUNGEON_DROP",
+        icon      = 132940,
         note      = "4 Agi, 4 Str, 4 Stam -- Top-bracket level 19 leather gloves (WC BoE)",
     },
     [16901] = {
@@ -471,6 +511,7 @@ local BIS_DATABASE = {
         classes   = { "MAGE", "PRIEST", "WARLOCK" },
         roles     = { "CASTER", "HEALER" },
         source    = "WORLD_DROP",
+        icon      = 132711,
         note      = "9 Intellect -- #1 Level 19 Twink Caster bracers",
     },
     [9425] = {
@@ -482,6 +523,7 @@ local BIS_DATABASE = {
         classes   = { "WARRIOR", "PALADIN", "SHAMAN" },
         roles     = { "DPS" },
         source    = "DUNGEON_DROP",
+        icon      = 132395,
         note      = "4.00 Ultra-Slow Speed, Heavy Damage Proc -- Highest value level 39 twink weapon in Classic",
     },
     [13122] = {
@@ -493,6 +535,7 @@ local BIS_DATABASE = {
         classes   = { "ROGUE", "HUNTER", "DRUID" },
         roles     = { "DPS" },
         source    = "WORLD_DROP",
+        icon      = 133767,
         note      = "15 Agility -- #1 Level 39 Twink physical DPS cloak",
     },
 }

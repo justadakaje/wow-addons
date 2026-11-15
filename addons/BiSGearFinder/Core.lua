@@ -47,8 +47,142 @@ f:SetScript("OnEvent", function(self, event, arg1)
         local allItems = ns.GetAllBiSItems and ns.GetAllBiSItems() or {}
         for _ in pairs(allItems) do count = count + 1 end
         ns.Print("Loaded v0.1.0 (%d curated BoE BiS items indexed). Type |cffffd100/bgf|r for options.", count)
+        if ns.PreloadItemData then
+            ns.PreloadItemData()
+        end
     end
 end)
+
+---------------------------------------------------------------------------
+-- Logging & Diagnostic Engine
+---------------------------------------------------------------------------
+
+function ns.LogDebug(category, fmt, ...)
+    local msg = (select("#", ...) > 0) and fmt:format(...) or fmt
+    local entry = {
+        t   = (GetServerTime and GetServerTime()) or time(),
+        cat = category or "INFO",
+        msg = msg,
+    }
+    local db = ns.db or BiSGearFinderDB
+    if db then
+        db.debug = db.debug or {}
+        db.debug.log = db.debug.log or {}
+        table.insert(db.debug.log, entry)
+        while #db.debug.log > 200 do
+            table.remove(db.debug.log, 1)
+        end
+    end
+end
+
+function ns.CaptureDebugSnapshot()
+    local db = ns.db or BiSGearFinderDB or {}
+    db.debug = db.debug or {}
+
+    local all = ns.GetAllBiSItems and ns.GetAllBiSItems() or {}
+    local totalCount = 0
+    local loadedCount = 0
+    local coldCount = 0
+    local itemMap = {}
+
+    for itemID, info in pairs(all) do
+        totalCount = totalCount + 1
+        local itemName = GetItemInfo and GetItemInfo(itemID)
+        local cName = C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID)
+        local isLoaded = (itemName ~= nil) or (cName ~= nil)
+        if isLoaded then
+            loadedCount = loadedCount + 1
+        else
+            coldCount = coldCount + 1
+        end
+
+        local cIcon = C_Item and C_Item.GetItemIconByID and C_Item.GetItemIconByID(itemID)
+        local gIcon = GetItemIcon and GetItemIcon(itemID)
+        local resolvedIcon = (ns.ResolveItemIcon and ns.ResolveItemIcon(itemID, info)) or info.icon
+
+        itemMap[itemID] = {
+            curatedName   = info.name,
+            apiName       = itemName or cName,
+            isLoaded      = isLoaded,
+            curatedIcon   = info.icon,
+            cIcon         = cIcon,
+            gIcon         = gIcon,
+            resolvedIcon  = resolvedIcon,
+            market        = ns.GetCachedItemMarket and ns.GetCachedItemMarket(itemID),
+            scarcity      = ns.GetItemScarcity and ns.GetItemScarcity(itemID),
+        }
+    end
+
+    local buildVer, buildNum, buildDate, tocVer = "unknown", "unknown", "unknown", "unknown"
+    if GetBuildInfo then
+        buildVer, buildNum, buildDate, tocVer = GetBuildInfo()
+    end
+
+    local charName = (UnitName and UnitName("player")) or "Unknown"
+    local charClass = (UnitClass and select(2, UnitClass("player"))) or "Unknown"
+    local charLvl = (UnitLevel and UnitLevel("player")) or 0
+    local realm = (GetRealmName and GetRealmName()) or "Unknown"
+
+    local snap = {
+        time         = (GetServerTime and GetServerTime()) or time(),
+        timeStr      = (date and date("%Y-%m-%d %H:%M:%S")) or "N/A",
+        client       = { version = buildVer, build = buildNum, date = buildDate, toc = tocVer },
+        player       = { name = charName, class = charClass, level = charLvl, realm = realm },
+        summary      = { total = totalCount, loaded = loadedCount, cold = coldCount },
+        items        = itemMap,
+    }
+
+    db.debug.snapshot = snap
+    return snap
+end
+
+local debugEventFrame = CreateFrame("Frame")
+debugEventFrame:RegisterEvent("ITEM_DATA_LOAD_RESULT")
+debugEventFrame:RegisterEvent("GET_ITEM_INFO_RECEIVED")
+debugEventFrame:RegisterEvent("AUCTION_HOUSE_SHOW")
+debugEventFrame:RegisterEvent("AUCTION_HOUSE_CLOSED")
+debugEventFrame:RegisterEvent("AUCTION_HOUSE_BROWSE_RESULTS_UPDATED")
+debugEventFrame:RegisterEvent("AUCTION_HOUSE_BROWSE_RESULTS_ADDED")
+debugEventFrame:RegisterEvent("ITEM_SEARCH_RESULTS_UPDATED")
+
+debugEventFrame:SetScript("OnEvent", function(self, event, arg1, arg2)
+    local db = ns.db or BiSGearFinderDB
+    if not db then return end
+    db.debug = db.debug or {}
+    db.debug.events = db.debug.events or {}
+
+    local eventRecord = {
+        t = (GetServerTime and GetServerTime()) or time(),
+        event = event,
+    }
+
+    if event == "ITEM_DATA_LOAD_RESULT" or event == "GET_ITEM_INFO_RECEIVED" then
+        eventRecord.itemID = arg1
+        eventRecord.success = arg2
+    elseif event == "ITEM_SEARCH_RESULTS_UPDATED" then
+        eventRecord.itemID = arg1 and arg1.itemID
+    end
+
+    table.insert(db.debug.events, eventRecord)
+    while #db.debug.events > 60 do
+        table.remove(db.debug.events, 1)
+    end
+end)
+
+---------------------------------------------------------------------------
+-- Item Preloading
+---------------------------------------------------------------------------
+
+function ns.PreloadItemData()
+    local all = ns.GetAllBiSItems and ns.GetAllBiSItems() or {}
+    for itemID in pairs(all) do
+        if C_Item and C_Item.RequestLoadItemDataByID then
+            pcall(C_Item.RequestLoadItemDataByID, itemID)
+        elseif GetItemInfo then
+            pcall(GetItemInfo, itemID)
+        end
+    end
+end
 
 ---------------------------------------------------------------------------
 -- Tooltip Integration
@@ -248,6 +382,29 @@ local function HandleSlash(msg)
             DEFAULT_CHAT_FRAME:AddMessage("  • GoldFinder Bridge: Standalone Mode")
         end
 
+    elseif cmd == "debug" then
+        local snap = ns.CaptureDebugSnapshot and ns.CaptureDebugSnapshot()
+        if snap then
+            ns.Good("Debug snapshot captured!")
+            DEFAULT_CHAT_FRAME:AddMessage(("  • Client: WoW %s (Build %s, TOC %s)"):format(snap.client.version, snap.client.build, tostring(snap.client.toc)))
+            DEFAULT_CHAT_FRAME:AddMessage(("  • Character: %s - Lvl %d %s (%s)"):format(snap.player.name, snap.player.level, snap.player.class, snap.player.realm))
+            DEFAULT_CHAT_FRAME:AddMessage(("  • Matrix Health: %d/%d items loaded in cache (%d cold)"):format(snap.summary.loaded, snap.summary.total, snap.summary.cold))
+            DEFAULT_CHAT_FRAME:AddMessage("  • Snapshot saved to |cffffd100BiSGearFinderDB.debug|r. Type |cffffd100/reload|r to persist to WTF.")
+            DEFAULT_CHAT_FRAME:AddMessage("  • Type |cffffd100/bgf dump|r to view or copy the diagnostic report in-game.")
+        end
+
+    elseif cmd == "dump" then
+        local snap = ns.CaptureDebugSnapshot and ns.CaptureDebugSnapshot()
+        if ns.ShowDebugDumpWindow then
+            ns.ShowDebugDumpWindow(snap)
+        end
+
+    elseif cmd == "preload" then
+        if ns.PreloadItemData then
+            ns.PreloadItemData()
+            ns.Good("Sent server data requests for all 43 BiS items.")
+        end
+
     else
         ns.Print("Commands:")
         DEFAULT_CHAT_FRAME:AddMessage("  |cffffd100/bgf|r (or /bis) - Open interactive BiS BoE radar browser")
@@ -257,6 +414,9 @@ local function HandleSlash(msg)
         DEFAULT_CHAT_FRAME:AddMessage("  |cffffd100/bgf check <link|id>|r - Look up an item in the BiS database")
         DEFAULT_CHAT_FRAME:AddMessage("  |cffffd100/bgf tooltip|r - Toggle item tooltip annotations")
         DEFAULT_CHAT_FRAME:AddMessage("  |cffffd100/bgf info|r - View database status and bridge connectivity")
+        DEFAULT_CHAT_FRAME:AddMessage("  |cffffd100/bgf debug|r - Capture diagnostic snapshot to SavedVariables")
+        DEFAULT_CHAT_FRAME:AddMessage("  |cffffd100/bgf dump|r - Open copy-pasteable diagnostic window")
+        DEFAULT_CHAT_FRAME:AddMessage("  |cffffd100/bgf preload|r - Force server data requests for all 43 BiS items")
     end
 end
 

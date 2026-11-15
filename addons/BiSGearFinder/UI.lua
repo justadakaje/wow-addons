@@ -74,6 +74,26 @@ local function GetFilteredItems()
     return filtered
 end
 
+local function ResolveItemIcon(itemID, info)
+    local icon = nil
+    if C_Item and C_Item.GetItemIconByID then
+        icon = C_Item.GetItemIconByID(itemID)
+    end
+    if not icon or icon == 134400 then
+        if GetItemIcon then
+            icon = GetItemIcon(itemID)
+        end
+    end
+    if not icon or icon == 134400 or icon == "Interface\\Icons\\INV_Misc_QuestionMark" or icon == "Interface\\Icons\\INV_Misc_QuestionMark.blp" then
+        if info and info.icon then
+            icon = info.icon
+        end
+    end
+    return icon or 134400
+end
+
+ns.ResolveItemIcon = ResolveItemIcon
+
 local function FormatMoneyShort(copper)
     if not copper or copper <= 0 then return "|cff8888880c|r" end
     local g = math.floor(copper / 10000)
@@ -83,6 +103,84 @@ local function FormatMoneyShort(copper)
     else
         return ("|cffe6e6e6%ds|r"):format(s)
     end
+end
+
+function ns.ShowItemTooltip(owner, itemID, info)
+    if not owner or not itemID then return end
+    GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
+
+    -- Proactively request server item info
+    if C_Item and C_Item.RequestLoadItemDataByID then
+        pcall(C_Item.RequestLoadItemDataByID, itemID)
+    elseif GetItemInfo then
+        pcall(GetItemInfo, itemID)
+    end
+
+    local hasNative = false
+    if GameTooltip.SetItemByID then
+        local ok = pcall(GameTooltip.SetItemByID, GameTooltip, itemID)
+        if ok and GameTooltip:NumLines() > 0 then
+            hasNative = true
+        end
+    end
+    if not hasNative and GameTooltip.SetHyperlink then
+        local ok = pcall(GameTooltip.SetHyperlink, GameTooltip, "item:" .. itemID)
+        if ok and GameTooltip:NumLines() > 0 then
+            hasNative = true
+        end
+    end
+
+    local firstLine = _G["GameTooltipTextLeft1"] and _G["GameTooltipTextLeft1"]:GetText()
+    local isRetrieving = (not hasNative)
+        or (firstLine == "Retrieving item information")
+        or (_G.RETRIEVING_ITEM_INFO and firstLine == _G.RETRIEVING_ITEM_INFO)
+
+    if isRetrieving and info then
+        GameTooltip:ClearLines()
+        local qualityColor = (info.tier == "PRE_RAID_BIS" or info.tier == "EPIC_WORLD_DROP") and "|cffa335ee" or "|cff0070dd"
+        GameTooltip:AddLine(qualityColor .. (info.name or ("Item " .. itemID)) .. "|r")
+        GameTooltip:AddLine("Binds when equipped", 1, 1, 1)
+
+        local slotStr = (info.slot and info.slot:gsub("INVTYPE_", "")) or ""
+        local typeStr = info.armorType or ""
+        if slotStr ~= "" or typeStr ~= "" then
+            GameTooltip:AddDoubleLine(typeStr, slotStr, 1, 1, 1, 1, 1, 1)
+        end
+
+        if info.reqLevel and info.reqLevel > 1 then
+            local playerLvl = (UnitLevel and UnitLevel("player")) or 60
+            local lvlColor = (playerLvl >= info.reqLevel) and "|cffffffff" or "|cffff2020"
+            GameTooltip:AddLine(lvlColor .. "Requires Level " .. info.reqLevel .. "|r")
+        end
+
+        local tierDisplay = {
+            PRE_RAID_BIS    = "|cffff8000[Pre-Raid BiS]|r",
+            EPIC_WORLD_DROP = "|cffa335ee[Top BoE Epic]|r",
+            TWINK_19        = "|cff0070dd[L19 Twink BiS]|r",
+            TWINK_39        = "|cff0070dd[L39 Twink BiS]|r",
+        }
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddDoubleLine("|cffffd100BiSGearFinder:|r", tierDisplay[info.tier] or "|cffffd100[BiS Gear]|r", 1, 1, 1, 1, 1, 1)
+
+        if info.classes and #info.classes > 0 then
+            GameTooltip:AddDoubleLine("|cff888888Target Classes:|r", "|cff00ccff" .. table.concat(info.classes, ", ") .. "|r", 1, 1, 1, 1, 1, 1)
+        end
+
+        if info.note then
+            GameTooltip:AddLine("|cffffd100Note:|r " .. info.note, 0.9, 0.9, 0.9, true)
+        end
+
+        if ns.GetMarketSummary then
+            local summary = ns.GetMarketSummary(itemID)
+            if summary then
+                GameTooltip:AddDoubleLine("|cff888888AH Market:|r", summary, 1, 1, 1, 1, 1, 1)
+            end
+        end
+
+        GameTooltip:AddLine("|cff888888(Curated offline data - querying server for live stats...)|r", 0.6, 0.6, 0.6)
+    end
+
+    GameTooltip:Show()
 end
 
 local function RefreshBrowserUI()
@@ -116,10 +214,7 @@ local function RefreshBrowserUI()
                 or info.name
                 or ("Item " .. itemID)
 
-            local icon = (C_Item and C_Item.GetItemIconByID and C_Item.GetItemIconByID(itemID))
-                or (GetItemIcon and GetItemIcon(itemID))
-                or 134400
-
+            local icon = ResolveItemIcon(itemID, info)
             row.icon:SetTexture(icon)
             row.nameText:SetText(name)
             row.slotText:SetText((info.armorType or "") .. " " .. (info.slot:gsub("INVTYPE_", "") or ""))
@@ -319,9 +414,7 @@ local function CreateBrowserFrame()
         row:SetScript("OnEnter", function(self)
             self.hl:Show()
             if self.itemID then
-                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                GameTooltip:SetItemByID(self.itemID)
-                GameTooltip:Show()
+                ns.ShowItemTooltip(self, self.itemID, self.info)
             end
         end)
         row:SetScript("OnLeave", function(self)
@@ -391,7 +484,147 @@ local function CreateBrowserFrame()
     return uiFrame
 end
 
+local itemListener = CreateFrame("Frame")
+itemListener:RegisterEvent("ITEM_DATA_LOAD_RESULT")
+itemListener:RegisterEvent("GET_ITEM_INFO_RECEIVED")
+itemListener:SetScript("OnEvent", function(self, event, itemID, success)
+    if not itemID or not (ns.IsBiSItem and ns.IsBiSItem(itemID)) then return end
+
+    if ns.LogDebug then
+        ns.LogDebug("ITEM_LOAD", "%s for item %d (success=%s)", event, itemID, tostring(success))
+    end
+
+    -- If GameTooltip is open and anchored to this item row, refresh it immediately
+    if GameTooltip and GameTooltip:IsShown() then
+        local owner = GameTooltip:GetOwner()
+        if owner and owner.itemID == itemID then
+            ns.ShowItemTooltip(owner, itemID, owner.info)
+        end
+    end
+
+    -- If browser UI is shown, update rows to reflect loaded names and icons
+    if uiFrame and uiFrame:IsShown() then
+        RefreshBrowserUI()
+    end
+end)
+
+local dumpFrame = nil
+function ns.ShowDebugDumpWindow(snap)
+    if not dumpFrame then
+        local template = BackdropTemplateMixin and "BackdropTemplate" or nil
+        local df = CreateFrame("Frame", "BiSGearFinderDumpFrame", UIParent, template)
+        df:SetSize(640, 480)
+        df:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+        df:SetFrameStrata("DIALOG")
+        df:SetToplevel(true)
+        df:EnableMouse(true)
+        df:SetMovable(true)
+        df:RegisterForDrag("LeftButton")
+        df:SetScript("OnDragStart", df.StartMoving)
+        df:SetScript("OnDragStop", df.StopMovingOrSizing)
+        df:SetClampedToScreen(true)
+
+        df:SetBackdrop({
+            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+            tile = true, tileSize = 32, edgeSize = 32,
+            insets = { left = 8, right = 8, top = 8, bottom = 8 }
+        })
+        if df.SetBackdropColor then df:SetBackdropColor(0, 0, 0, 1) end
+
+        local title = df:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        title:SetPoint("TOP", 0, -16)
+        title:SetText("BiSGearFinder — Diagnostic Report")
+
+        local subtitle = df:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        subtitle:SetPoint("TOP", 0, -34)
+        subtitle:SetText("Click 'Select All' then Ctrl+C to copy this report.")
+
+        local scroll = CreateFrame("ScrollFrame", "BiSGearFinderDumpScroll", df, "UIPanelScrollFrameTemplate")
+        scroll:SetPoint("TOPLEFT", 16, -56)
+        scroll:SetPoint("BOTTOMRIGHT", -36, 44)
+
+        local eb = CreateFrame("EditBox", nil, scroll)
+        eb:SetMultiLine(true)
+        eb:SetMaxLetters(999999)
+        eb:EnableMouse(true)
+        eb:SetAutoFocus(false)
+        eb:SetFontObject("GameFontHighlightSmall")
+        eb:SetWidth(560)
+        eb:SetScript("OnEscapePressed", function() df:Hide() end)
+        scroll:SetScrollChild(eb)
+        df.editBox = eb
+
+        local copyBtn = CreateFrame("Button", nil, df, "UIPanelButtonTemplate")
+        copyBtn:SetSize(110, 22)
+        copyBtn:SetPoint("BOTTOMLEFT", 16, 14)
+        copyBtn:SetText("Select All")
+        copyBtn:SetScript("OnClick", function()
+            eb:SetFocus()
+            eb:HighlightText()
+        end)
+
+        local closeBtn = CreateFrame("Button", nil, df, "UIPanelButtonTemplate")
+        closeBtn:SetSize(80, 22)
+        closeBtn:SetPoint("BOTTOMRIGHT", -16, 14)
+        closeBtn:SetText("Close")
+        closeBtn:SetScript("OnClick", function() df:Hide() end)
+
+        dumpFrame = df
+    end
+
+    snap = snap or (ns.CaptureDebugSnapshot and ns.CaptureDebugSnapshot()) or {}
+    local lines = {}
+    lines[#lines + 1] = "# BiSGearFinder Diagnostic Dump"
+    lines[#lines + 1] = "Generated: " .. (snap.timeStr or tostring(snap.time))
+    if snap.client then
+        lines[#lines + 1] = ("Client: WoW %s (Build %s, TOC %s)"):format(snap.client.version or "?", snap.client.build or "?", tostring(snap.client.toc or "?"))
+    end
+    if snap.player then
+        lines[#lines + 1] = ("Player: %s (Lvl %s %s on %s)"):format(snap.player.name or "?", tostring(snap.player.level or "?"), snap.player.class or "?", snap.player.realm or "?")
+    end
+    if snap.summary then
+        lines[#lines + 1] = ("Summary: %d total, %d loaded in memory, %d cold"):format(snap.summary.total or 0, snap.summary.loaded or 0, snap.summary.cold or 0)
+    end
+    lines[#lines + 1] = ""
+    lines[#lines + 1] = "## Tracked Items Diagnostic Matrix"
+    if snap.items then
+        local sortedIDs = {}
+        for id in pairs(snap.items) do sortedIDs[#sortedIDs + 1] = id end
+        table.sort(sortedIDs)
+        for _, id in ipairs(sortedIDs) do
+            local it = snap.items[id]
+            local lowestStr = (it.market and it.market.lowest and it.market.lowest > 0) and tostring(it.market.lowest) or "0"
+            lines[#lines + 1] = ("- [%d] %s | Loaded=%s | Icon=%s | Scarcity=%s | Lowest=%s"):format(
+                id,
+                it.curatedName or "?",
+                tostring(it.isLoaded),
+                tostring(it.resolvedIcon),
+                tostring(it.scarcity),
+                lowestStr
+            )
+        end
+    end
+
+    local db = ns.db or BiSGearFinderDB
+    if db and db.debug and db.debug.events and #db.debug.events > 0 then
+        lines[#lines + 1] = ""
+        lines[#lines + 1] = "## Recent Events (Last " .. #db.debug.events .. ")"
+        for _, ev in ipairs(db.debug.events) do
+            local extra = ev.itemID and (" (itemID=" .. ev.itemID .. ", success=" .. tostring(ev.success) .. ")") or ""
+            lines[#lines + 1] = ("- [%s] %s%s"):format(tostring(ev.t), ev.event or "?", extra)
+        end
+    end
+
+    dumpFrame.editBox:SetText(table.concat(lines, "\n"))
+    dumpFrame:Show()
+    dumpFrame:Raise()
+end
+
 function ns.OpenBrowser()
+    if ns.PreloadItemData then
+        ns.PreloadItemData()
+    end
     local f = CreateBrowserFrame()
     if f then
         f:Show()

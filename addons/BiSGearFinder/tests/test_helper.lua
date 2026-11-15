@@ -92,6 +92,9 @@ _G.C_Item = {
         local name = helper.mockItemNames[itemID] or ("Item " .. tostring(itemID))
         return string.format("|cffa335ee|Hitem:%d::::::::||h[%s]|h|r", itemID, name)
     end,
+    RequestLoadItemDataByID = function(_itemID)
+        return true
+    end,
 }
 
 _G.GetItemInfo = function(itemID)
@@ -141,6 +144,15 @@ _G.C_AuctionHouse = {
             return results[index]
         end
         return nil
+    end,
+    GetBrowseResults = function()
+        return helper.mockBrowseResults or {}
+    end,
+    HasFullBrowseResults = function()
+        return true
+    end,
+    RequestMoreBrowseResults = function()
+        return true
     end,
 }
 
@@ -300,6 +312,7 @@ function helper.reset()
     helper.mockItemIcons = {}
     helper.mockHeldItems = {}
     helper.mockSearchResults = {}
+    helper.mockBrowseResults = {}
     helper.currentTime = 1000
     helper.currentServerTime = 1700000000
     _G.GameTooltip.lines = {}
@@ -325,6 +338,7 @@ function helper.createNamespace(overrides)
                 minTier = "ALL",
             },
             cache = {},
+            debug = { log = {}, events = {} },
         },
         Print = function(...)
             table.insert(helper.chatMessages, string.format(...))

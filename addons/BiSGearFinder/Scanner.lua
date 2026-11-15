@@ -9,6 +9,8 @@ ns.Scanner = ns.Scanner or {}
 local isScanning = false
 local scanQueue = {}
 local queueIndex = 1
+local scanStartTime = nil
+local settleArmed = false
 
 ---------------------------------------------------------------------------
 -- Cache Accessors
@@ -26,8 +28,8 @@ function ns.GetCachedItemMarket(itemID)
         if latest then
             return {
                 lowest   = latest.min,
-                count    = 1,
-                totalQty = 1,
+                count    = latest.qty or 1,
+                totalQty = latest.qty or 1,
                 seen     = latest.t or 0,
                 source   = "GoldFinder",
             }
@@ -54,6 +56,8 @@ end
 
 local scanFrame = CreateFrame("Frame")
 scanFrame:RegisterEvent("ITEM_SEARCH_RESULTS_UPDATED")
+scanFrame:RegisterEvent("AUCTION_HOUSE_BROWSE_RESULTS_UPDATED")
+scanFrame:RegisterEvent("AUCTION_HOUSE_BROWSE_RESULTS_ADDED")
 scanFrame:RegisterEvent("AUCTION_HOUSE_CLOSED")
 
 local function ProcessItemSearchResults(itemKey)
@@ -92,20 +96,139 @@ local function ProcessItemSearchResults(itemKey)
 
     ns.db.cache[itemID] = entry
 
-    -- Fire callbacks or update UI if open
     if ns.OnItemMarketUpdated then
         ns.OnItemMarketUpdated(itemID, entry)
     end
 end
 
+local function IngestBrowseResults(results)
+    if type(results) ~= "table" then return 0 end
+    ns.db = ns.db or BiSGearFinderDB or {}
+    ns.db.cache = ns.db.cache or {}
+    local now = (GetServerTime and GetServerTime()) or time()
+    local updatedCount = 0
+
+    for _, r in ipairs(results) do
+        local k = r.itemKey
+        local itemID = k and k.itemID
+        if itemID and ns.IsBiSItem(itemID) then
+            local minPrice = r.minPrice or 0
+            local qty = r.totalQuantity or 0
+            local isScarce = (qty == 0 or minPrice == 0)
+
+            local entry = {
+                lowest   = minPrice,
+                count    = qty,
+                totalQty = qty,
+                seen     = now,
+                isScarce = isScarce,
+            }
+
+            ns.db.cache[itemID] = entry
+            updatedCount = updatedCount + 1
+
+            if ns.OnItemMarketUpdated then
+                ns.OnItemMarketUpdated(itemID, entry)
+            end
+        end
+    end
+
+    return updatedCount
+end
+
+local function FinalizeBatchScan()
+    settleArmed = false
+    if not isScanning then return end
+    isScanning = false
+
+    -- Ingest latest browse results snapshot if available
+    if C_AuctionHouse and C_AuctionHouse.GetBrowseResults then
+        IngestBrowseResults(C_AuctionHouse.GetBrowseResults())
+    end
+
+    -- Stamp any queried items that have zero active realm listings
+    local now = (GetServerTime and GetServerTime()) or time()
+    local unlistedCount = 0
+    local listedCount = 0
+
+    ns.db = ns.db or BiSGearFinderDB or {}
+    ns.db.cache = ns.db.cache or {}
+
+    for _, id in ipairs(scanQueue) do
+        local cached = ns.db.cache[id]
+        if not cached or (scanStartTime and cached.seen < scanStartTime) then
+            ns.db.cache[id] = {
+                lowest   = 0,
+                count    = 0,
+                totalQty = 0,
+                seen     = now,
+                isScarce = true,
+            }
+            unlistedCount = unlistedCount + 1
+        elseif cached.isScarce or cached.count == 0 then
+            unlistedCount = unlistedCount + 1
+        else
+            listedCount = listedCount + 1
+        end
+    end
+
+    ns.Good("BiS scan complete: %d active, %d unlisted on realm.", listedCount, unlistedCount)
+
+    if ns.CheckMonopolyOpportunities then
+        ns.CheckMonopolyOpportunities()
+    end
+    if ns.RefreshUI then
+        ns.RefreshUI()
+    end
+end
+
+local function ArmScanSettle()
+    if not settleArmed then
+        settleArmed = true
+        C_Timer.After(1.2, FinalizeBatchScan)
+    end
+end
+
 ns.ProcessItemSearchResults = ProcessItemSearchResults
+ns.IngestBrowseResults = IngestBrowseResults
+ns.FinalizeBatchScan = FinalizeBatchScan
 
 scanFrame:SetScript("OnEvent", function(self, event, arg1)
-    if event == "ITEM_SEARCH_RESULTS_UPDATED" then
+    if event == "AUCTION_HOUSE_BROWSE_RESULTS_UPDATED" then
+        if C_AuctionHouse and C_AuctionHouse.GetBrowseResults then
+            IngestBrowseResults(C_AuctionHouse.GetBrowseResults())
+        end
+        if isScanning then
+            if C_AuctionHouse and C_AuctionHouse.HasFullBrowseResults and not C_AuctionHouse.HasFullBrowseResults() then
+                pcall(C_AuctionHouse.RequestMoreBrowseResults)
+            end
+            ArmScanSettle()
+        elseif ns.RefreshUI then
+            ns.RefreshUI()
+        end
+
+    elseif event == "AUCTION_HOUSE_BROWSE_RESULTS_ADDED" then
+        IngestBrowseResults(arg1)
+        if isScanning then
+            if C_AuctionHouse and C_AuctionHouse.HasFullBrowseResults and not C_AuctionHouse.HasFullBrowseResults() then
+                pcall(C_AuctionHouse.RequestMoreBrowseResults)
+            end
+            ArmScanSettle()
+        elseif ns.RefreshUI then
+            ns.RefreshUI()
+        end
+
+    elseif event == "ITEM_SEARCH_RESULTS_UPDATED" then
         ProcessItemSearchResults(arg1)
+        if ns.RefreshUI then
+            ns.RefreshUI()
+        end
+
     elseif event == "AUCTION_HOUSE_CLOSED" then
         isScanning = false
         scanQueue = {}
+        scanStartTime = nil
+        settleArmed = false
     end
 end)
 
@@ -117,6 +240,9 @@ local function StepQueue()
     if not isScanning or queueIndex > #scanQueue then
         isScanning = false
         ns.Good("BiS scan complete (%d items queried).", #scanQueue)
+        if ns.CheckMonopolyOpportunities then
+            ns.CheckMonopolyOpportunities()
+        end
         if ns.RefreshUI then ns.RefreshUI() end
         return
     end
@@ -153,6 +279,7 @@ function ns.StartBiSScan()
     end
 
     table.sort(scanQueue)
+    scanStartTime = (GetServerTime and GetServerTime()) or time()
 
     -- Multi-key search optimization if client supports batching
     if C_AuctionHouse and C_AuctionHouse.SearchForItemKeys and C_AuctionHouse.MakeItemKey then
@@ -167,10 +294,11 @@ function ns.StartBiSScan()
             if ok then
                 ns.Print("Scanning %d BiS BoE items via batch query...", #keys)
                 isScanning = true
+                -- Safety fallback timer in case browse events do not fire
                 C_Timer.After(2.5, function()
-                    isScanning = false
-                    ns.Good("BiS batch scan processed.")
-                    if ns.RefreshUI then ns.RefreshUI() end
+                    if isScanning then
+                        FinalizeBatchScan()
+                    end
                 end)
                 return
             end

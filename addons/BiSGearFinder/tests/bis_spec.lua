@@ -69,6 +69,13 @@ describe("BiSGearFinder Addon Suite", function()
                 assert.is_string(info.source)
                 assert.is_true(#info.source > 0)
 
+                assert.is_true(type(info.icon) == "number" or type(info.icon) == "string")
+                if type(info.icon) == "number" then
+                    assert.is_true(info.icon > 0)
+                else
+                    assert.is_true(#info.icon > 0)
+                end
+
                 assert.is_string(info.note)
                 assert.is_true(#info.note > 0)
             end
@@ -295,6 +302,96 @@ describe("BiSGearFinder Addon Suite", function()
             assert.are.equal(4, cached.totalQty)
             assert.is_false(cached.isScarce)
             assert.is_true(callbackFired)
+        end)
+
+        it("ingests batch browse results correctly updating cache and scarcity", function()
+            local browseBatch = {
+                { itemKey = { itemID = 870 }, minPrice = 1900000, totalQuantity = 1 }, -- Fiery War Axe: 190g
+                { itemKey = { itemID = 2825 }, minPrice = 990000, totalQuantity = 2 }, -- Bow of Searing Arrows: 99g
+                { itemKey = { itemID = 942 }, minPrice = 0, totalQuantity = 0 },       -- Freezing Band: None available
+            }
+
+            local count = ns.IngestBrowseResults(browseBatch)
+            assert.are.equal(3, count)
+
+            -- Fiery War Axe (870)
+            local axe = ns.db.cache[870]
+            assert.is_table(axe)
+            assert.are.equal(1900000, axe.lowest)
+            assert.are.equal(1, axe.count)
+            assert.is_false(axe.isScarce)
+            assert.are.equal("MONOPOLY_SINGLE", ns.GetItemScarcity(870))
+
+            -- Bow of Searing Arrows (2825)
+            local bow = ns.db.cache[2825]
+            assert.is_table(bow)
+            assert.are.equal(990000, bow.lowest)
+            assert.are.equal(2, bow.count)
+            assert.is_false(bow.isScarce)
+            assert.are.equal("AVAILABLE", ns.GetItemScarcity(2825))
+
+            -- Freezing Band (942)
+            local band = ns.db.cache[942]
+            assert.is_table(band)
+            assert.are.equal(0, band.lowest)
+            assert.are.equal(0, band.count)
+            assert.is_true(band.isScarce)
+            assert.are.equal("SCARCE", ns.GetItemScarcity(942))
+        end)
+
+        it("finalizes batch scan stamping unlisted items as scarce", function()
+            _G.AuctionHouseFrame.shown = true
+            ns.StartBiSScan()
+            assert.is_true(ns.IsScanning())
+
+            -- Provide only 1 item in browse results, all others unlisted
+            local singleResult = {
+                { itemKey = { itemID = 870 }, minPrice = 1900000, totalQuantity = 1 },
+            }
+            ns.IngestBrowseResults(singleResult)
+            ns.FinalizeBatchScan()
+
+            assert.is_false(ns.IsScanning())
+
+            -- Listed item
+            assert.are.equal(1900000, ns.db.cache[870].lowest)
+            assert.is_false(ns.db.cache[870].isScarce)
+
+            -- Unlisted item (e.g. Teebu's 1728)
+            assert.is_table(ns.db.cache[1728])
+            assert.are.equal(0, ns.db.cache[1728].lowest)
+            assert.are.equal(0, ns.db.cache[1728].count)
+            assert.is_true(ns.db.cache[1728].isScarce)
+            assert.are.equal("SCARCE", ns.GetItemScarcity(1728))
+        end)
+
+        it("preloads item data and exposes GetItemBiS icon path", function()
+            local lionHorn = ns.GetItemBiS(14557)
+            assert.is_table(lionHorn)
+            assert.are.equal("Interface\\Icons\\INV_Misc_Horn_03", lionHorn.icon)
+            assert.are.equal("Interface\\Icons\\INV_Misc_Horn_03", ns.ResolveItemIcon(14557, lionHorn))
+
+            -- Preload executes without throwing
+            assert.has_no.errors(function()
+                ns.PreloadItemData()
+            end)
+        end)
+
+        it("captures diagnostic snapshots and debug logs correctly", function()
+            ns.LogDebug("TEST", "Test debug log entry %d", 42)
+            assert.is_table(ns.db.debug)
+            assert.is_table(ns.db.debug.log)
+            assert.is_true(#ns.db.debug.log >= 1)
+            assert.are.equal("Test debug log entry 42", ns.db.debug.log[#ns.db.debug.log].msg)
+
+            local snap = ns.CaptureDebugSnapshot()
+            assert.is_table(snap)
+            assert.is_table(snap.summary)
+            assert.are.equal(43, snap.summary.total)
+            assert.is_table(snap.items)
+            assert.is_table(snap.items[14557])
+            assert.are.equal("The Lion Horn of Stormwind", snap.items[14557].curatedName)
+            assert.are.equal("Interface\\Icons\\INV_Misc_Horn_03", snap.items[14557].resolvedIcon)
         end)
 
         it("guards against scanning when Auction House is closed", function()
