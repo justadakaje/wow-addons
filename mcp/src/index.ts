@@ -112,7 +112,7 @@ server.registerTool(
         `No function named "${name}" exists on ${CLIENT}.${hint}\n\n` +
           `Absence here is meaningful: this index is the client's own documentation. ` +
           `Note it may still exist but be undocumented — see reference/undocumented.md ` +
-          `(627 such functions). Do not assume a signature for it.`,
+          `(${index.undocumentedCount} such functions). Do not assume a signature for it.`,
       );
     }
     if (response_format === "json") {
@@ -438,10 +438,11 @@ server.registerTool(
       // Distinguish "we never captured definitions" from "Blizzard defines none
       // for this type" -- conflating them sends the reader to re-run a probe
       // that would not help.
+      const { referenced, missing } = index.typeCoverage;
       parts.push(
         index.hasTables
           ? `**Referenced in signatures, but Blizzard's documentation defines no values or fields for it.** ` +
-            `About 129 of the 778 referenced types are like this — typically opaque handles ` +
+            `${missing} of the ${referenced} referenced types are like this — typically opaque handles ` +
             `(\`ItemLocation\`, \`ClubId\`, \`SpellIdentifier\`) that you obtain from another call ` +
             `rather than construct. Treat it as a token to pass through, and check the functions below ` +
             `for one that produces it.`

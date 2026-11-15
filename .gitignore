@@ -40,9 +40,32 @@ luac.out
 *.hex
 
 
-# Node tooling for scripts/extract-api.js (npm install luaparse)
+# Node tooling for scripts/extract-api.js (npm install luaparse at repo root)
 node_modules/
-package-lock.json
-package.json
+/package-lock.json
+/package.json
 
 dist/
+
+# Local planning notes, AI worktrees, and local IDE settings
+/HANDOFF.md
+.claude/worktrees/
+.claude/settings.local.json
+
+# OS & Lua coverage junk
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+luacov.stats.out
+luacov.report.out
+
+# Stray screenshots, raw AI concept art, and superseded debug images
+/2020-01-01 14_12_54-Window.png
+* [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9][0-9][0-9][0-9][0-9].png
+* - Before.png
+docs/media/**/concept-art/
+addons/GoldFinder/assets/AH-FullScan-GoldFinderChatAlert.png
+addons/GoldFinder/assets/GoldFinder-AHTab-underpriced-materials-details.png
+addons/GoldFinder/assets/GoldFinder-Logo.jpg
+addons/GoldFinder/assets/GoldFinder-v1.0.3-Options-OutputChatTab.png

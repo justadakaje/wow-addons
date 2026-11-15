@@ -56,6 +56,7 @@ export interface ApiFile {
   /** Real numeric values from the global Enum table. ForeverProbe 0.7.0+. */
   enums?: Record<string, Record<string, number | string>>;
   watchlist?: Record<string, boolean>;
+  undocumented?: string[];
   systems: ApiSystem[];
 }
 
@@ -290,6 +291,20 @@ export class ApiIndex {
   /** How many names the capture's presence watchlist covers. */
   get watchlistSize(): number {
     return Object.keys(this.watchlist).length;
+  }
+
+  /** How many C_* functions exist at runtime with no documentation entry. */
+  get undocumentedCount(): number {
+    return this.file.undocumented?.length ?? 0;
+  }
+
+  /** How many type names referenced in signatures resolve to a table or enum. */
+  get typeCoverage(): { referenced: number; missing: number } {
+    let missing = 0;
+    for (const key of this.byType.keys()) {
+      if (!this.tables.has(key) && !this.enumValues(key)) missing++;
+    }
+    return { referenced: this.byType.size, missing };
   }
 
   /** Near-misses for a name that did not resolve, so errors can suggest a fix. */

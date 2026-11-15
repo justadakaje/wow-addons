@@ -29,8 +29,8 @@ live client → addons/ForeverProbe → SavedVariables → scripts/extract-api.j
 `ForeverProbe` loads `Blizzard_APIDocumentation` **and**
 `Blizzard_APIDocumentationGenerated` (the framework ships without its data, so
 loading only the first yields nothing) and dumps Blizzard's own documentation
-tables. Currently **397 systems, 6,577 functions, 1,802 events**, plus **1,738 type
-definitions** and **1,886 enums (10,350 members)** with their real numeric
+tables. Currently **396 systems, 6,621 functions, 1,816 events**, plus **1,759 type
+definitions** and **1,912 enums (10,450 members)** with their real numeric
 values read from the global `Enum` table.
 
 Every response carries the build it describes, so an answer can never be
@@ -53,7 +53,7 @@ node smoke.mjs
 Claude Code:
 
 ```bash
-claude mcp add wow-api -- node D:/Code/GitHub/wow-addons/mcp/dist/index.js
+claude mcp add wow-api -- node <path-to-wow-addons>/mcp/dist/index.js
 ```
 
 Claude Desktop (`claude_desktop_config.json`):
@@ -63,7 +63,7 @@ Claude Desktop (`claude_desktop_config.json`):
   "mcpServers": {
     "wow-api": {
       "command": "node",
-      "args": ["D:/Code/GitHub/wow-addons/mcp/dist/index.js"]
+      "args": ["<path-to-wow-addons>/mcp/dist/index.js"]
     }
   }
 }
@@ -131,7 +131,7 @@ it to `ForeverProbe.lua`'s `WATCHLIST` and recapture, not to infer.
 
 ## Known gaps
 
-- **118 of 778 referenced types have no definition** — 85% resolve. The
+- **139 of 807 referenced types have no definition** — ~83% resolve. The
   remainder are opaque handles (`ItemLocation`, `ClubId`, `SpellIdentifier`,
   `TooltipData`) that you obtain from another call rather than construct;
   Blizzard documents no fields for them. `get_enum` says so explicitly and
@@ -147,11 +147,15 @@ it to `ForeverProbe.lua`'s `WATCHLIST` and recapture, not to infer.
   global, and says so in its output. `LoadAddOn` was the case that exposed
   this: ForeverProbe's own comments said the global did not exist, but it was
   missing from the watchlist, so neither tool could report it as removed. A
-  name missing from the watchlist is fixed by adding it to `WATCHLIST` and
-  recapturing — see `HANDOFF.md`, Open questions 2.
-- **627 `C_*` functions exist but are undocumented** (see
+  name missing from the watchlist is fixed by adding it to `WATCHLIST` in
+  `addons/ForeverProbe/ForeverProbe.lua` and recapturing.
+- **624 `C_*` functions exist but are undocumented** (see
   `reference/undocumented.md`). `lookup_api` says so when a name misses, because
   "not documented" and "not present" are different claims.
+
+## Sharing with fellow addon developers
+
+To bundle this MCP server alongside `reference/`, `addons/ForeverProbe/`, `scripts/{extract-api,check-toc,check-lua}.js`, `.luacheckrc`, and `.claude/skills/wow-addon-partner/SKILL.md` as a standalone zip, see [docs/copilot-devkit.md](../docs/copilot-devkit.md) or run `scripts/package-devkit.ps1`.
 
 ## Regenerating after a patch
 
