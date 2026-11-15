@@ -101,6 +101,7 @@ function ns.GenerateDiagnosticReport()
     local buyHelper = ns.IsBuyHelperEnabled and ns.IsBuyHelperEnabled()
     local mailCollector = ns.IsMailCollectorEnabled and ns.IsMailCollectorEnabled()
     local costBasis = ns.IsCostBasisTooltipEnabled and ns.IsCostBasisTooltipEnabled()
+    local barkScanner = ns.IsBarkScannerEnabled and ns.IsBarkScannerEnabled()
     local factionShare = ns.IsFactionShareEnabled and ns.IsFactionShareEnabled()
 
     local ahShown = AuctionHouseFrame and AuctionHouseFrame:IsShown() and true or false
@@ -124,8 +125,8 @@ function ns.GenerateDiagnosticReport()
     lines[#lines + 1] = ("- **Thresholds:** Discount: %d%%, MinPrior: %d, MinProfit: %s, SpendCap: %s"):format(
         discount, minPrior, ns.Money(minProfit), (spendCap > 0) and ns.Money(spendCap) or "Unlimited")
     lines[#lines + 1] = ("- **Engine Settings:** Confidence: %s, ValuationModel: %s, FactionShare: %s"):format(conf:upper(), valModel:upper(), factionShare and "ON" or "OFF")
-    lines[#lines + 1] = ("- **Modules:** Sound: %s (%ds throttle), RaidWarning: %s, ChatTab: %s, Tooltip: %s, SellHelper: %s, BuyHelper: %s, MailCollector: %s, CostBasis: %s"):format(
-        soundOn and "ON" or "MUTED", soundThrottle, raidWarnOn and "ON" or "OFF", chatTab and "ON" or "OFF", tooltipOn and "ON" or "OFF", sellHelper and "ON" or "OFF", buyHelper and "ON" or "OFF", mailCollector and "ON" or "OFF", costBasis and "ON" or "OFF")
+    lines[#lines + 1] = ("- **Modules:** Sound: %s (%ds throttle), RaidWarning: %s, ChatTab: %s, Tooltip: %s, SellHelper: %s, BuyHelper: %s, MailCollector: %s, CostBasis: %s, BarkScanner: %s"):format(
+        soundOn and "ON" or "MUTED", soundThrottle, raidWarnOn and "ON" or "OFF", chatTab and "ON" or "OFF", tooltipOn and "ON" or "OFF", sellHelper and "ON" or "OFF", buyHelper and "ON" or "OFF", mailCollector and "ON" or "OFF", costBasis and "ON" or "OFF", barkScanner and "ON" or "OFF")
     lines[#lines + 1] = ("- **AH State:** IsShown=%s, SelectedTab=%s"):format(tostring(ahShown), tostring(ahSelectedTab))
 
     local scanDiag = ns.GetScanDiag and ns.GetScanDiag()

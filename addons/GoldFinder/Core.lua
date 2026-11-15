@@ -69,6 +69,8 @@ local function GetTargetChatFrame()
     return DEFAULT_CHAT_FRAME
 end
 
+ns.inSlashCommand = false
+
 local function emit(colour, msg, ...)
     if select("#", ...) > 0 then
         msg = msg:format(...)
@@ -79,6 +81,12 @@ local function emit(colour, msg, ...)
         target:AddMessage(fullMsg)
     else
         print(fullMsg)
+    end
+    if ns.inSlashCommand then
+        local activeFrame = _G.SELECTED_CHAT_FRAME or DEFAULT_CHAT_FRAME
+        if activeFrame and activeFrame ~= target and activeFrame.AddMessage then
+            activeFrame:AddMessage(fullMsg)
+        end
     end
 end
 
@@ -1732,14 +1740,94 @@ function ns.ResetLedger()
 end
 
 ---------------------------------------------------------------------------
+-- Item Name / Link / ID Resolution Helper
+
+function ns.ResolveItemID(query)
+    if type(query) == "number" then
+        return (query > 0) and math.floor(query) or nil
+    end
+    if type(query) ~= "string" then return nil end
+
+    local trimmed = query:match("^%s*(.-)%s*$")
+    if not trimmed or trimmed == "" then return nil end
+
+    local linkID = tonumber(trimmed:match("item:(%d+)"))
+    if linkID and linkID > 0 then return linkID end
+
+    local numID = tonumber(trimmed:match("^(%d+)$"))
+    if numID and numID > 0 then return numID end
+
+    local qLower = trimmed:lower():gsub("^%[", ""):gsub("%]$", "")
+    if qLower == "" then return nil end
+
+    local bestPartialID, bestPartialLen = nil, nil
+
+    local function considerItem(id, candidateName)
+        if not id or type(candidateName) ~= "string" or candidateName == "" then return nil end
+        local lowerName = candidateName:lower()
+        if lowerName == qLower then
+            return id
+        end
+        if lowerName:find(qLower, 1, true) then
+            local nameLen = #lowerName
+            if not bestPartialLen or nameLen < bestPartialLen then
+                bestPartialID = id
+                bestPartialLen = nameLen
+            end
+        end
+        return nil
+    end
+
+    if ns.db and ns.db.items then
+        for id, rec in pairs(ns.db.items) do
+            if type(id) == "number" then
+                local clientName = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(id))
+                    or (GetItemInfo and GetItemInfo(id))
+                local recName = (type(rec) == "table" and rec.name) or nil
+                if considerItem(id, clientName) or considerItem(id, recName) then
+                    return id
+                end
+            end
+        end
+    end
+
+    if ns.CONVERSIONS then
+        for _, conv in ipairs(ns.CONVERSIONS) do
+            if conv.output and conv.output.itemID then
+                local outID = conv.output.itemID
+                local outName = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(outID))
+                    or (GetItemInfo and GetItemInfo(outID))
+                if considerItem(outID, outName) or considerItem(outID, conv.name) then
+                    return outID
+                end
+            end
+            if conv.reagents then
+                for _, r in ipairs(conv.reagents) do
+                    if r.itemID then
+                        local rName = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(r.itemID))
+                            or (GetItemInfo and GetItemInfo(r.itemID))
+                        if considerItem(r.itemID, rName) then
+                            return r.itemID
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return bestPartialID
+end
+
+---------------------------------------------------------------------------
 -- Slash commands
 
 SLASH_GOLDFINDER1 = "/goldfinder"
 SLASH_GOLDFINDER2 = "/gf"
 SlashCmdList["GOLDFINDER"] = function(msg)
+    ns.inSlashCommand = true
     msg = (msg or ""):match("^%s*(.-)%s*$")
     local cmd, arg = msg:match("^(%S+)%s*(.*)$")
-    cmd = cmd and cmd:lower() or ""
+    cmd = (cmd and cmd:lower():gsub("[^%w]", "")) or ""
 
     if cmd == "config" or cmd == "options" or cmd == "opt" or cmd == "settings" then
         local sub = arg and arg:lower():match("^(%S+)")
@@ -2438,24 +2526,73 @@ SlashCmdList["GOLDFINDER"] = function(msg)
             ns.Print("Usage: /gf merge <encoded_data_string>")
             ns.Print("Merges external scan data and price history into your local database.")
         end
-    elseif cmd == "bark" or cmd == "barks" then
-        local sub = (cmd == "barks") and "list" or (arg and arg:lower() or "list")
+    elseif cmd == "bark" or cmd == "barks" or cmd == "barkscan" or cmd == "tradebark" then
+        local sub = (cmd == "barks") and "list" or (arg and arg:lower():match("^%s*(.-)%s*$") or "list")
         if sub == "on" then
             ns.SetBarkScannerEnabled(true)
-            ns.Print("Trade Chat Bark Scanner is now |cff00ff00ON|r.")
+            ns.Good("Trade Chat Bark Scanner is now ON.")
         elseif sub == "off" then
             ns.SetBarkScannerEnabled(false)
-            ns.Print("Trade Chat Bark Scanner is now |cffff4444OFF|r.")
+            ns.Warn("Trade Chat Bark Scanner is now OFF.")
+        elseif sub == "test" or sub == "sim" then
+            local testID, testTypical, testName
+            if ns.db and ns.db.items then
+                for id, rec in pairs(ns.db.items) do
+                    if rec and rec.history and #rec.history >= (ns.GetMinPrior and ns.GetMinPrior() or 3) then
+                        local t = ns.GetItemTypicalPrice and ns.GetItemTypicalPrice(id)
+                        if t and t >= 2000 then
+                            testID = id
+                            testTypical = t
+                            testName = rec.name or (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(id)) or ("Item " .. id)
+                            break
+                        end
+                    end
+                end
+            end
+            if not testID then
+                ns.Warn("Need at least one item with AH scan history in GoldFinderDB to simulate a bark test.")
+            else
+                local askCopper = math.max(100, math.floor(testTypical * 0.50))
+                local goldPart = math.floor(askCopper / 10000)
+                local silverPart = math.floor((askCopper % 10000) / 100)
+                local priceTag = (goldPart > 0 and silverPart > 0) and ("%dg %ds"):format(goldPart, silverPart)
+                    or (goldPart > 0) and ("%dg"):format(goldPart)
+                    or ("%ds"):format(math.max(1, silverPart))
+                local simLink = ("|cff1eff00|Hitem:%d::::::::60:::::|h[%s]|h|r"):format(testID, testName)
+                local simMsg = ("WTS %s %s pst"):format(simLink, priceTag)
+                ns.Print("Simulating Trade Chat message: \"%s\"", simMsg)
+                local bark, reason
+                if ns.ParseTradeBark then
+                    bark, reason = ns.ParseTradeBark(simMsg, "GoblinTrader-Test", "2. Trade - City")
+                end
+                if bark then
+                    local savePct = math.floor((bark.discount or 0) * 100 + 0.5)
+                    ns.Print("|cff33ff99[BARK DEAL]|r %s: %s for %s (%d%% below AH %s, +%s profit) [whisper %s]",
+                        bark.sender or "?", bark.itemLink or simLink, ns.Money(bark.price),
+                        savePct, ns.Money(bark.typical), ns.Money(bark.netProfit), bark.sender or "?")
+                    if ns.PlayDealSound then ns.PlayDealSound() end
+                else
+                    ns.Warn("Simulation did not qualify as a deal: %s", tostring(reason))
+                end
+            end
         else
             local list = ns.recentBarks or {}
-            ns.Print("Trade Chat Bark Scanner: %s (%d recent deal(s))",
-                ns.IsBarkScannerEnabled() and "|cff00ff00ON|r" or "|cffff4444OFF|r", #list)
-            for i = 1, math.min(10, #list) do
-                local b = list[i]
-                local savePct = math.floor((b.discount or 0) * 100 + 0.5)
-                ns.Print("  %d. %s: %s for %s (%d%% off, +%s) [%s]",
-                    i, b.sender or "?", b.itemLink or ("item:" .. tostring(b.itemID)),
-                    ns.Money(b.price), savePct, ns.Money(b.netProfit), b.channel or "Trade")
+            local ratio = ns.GetDealRatio and ns.GetDealRatio() or 0.70
+            local discPct = math.floor((1 - ratio) * 100 + 0.5)
+            ns.Print("Trade Chat Bark Scanner: %s (Deal threshold: %d%% below typical AH price)",
+                ns.IsBarkScannerEnabled() and "|cff00ff00ON|r" or "|cffff4444OFF|r", discPct)
+            ns.Print("  - Monitored Channels: Trade, General, LookingForGroup, World")
+            ns.Print("  - Recent Bargain Barks Caught: %d", #list)
+            if #list == 0 then
+                ns.Print("  - None caught yet this session. Tip: type '/gf bark test' to simulate a live Trade Chat bark!")
+            else
+                for i = 1, math.min(10, #list) do
+                    local b = list[i]
+                    local savePct = math.floor((b.discount or 0) * 100 + 0.5)
+                    ns.Print("  %d. %s: %s for %s (%d%% off, +%s) [%s]",
+                        i, b.sender or "?", b.itemLink or ("item:" .. tostring(b.itemID)),
+                        ns.Money(b.price), savePct, ns.Money(b.netProfit), b.channel or "Trade")
+                end
             end
         end
     elseif cmd == "cross" then
@@ -2474,16 +2611,18 @@ SlashCmdList["GOLDFINDER"] = function(msg)
             end
         end
     elseif cmd == "chart" then
-        local idStr = arg and arg:match("item:(%d+)") or arg and arg:match("^(%d+)")
-        local itemID = tonumber(idStr)
+        local trimmedArg = arg and arg:match("^%s*(.-)%s*$") or ""
+        local itemID = (trimmedArg ~= "") and ns.ResolveItemID and ns.ResolveItemID(trimmedArg) or nil
         if itemID and ns.ShowPriceChartModal then
             ns.ShowPriceChartModal(itemID)
+        elseif trimmedArg ~= "" then
+            ns.Warn("Could not find tracked item matching \"%s\". Try an item link or item ID.", trimmedArg)
         else
-            ns.Print("Usage: /gf chart <itemID|itemLink>")
+            ns.Print("Usage: /gf chart <itemName|itemLink|itemID>")
         end
     elseif cmd == "alts" then
-        local idStr = arg and arg:match("item:(%d+)") or arg and arg:match("^(%d+)")
-        local itemID = tonumber(idStr)
+        local trimmedArg = arg and arg:match("^%s*(.-)%s*$") or ""
+        local itemID = (trimmedArg ~= "") and ns.ResolveItemID and ns.ResolveItemID(trimmedArg) or nil
         if itemID then
             local total, rows = ns.GetAltItemBreakdown(itemID)
             local iName = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID)) or ("Item " .. itemID)
@@ -2595,7 +2734,7 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         ns.Print("  /gf cart [buy|clear] - open staging cart or execute batch buy")
         ns.Print("  /gf vendor [link]    - inspect trade NPC reagent prices")
         ns.Print("  /gf shopping          - view active shopping list fulfillment progress")
-        ns.Print("  /gf bark [on|off|list] - toggle Trade Chat Bark Scanner or view deals")
+        ns.Print("  /gf bark [on|off|list|test] - toggle Trade Chat Bark Scanner or simulate deal")
         ns.Print("  /gf cross             - list Neutral vs. Faction AH arbitrage opportunities")
         ns.Print("  /gf chart <link|id>   - open 30-day interactive price history chart")
         ns.Print("  /gf alts [link|id]    - view multi-alt reagent inventory & mail expirations")
@@ -2603,4 +2742,5 @@ SlashCmdList["GOLDFINDER"] = function(msg)
         ns.Print("  /gf info             - open About & System Diagnostics dashboard")
         ns.Print("  /gf bench            - run memory & calculation latency benchmark")
     end
+    ns.inSlashCommand = false
 end

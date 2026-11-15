@@ -272,7 +272,8 @@ local function CreatePriceChartModal()
     local f = CreateFrame("Frame", "GoldFinderPriceChartModal", UIParent, template)
     f:SetSize(MODAL_WIDTH, MODAL_HEIGHT)
     f:SetPoint("CENTER")
-    f:SetFrameStrata("DIALOG")
+    f:SetFrameStrata("FULLSCREEN_DIALOG")
+    if f.SetToplevel then f:SetToplevel(true) end
     f:SetClampedToScreen(true)
     if f.SetMovable then f:SetMovable(true) end
     if f.EnableMouse then f:EnableMouse(true) end
@@ -324,6 +325,7 @@ local function CreatePriceChartModal()
 
     -- Plot container
     local plot = CreateFrame("Frame", nil, f, template)
+    plot:SetSize(MODAL_WIDTH - 28, MODAL_HEIGHT - 96)
     plot:SetPoint("TOPLEFT", 14, -68)
     plot:SetPoint("BOTTOMRIGHT", -14, 28)
     if plot.SetBackdrop then
@@ -410,6 +412,15 @@ function ns.ShowPriceChartModal(itemID)
             recent[#recent + 1] = pt
         end
     end
+    if #recent < 2 and #rawHistory >= 2 then
+        recent = {}
+        for i = 1, #rawHistory do
+            local pt = rawHistory[i]
+            if pt.min and pt.min > 0 then
+                recent[#recent + 1] = pt
+            end
+        end
+    end
     local startIdx = math.max(1, #recent - MODAL_MAX_BARS + 1)
     local points = {}
     for i = startIdx, #recent do
@@ -424,6 +435,8 @@ function ns.ShowPriceChartModal(itemID)
         f.emptyText:SetText("Insufficient price history (need at least 2 sightings to plot 30-day trend).")
         f.emptyText:Show()
         f:Show()
+        if f.Raise then f:Raise() end
+        if ns.Print then ns.Print("Opened 30-day price history chart for %s (%d sightings).", itemName, #points) end
         return f
     end
 
@@ -486,5 +499,7 @@ function ns.ShowPriceChartModal(itemID)
     end
 
     f:Show()
+    if f.Raise then f:Raise() end
+    if ns.Print then ns.Print("Opened 30-day price history chart for %s (%d sightings).", itemName, #points) end
     return f
 end

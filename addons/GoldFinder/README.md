@@ -32,10 +32,15 @@
 - **Smart Selling Popout Card:** When dragging an item into Blizzard's Sell tab (`ItemSellFrame` or `CommoditiesSellFrame`), GoldFinder docks a neat market evaluation card.
 - **Instant Price Autofill:** Displays historical median price, lowest current AH buyout, and market trajectory (Rising, Steady, Falling) with one-click quick-fill buttons: `[-1c Cut]`, `[Match]`, and `[Typical]`.
 
-### 🔨 Crafting Arbitrage & Undercut Detection
-- **Reagent Crafting Arbitrage:** Detects profitable crafting conversions (Smelting ores, Tailoring cloth bolts, Alchemy transmutes) where crafted output value exceeds total material input costs.
+### 🔨 Crafting Arbitrage, Disenchant EV & Market Intelligence
+- **Reagent Crafting Arbitrage & TradeSkill Overlay:** Detects profitable crafting conversions (Smelting ores, Tailoring cloth bolts, Alchemy transmutes) where crafted output value exceeds total material input costs, and surfaces live profit/cost insights in the TradeSkill frame.
+- **Disenchant Expected Value (EV):** Computes enchanting material expected value on BoE gear across Browse results, tooltips, and scan alerts.
 - **Vendor Reagent Integration:** Injects fixed NPC vendor costs (Flux, Coal, Thread, Vials) to avoid overpaying on the AH.
 - **Active Undercut Monitor:** Cross-checks your active auctions (`C_AuctionHouse.GetOwnedAuctions()`) against current lowest browse prices on the `[ Undercuts ]` tab with 1-click cancel.
+- **Bark Scanner & Cross-Market Analytics:** Parses Trade/barter chat (`/gf bark`) and compares crafting, disenchant, and realm scan markets (`/gf cross`).
+- **30-Day Price History Charts:** Inspect 30-day min/median price curves in-game via `/gf chart` or `Ctrl-Click` on tracked rows.
+- **Smart Buy Parity 2.0:** Streamlined commodity/item purchase confirmation and quick-buy queue behavior.
+- **BiSGearFinder Integration (`[ BiS BoEs ]`):** Surfaces Best-in-Slot BoE gear tab/pricing cues when [BiSGearFinder](../BiSGearFinder/README.md) is active.
 
 ### 📬 Mailbox Collector & Goblin P&L Accounting Ledger
 - **One-Click Deal Collector:** Adds a native `[ Collect Deals (N) ]` button to the mailbox to safely retrieve won items and record acquisition costs.
@@ -46,8 +51,9 @@
 - **Character-Specific & Account-Wide Profiles:** Switch between global settings and character-specific profiles with one click, mirroring WoW's native HUD Edit Mode architecture.
 - **Base64 Profile Sharing:** Export and import full configurations, custom material categories, and watchlists via copy-pasteable strings (`/gf profile export|import`).
 - **Automated Database Vacuum:** Built-in compaction engine prunes stale sightings (>30 days) and caps historical arrays every 7 days, keeping SavedVariables storage featherweight (<2MB).
-- **Multi-Account DB Merger:** Ingest scan dumps across accounts (`/gf merge`) without losing local history.
-- **Dedicated Chat Tab:** Route all notifications, deals, and snipes into a dedicated "GoldFinder" chat tab (`/gf chat tab`).
+- **Multi-Account & Multi-Alt Hub:** Ingest scan dumps across accounts (`/gf merge`), review alt inventories, and flag `<3d` mail expiry risks (`/gf alts`).
+- **Dedicated Chat Tab:** Route all notifications, deals, and snipes into a dedicated "GoldFinder" chat tab (`/gf chattab`).
+- **Sound & Blizzard Settings Integration:** Optional `LibSharedMedia-3.0` alert integration plus embedded Blizzard Options alongside the floating panel (`/gf config [float|game]`).
 
 ---
 
@@ -60,7 +66,11 @@
 
 | Market Statistics & Scan Health | Scan Complete Chat Alerts |
 |:---:|:---:|
-| [![Market Stats Tooltip](assets/GoldFinder-AH-Tab_StatsHover.png)](assets/GoldFinder-AH-Tab_StatsHover.png) | [![Scan Notification](assets/AH-FullScan-GoldFinderChatAlert-MegaSnipe.png)](assets/AH-FullScan-GoldFinderChatAlert-MegaSnipe.png) |
+| [![Market Stats Tooltip](assets/GoldFinder-AH-Tab-ScansHistoryTooltip.png)](assets/GoldFinder-AH-Tab-ScansHistoryTooltip.png) | [![Scan Notification](assets/AH-FullScan-GoldFinderChatAlert-MegaSnipe.png)](assets/AH-FullScan-GoldFinderChatAlert-MegaSnipe.png) |
+| **Options & Settings Window** | **Goblin Ledger P&L & Project Info** |
+| [![Options Window](assets/GoldFinder-Options.png)](assets/GoldFinder-Options.png) | [![Goblin Ledger P&L](assets/GoldFinder-GoblinLedgerP&L.png)](assets/GoldFinder-GoblinLedgerP&L.png) |
+
+[![GoldFinder Info & Diagnostics](assets/GoldFinder-InfoAbout.png)](assets/GoldFinder-InfoAbout.png)
 | *Scan history, evaluated items count, and threshold stats* | *Instant chat notification when high-margin deals and snipes are detected* |
 
 | Native AddOn List Categorization |
@@ -74,7 +84,7 @@
 
 GoldFinder features unified multi-client support:
 
-- **WoW: Forever** (Interface `16001`) — Verified on live client build 70707.
+- **WoW: Forever** (Interface `16001`) — Verified on live client build `1.60.1.70862`.
 - **Classic Era & Season of Discovery** (Interface `11506`–`11509`, `20506`).
 - **Retail / The War Within / Midnight** (Interface `110007`–`110200`, `120100`).
 - **Mists of Pandaria Classic** (Interface `50400`–`50504`).
@@ -100,12 +110,18 @@ Full native translation and localized category filtering across 8 languages:
 | Command | Action |
 | :--- | :--- |
 | `/gf` or `/goldfinder` | Opens the graphical Options & Settings window |
+| `/gf config [float\|game]` | Opens the floating Options window or Blizzard's embedded Settings category |
 | `/gf tour` | Starts the interactive 6-step feature onboarding walkthrough |
 | `/gf ledger` or `/gf pnl` | Opens the Realized Profit & Loss Goblin Ledger |
 | `/gf cart` | Opens the Multi-Item Quick-Buy Staging Cart |
+| `/gf chart` | Opens 30-day item price history charts (also `Ctrl-Click` on item rows) |
+| `/gf bark` | Toggles or inspects Trade/barter Bark Scanner alerts |
+| `/gf cross` | Opens Cross-Market arbitrage comparison view |
+| `/gf alts` | Opens the Multi-Alt Hub and mail expiry (`<3d`) monitor |
 | `/gf snipe [on\|off]` | Toggles live background Snipe Mode |
 | `/gf info` or `/gf about` | Opens the Journalator-style project info and diagnostics dashboard |
-| `/gf chat tab` | Toggles routing messages to a dedicated "GoldFinder" chat tab |
+| `/gf diag` | Prints runtime diagnostics and SavedVariables health summary |
+| `/gf chattab` | Toggles routing messages to a dedicated "GoldFinder" chat tab |
 | `/gf profile [export\|import]` | Opens the Base64 profile sharing dialog |
 | `/gf vacuum [days]` | Runs manual database compaction and pruning |
 | `/gf bench` / `/gf memory` | Runs real-time GC benchmarks and memory diagnostics |
@@ -116,5 +132,5 @@ Full native translation and localized category filtering across 8 languages:
 
 - **Author:** KenHenChan
 - **License:** MIT License
-- **Vendored Libraries:** Includes [LibAHTab](https://github.com/TheMouseNest/LibAHTab) (MIT), LibStub, LibDataBroker-1.1, and LibDBIcon-1.0.
+- **Vendored Libraries:** Includes [LibAHTab](https://github.com/TheMouseNest/LibAHTab) (MIT), `LibStub`, `CallbackHandler-1.0`, `LibDataBroker-1.1`, and `LibDBIcon-1.0` — see [libs/README.md](libs/README.md).
 - **Independence:** GoldFinder is **not** based on Auctionator. None of Auctionator's code is used or was read. The two only share the auction house window through LibAHTab.

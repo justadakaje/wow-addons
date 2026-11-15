@@ -207,12 +207,51 @@ local function CreateBuyHelperCard()
     switchBtn:SetPoint("BOTTOMLEFT", 16, 12)
     switchBtn:SetText("Search Alternative")
     switchBtn:SetScript("OnClick", function()
-        if card.targetAltID and C_AuctionHouse and C_AuctionHouse.MakeItemKey and C_AuctionHouse.SendSearchQuery then
-            local key = C_AuctionHouse.MakeItemKey(card.targetAltID)
-            if key then
-                C_AuctionHouse.SendSearchQuery(key, {}, false)
-                ns.Good("Searching AH for %s...", card.targetAltName or "alternative")
+        local targetID = card.targetAltID
+        if not targetID then return end
+        local targetName = card.targetAltName or ("Item " .. tostring(targetID))
+        if not (AuctionHouseFrame and C_AuctionHouse and C_AuctionHouse.MakeItemKey) then return end
+
+        local rec = ns.db and ns.db.items and ns.db.items[targetID]
+        local key = (rec and rec.itemKey) or C_AuctionHouse.MakeItemKey(targetID)
+        if not key then return end
+
+        if C_AuctionHouse.GetItemKeyInfo and not C_AuctionHouse.GetItemKeyInfo(key) then
+            if C_Item and C_Item.RequestLoadItemDataByID then
+                C_Item.RequestLoadItemDataByID(targetID)
             end
+            ns.Warn("%s is still loading from the server. Click it again in a moment.", targetName)
+            return
+        end
+
+        if AuctionHouseFrame.SearchBar and AuctionHouseFrame.SearchBar.SearchBox and AuctionHouseFrame.SearchBar.SearchBox.SetText then
+            AuctionHouseFrame.SearchBar.SearchBox:SetText(targetName)
+        end
+
+        local price = (ns.GetItemCurrentPrice and ns.GetItemCurrentPrice(targetID))
+            or (rec and rec.history and #rec.history > 0 and rec.history[#rec.history].min)
+            or 0
+
+        if AuctionHouseFrame.SelectBrowseResult then
+            local ok, err = pcall(AuctionHouseFrame.SelectBrowseResult, AuctionHouseFrame, {
+                itemKey = key,
+                minPrice = math.floor(price or 0),
+                totalQuantity = 1,
+                containsOwnerItem = false,
+            })
+            if ok then
+                if C_AuctionHouse.SendSearchQuery then
+                    pcall(C_AuctionHouse.SendSearchQuery, key, {}, false)
+                elseif C_AuctionHouse.RefreshCommoditySearchResults then
+                    pcall(C_AuctionHouse.RefreshCommoditySearchResults, targetID)
+                end
+                ns.Good("Opened %s in the Auction House Buy view.", targetName)
+            else
+                ns.Bad("Could not open %s in Buy view: %s", targetName, tostring(err))
+            end
+        elseif C_AuctionHouse.SendSearchQuery then
+            C_AuctionHouse.SendSearchQuery(key, {}, false)
+            ns.Good("Searching AH for %s...", targetName)
         end
     end)
     card.switchBtn = switchBtn
@@ -276,7 +315,7 @@ local function EvaluateParity(itemID)
         end
     end
 
-    local bestReagentConv, bestOutputPrice, bestRawCostForOne, bestOutSavings = nil, nil, nil, -1
+    local bestReagentConv, bestOutputPrice, bestRawCostForOne, bestOutSavings = nil, nil, nil, nil
     if asReagents then
         for _, conv in ipairs(asReagents) do
             local outID = conv.output and conv.output.itemID
@@ -288,10 +327,10 @@ local function EvaluateParity(itemID)
             local rawCost = currentPrice and (currentPrice * reqQty) or 0
             local outQty = math.max(1, (conv.output and conv.output.qty) or conv.outputQty or 1)
             local effOutPrice = outPrice and math.floor(outPrice * outQty) or nil
-            local savings = (effOutPrice and rawCost > 0) and (rawCost - effOutPrice) or 0
-            if not bestReagentConv or savings > bestOutSavings then
+            local savings = (effOutPrice and rawCost > 0) and (rawCost - effOutPrice) or nil
+            if not bestReagentConv or (savings and (not bestOutSavings or savings > bestOutSavings)) then
                 bestReagentConv = conv
-                bestOutputPrice = outPrice
+                bestOutputPrice = effOutPrice
                 bestRawCostForOne = rawCost
                 bestOutSavings = savings
             end
@@ -325,23 +364,30 @@ local function EvaluateParity(itemID)
         end
     elseif bestReagentConv then
         local conv = bestReagentConv
-        local outputPrice = bestOutputPrice
+        local effOutputPrice = bestOutputPrice
         local outQty = math.max(1, (conv.output and conv.output.qty) or conv.outputQty or 1)
-        local effOutputPrice = outputPrice and (outputPrice * outQty) or nil
         local rawCostForOne = bestRawCostForOne or 0
         local outName = (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(conv.output.itemID)) or (GetItemInfo and GetItemInfo(conv.output.itemID)) or "finished item"
+        local outLabel = (outQty > 1) and ("%dx %s"):format(outQty, outName) or outName
+        local craftProfit = (effOutputPrice and rawCostForOne > 0) and (math.floor(effOutputPrice * 0.95) - rawCostForOne) or 0
 
         if showReagentAlert and effOutputPrice then
             local savingsAmt = rawCostForOne - effOutputPrice
-            local outLabel = (outQty > 1) and ("%dx %s"):format(outQty, outName) or outName
             card.compLine:SetText(("|cffff4040[Do Not Craft]:|r %s sells for %s."):format(outLabel, ns.Money(effOutputPrice)))
             card.savings:SetText(("|cff40ff40Save %s|r: Buying pre-crafted %s is cheaper than crafting from raw materials!"):format(ns.Money(savingsAmt), outName))
             card.targetAltID = conv.output.itemID
             card.targetAltName = outName
             card.switchBtn:SetText("Search " .. (outName:sub(1, 14)))
             card.switchBtn:Show()
+        elseif effOutputPrice and craftProfit > 0 then
+            card.compLine:SetText(("|cff40ff40[Craft Profit]:|r %s sells for %s."):format(outLabel, ns.Money(effOutputPrice)))
+            card.savings:SetText(("|cff40ff40Est. +%s net profit|r (after 5%% AH cut) by crafting %s from this reagent."):format(ns.Money(craftProfit), outLabel))
+            card.targetAltID = conv.output.itemID
+            card.targetAltName = outName
+            card.switchBtn:SetText("Search " .. (outName:sub(1, 14)))
+            card.switchBtn:Show()
         else
-            card.compLine:SetText(("|cff40ff40[Parity Normal]:|r Finished %s is %s."):format(outName, effOutputPrice and ns.Money(effOutputPrice) or "unknown"))
+            card.compLine:SetText(("|cff40ff40[Parity Normal]:|r Finished %s is %s."):format(outLabel, effOutputPrice and ns.Money(effOutputPrice) or "unknown"))
             card.savings:SetText("Raw material prices align with finished market value.")
             card.switchBtn:Hide()
         end

@@ -35,6 +35,7 @@ describe("GoldFinder v2.0.0 Features", function()
     local origGetInboxItem
     local origLibStub
     local origPlaySoundFile
+    local origAHFrame
 
     before_each(function()
         helper.reset()
@@ -46,6 +47,7 @@ describe("GoldFinder v2.0.0 Features", function()
         origGetInboxItem = _G.GetInboxItem
         origLibStub = _G.LibStub
         origPlaySoundFile = _G.PlaySoundFile
+        origAHFrame = _G.AuctionHouseFrame
 
         ns = helper.createNamespace()
         ns.db.settings.minPrior = 2
@@ -77,6 +79,7 @@ describe("GoldFinder v2.0.0 Features", function()
         _G.GetInboxItem = origGetInboxItem
         _G.LibStub = origLibStub
         _G.PlaySoundFile = origPlaySoundFile
+        _G.AuctionHouseFrame = origAHFrame
     end)
 
     describe("Theme 1: Smart Buy Parity 2.0 & Disenchant EV (#60)", function()
@@ -133,6 +136,40 @@ describe("GoldFinder v2.0.0 Features", function()
             assert.are.equal(400, resProfit.cost)
             assert.are.equal(950, resProfit.netOutput)
             assert.are.equal(550, resProfit.netProfit)
+        end)
+
+        it("evaluates multi-output reagent parity (Heart of Fire -> 3x Elemental Fire) as profitable instead of Do Not Craft", function()
+            SeedItemHistory(ns, 7077, { 4099, 4099, 4099 }, "Heart of Fire")
+            SeedItemHistory(ns, 7068, { 3160, 3160, 3160 }, "Elemental Fire")
+            ns.GetItemCurrentPrice = function(id)
+                if id == 7077 then return 4099 end
+                if id == 7068 then return 3160 end
+                return nil
+            end
+            ns.GetItemTypicalPrice = ns.GetItemCurrentPrice
+
+            _G.AuctionHouseFrame = {
+                selectedTab = 1,
+                IsVisible = function() return true end,
+                IsShown = function() return true end,
+                GetRight = function() return 900 end,
+                CommoditiesBuyFrame = { IsVisible = function() return true end },
+            }
+
+            -- Fire the BuyHelper frame watcher registered during loadAddonFile
+            local buyWatcher = helper.createdFrames[#helper.createdFrames - 2]
+            for _, f in ipairs(helper.createdFrames) do
+                if f:IsEventRegistered("COMMODITY_SEARCH_RESULTS_UPDATED") then
+                    buyWatcher = f
+                end
+            end
+            assert.is_table(buyWatcher)
+            buyWatcher:FireEvent("COMMODITY_SEARCH_RESULTS_UPDATED", 7077)
+
+            local card = _G.GoldFinderBuyHelperCard
+            assert.is_table(card)
+            assert.is_truthy(card.compLine:GetText():find("Craft Profit"))
+            assert.is_falsy(card.compLine:GetText():find("Do Not Craft"))
         end)
     end)
 
@@ -199,6 +236,41 @@ describe("GoldFinder v2.0.0 Features", function()
             assert.are.equal(15, deals[2].ahCutPct)
             assert.are.equal(700, deals[2].netProfit) -- floor(2000 * 0.85) - 1000 = 700
         end)
+
+        it("handles /gf bark and /gf bark test without falling through to help output", function()
+            local printed = {}
+            local fakeChat = {
+                AddMessage = function(_, text) printed[#printed + 1] = text end,
+            }
+            local origDefaultChat = _G.DEFAULT_CHAT_FRAME
+            local origSelectedChat = _G.SELECTED_CHAT_FRAME
+            _G.DEFAULT_CHAT_FRAME = fakeChat
+            _G.SELECTED_CHAT_FRAME = fakeChat
+
+            SeedItemHistory(ns, 13468, { 1000000, 1000000, 1000000 }, "Black Lotus")
+            ns.GetItemTypicalPrice = function(id) return (id == 13468) and 1000000 or nil end
+
+            SlashCmdList["GOLDFINDER"]("bark")
+            local sawBarkStatus = false
+            local sawHelpDump = false
+            for _, line in ipairs(printed) do
+                if line:find("Trade Chat Bark Scanner") then sawBarkStatus = true end
+                if line:find("/gf ratio") then sawHelpDump = true end
+            end
+            assert.is_true(sawBarkStatus)
+            assert.is_false(sawHelpDump)
+
+            printed = {}
+            SlashCmdList["GOLDFINDER"]("bark test")
+            local sawSimulated = false
+            for _, line in ipairs(printed) do
+                if line:find("%[BARK DEAL%]") then sawSimulated = true end
+            end
+            assert.is_true(sawSimulated)
+
+            _G.DEFAULT_CHAT_FRAME = origDefaultChat
+            _G.SELECTED_CHAT_FRAME = origSelectedChat
+        end)
     end)
 
     describe("Theme 4: 30-Day Price Chart Modal & LibSharedMedia-3.0 (#62)", function()
@@ -216,6 +288,42 @@ describe("GoldFinder v2.0.0 Features", function()
             assert.is_false(modal.emptyText:IsShown())
             assert.is_true(modal.bars[5]:IsShown())
             assert.is_false(modal.bars[6]:IsShown())
+        end)
+
+        it("resolves item names in ns.ResolveItemID and /gf chart Elemental Fire", function()
+            helper.mockItemNames[7068] = "Elemental Fire"
+            helper.mockItemNames[13479] = "Recipe: Transmute Elemental Fire"
+            SeedItemHistory(ns, 7068, { 2500, 3100, 2900 }, "Elemental Fire")
+            SeedItemHistory(ns, 13479, { 50000, 48000 }, "Recipe: Transmute Elemental Fire")
+
+            assert.are.equal(7068, ns.ResolveItemID("Elemental Fire"))
+            assert.are.equal(7068, ns.ResolveItemID("elemental fire"))
+            assert.are.equal(7068, ns.ResolveItemID("7068"))
+            assert.are.equal(7068, ns.ResolveItemID("|cffffffff|Hitem:7068::::::::60:::::|h[Elemental Fire]|h|r"))
+
+            local printed = {}
+            local fakeChat = {
+                AddMessage = function(_, text) printed[#printed + 1] = text end,
+            }
+            local origDefaultChat = _G.DEFAULT_CHAT_FRAME
+            local origSelectedChat = _G.SELECTED_CHAT_FRAME
+            _G.DEFAULT_CHAT_FRAME = fakeChat
+            _G.SELECTED_CHAT_FRAME = fakeChat
+
+            SlashCmdList["GOLDFINDER"]("chart Elemental Fire")
+            assert.is_table(_G.GoldFinderPriceChartModal)
+            assert.is_true(_G.GoldFinderPriceChartModal:IsShown())
+
+            local sawOpened, sawUsage = false, false
+            for _, line in ipairs(printed) do
+                if line:find("Opened 30%-day price history chart for Elemental Fire") then sawOpened = true end
+                if line:find("Usage:") then sawUsage = true end
+            end
+            assert.is_true(sawOpened)
+            assert.is_false(sawUsage)
+
+            _G.DEFAULT_CHAT_FRAME = origDefaultChat
+            _G.SELECTED_CHAT_FRAME = origSelectedChat
         end)
 
         it("discovers and plays custom sounds registered via LibSharedMedia-3.0", function()

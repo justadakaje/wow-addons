@@ -180,6 +180,10 @@ _G.SOUNDKIT = {
 
 _G.SlashCmdList = {}
 _G.UISpecialFrames = {}
+_G.UIParent = {
+    GetWidth = function() return 1920 end,
+    GetHeight = function() return 1080 end,
+}
 
 local function CreateMockFrame(frameType, name, parent, template)
     local f = {
@@ -257,6 +261,7 @@ local function CreateMockFrame(frameType, name, parent, template)
         function fs:SetTextColor() end
         function fs:SetJustifyH() end
         function fs:SetJustifyV() end
+        function fs:SetWordWrap() end
         function fs:SetWidth() end
         function fs:SetHeight() end
         function fs:GetStringWidth() return 50 end

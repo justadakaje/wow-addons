@@ -60,7 +60,7 @@
 - **Base64 Profile Sharing:** Export and import full configurations, custom material categories, and watchlists via copy-pasteable strings (`/gf profile export|import`).
 - **Automated Database Vacuum:** Built-in compaction engine prunes stale sightings (>30 days) and caps historical arrays every 7 days, keeping SavedVariables storage featherweight (<2MB).
 - **Multi-Account DB Merger:** Ingest scan dumps across accounts (`/gf merge`) without losing local history.
-- **Dedicated Chat Tab:** Route all notifications, deals, and snipes into a dedicated "GoldFinder" chat tab (`/gf chat tab`).
+- **Dedicated Chat Tab:** Route all notifications, deals, and snipes into a dedicated "GoldFinder" chat tab (`/gf chattab`).
 
 ---
 
@@ -77,7 +77,7 @@
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/justadakaje/wow-addons/master/addons/GoldFinder/assets/GoldFinder-AH-Tab_StatsHover.png" alt="Market Statistics Tooltip" width="700">
+  <img src="https://raw.githubusercontent.com/justadakaje/wow-addons/master/addons/GoldFinder/assets/GoldFinder-AH-Tab-ScansHistoryTooltip.png" alt="Market Statistics Tooltip" width="700">
   <br><em>Market statistics and scan database health hover</em>
 </p>
 
@@ -123,17 +123,19 @@ Full native translation and localized category filtering across 8 languages:
 | Command | Action |
 | :--- | :--- |
 | `/gf` or `/goldfinder` | Opens the graphical Options & Settings window |
+| `/gf config [float\|game]` | Opens the floating Options window or Blizzard's embedded Settings panel |
 | `/gf tour` | Starts the interactive 6-step feature onboarding walkthrough |
 | `/gf ledger` or `/gf pnl` | Opens the Realized Profit & Loss Goblin Ledger |
 | `/gf cart` | Opens the Multi-Item Quick-Buy Staging Cart |
 | `/gf snipe [on\|off]` | Toggles live background Snipe Mode |
 | `/gf info` or `/gf about` | Opens the Journalator-style project info and diagnostics dashboard |
+| `/gf diag` | Prints runtime diagnostics and SavedVariables health summary |
 | `/gf chart <link\|id>` | Opens the interactive 30-day historical price chart modal |
 | `/gf bark [on\|off\|list]` | Toggles the Trade Chat Bark Scanner or lists recent bargains |
 | `/gf cross` | Lists Neutral AH (15% cut) vs. Faction AH (5% cut) arbitrage deals |
 | `/gf alts [link\|id]` | Shows realm-wide alt inventory breakdown and `<3d` mail expiry alerts |
 | `/gf sound [list\|<name>]` | Lists or selects built-in and `LibSharedMedia-3.0` alert sounds |
-| `/gf chat tab` | Toggles routing messages to a dedicated "GoldFinder" chat tab |
+| `/gf chattab` | Toggles routing messages to a dedicated "GoldFinder" chat tab |
 | `/gf profile [export\|import]` | Opens the Base64 profile sharing dialog |
 | `/gf vacuum [days]` | Runs manual database compaction and pruning |
 | `/gf bench` / `/gf memory` | Runs real-time GC benchmarks and memory diagnostics |
@@ -144,5 +146,5 @@ Full native translation and localized category filtering across 8 languages:
 
 - **Author:** KenHenChan
 - **License:** MIT License
-- **Vendored Libraries:** Includes [LibAHTab](https://github.com/TheMouseNest/LibAHTab) (MIT), LibStub, LibDataBroker-1.1, and LibDBIcon-1.0.
+- **Vendored Libraries:** Includes [LibAHTab](https://github.com/TheMouseNest/LibAHTab) (MIT), `LibStub`, `CallbackHandler-1.0`, `LibDataBroker-1.1`, and `LibDBIcon-1.0`.
 - **Independence:** GoldFinder is 100% standalone and is not affiliated with Blizzard Entertainment or Auctionator.

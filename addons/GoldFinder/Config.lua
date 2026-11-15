@@ -978,7 +978,7 @@ local function PopulateConfigControls(parent, isEmbedded)
     statusLbl:SetText("|cff40ff40All settings saved and active|r")
 
     if isEmbedded then
-        resetBtn:SetPoint("TOPLEFT", 28, -610 + offsetY)
+        resetBtn:SetPoint("TOPLEFT", 28, -650 + offsetY)
         infoBtn:SetPoint("LEFT", resetBtn, "RIGHT", 8, 0)
         statusLbl:SetPoint("LEFT", infoBtn, "RIGHT", 12, 0)
         statusLbl:SetPoint("RIGHT", parent, "RIGHT", -24, 0)
@@ -1199,7 +1199,7 @@ local function RegisterAddonSettings()
     scrollFrame:SetPoint("BOTTOMRIGHT", -26, 12)
 
     local scrollChild = CreateFrame("Frame", "GoldFinderSettingsScrollChild", scrollFrame)
-    scrollChild:SetSize(600, 660)
+    scrollChild:SetSize(600, 690)
     scrollFrame:SetScrollChild(scrollChild)
 
     scrollFrame:EnableMouseWheel(true)

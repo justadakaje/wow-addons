@@ -113,6 +113,13 @@ local ui = { rows = {} }
 local requested = {}  -- itemIDs whose names we have asked the client to load
 local OpenInBuy, ShowRowTip, ItemName, QuickBuy  -- defined below; rows call them on click/hover
 
+local function IsCtrlDown()
+    return (IsControlKeyDown and IsControlKeyDown())
+        or (_G.IsLeftControlKeyDown and _G.IsLeftControlKeyDown())
+        or (_G.IsRightControlKeyDown and _G.IsRightControlKeyDown())
+        or false
+end
+
 -- clickable rows highlight on hover and open their deal in the Buy view.
 local function MakeRow(anchor, font, clickable)
     local row = CreateFrame("Frame", nil, panel)
@@ -134,12 +141,24 @@ local function MakeRow(anchor, font, clickable)
             ShowRowTip(self)
         end)
         row:SetScript("OnLeave", function(self)
+            self._ctrlOnDown = false
             self.hl:Hide()
             GameTooltip:Hide()
             if ns.HideSparkline then ns.HideSparkline() end
         end)
+        row:SetScript("OnMouseDown", function(self)
+            self._ctrlOnDown = IsCtrlDown()
+        end)
         row:SetScript("OnMouseUp", function(self, button)
+            local ctrlHeld = IsCtrlDown() or self._ctrlOnDown
+            self._ctrlOnDown = false
             if not self.deal then return end
+            if ctrlHeld then
+                if ns.ShowPriceChartModal and self.deal.itemID then
+                    ns.ShowPriceChartModal(self.deal.itemID)
+                end
+                return
+            end
             if button == "LeftButton" then
                 if self.deal.isUndercut then
                     local name = (ItemName and ItemName(self.deal)) or self.deal.name or ("Item %d"):format(self.deal.itemID)
@@ -148,10 +167,6 @@ local function MakeRow(anchor, font, clickable)
                         ns.Good("Cancelling undercut auction for %s...", name)
                     else
                         ns.Bad("Failed to cancel auction: %s", tostring(err))
-                    end
-                elseif IsControlKeyDown and IsControlKeyDown() then
-                    if ns.ShowPriceChartModal and self.deal and self.deal.itemID then
-                        ns.ShowPriceChartModal(self.deal.itemID)
                     end
                 elseif IsAltKeyDown() then
                     if ns.AddToCart then
@@ -217,6 +232,12 @@ local function MakeRow(anchor, font, clickable)
     star:SetScript("OnClick", function(self)
         local pRow = self:GetParent()
         if pRow.deal and pRow.deal.itemID then
+            if IsCtrlDown() then
+                if ns.ShowPriceChartModal then
+                    ns.ShowPriceChartModal(pRow.deal.itemID)
+                end
+                return
+            end
             local id = pRow.deal.itemID
             local isWatched = ns.ToggleWatchlist(id)
             local name = (ItemName and ItemName(pRow.deal)) or pRow.deal.name or ("Item %d"):format(id)
@@ -1077,6 +1098,7 @@ ShowRowTip = function(row)
         tip:AddDoubleLine("Est. net craft profit", totalNetStr, 0.8, 0.8, 0.8, 0.25, 1, 0.25)
         tip:AddLine(" ")
         tip:AddLine("Left-Click: open crafted item in Buy view.", 0.4, 0.8, 1, true)
+        tip:AddLine("Ctrl-Click: Open 30-Day Price History Chart.", 0.4, 0.8, 1, true)
         tip:Show()
     if ns.ShowSparkline then
         ns.ShowSparkline(tip, d.history, d.typical, d.now)
