@@ -273,6 +273,7 @@ globals = {
     "ForeverProbeEventsDB",
     "AddonSmokeTest",
     "MeridianScoutFlights",
+    "KenHenRosterDB",
 }
 
 -- Pattern ignores for dynamic WoW APIs and addon conventions

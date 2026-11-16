@@ -44,9 +44,10 @@ wow-addons/
 
 | Addon | Client(s) | Status | Link |
 | --- | --- | --- | --- |
-| **GoldFinder** | Multi-Client (Forever `16001`, Retail, Classic Era, MoP) | `v2.0.0` — AH deal & snipe scanner, crafting arbitrage, Disenchant EV, Bark/Cross-Market, Goblin Ledger P&L, 30-day charts, Multi-Alt Hub, TradeSkill overlay (CurseForge ID `1715781`) | [README](addons/GoldFinder/README.md) |
+| **GoldFinder** | Multi-Client (Forever `16001`, Retail, Classic Era, MoP) | `v2.0.0+` — AH deal & snipe scanner, crafting arbitrage, Disenchant EV, Bark/Cross-Market, Goblin Ledger P&L, 30-day charts, Multi-Alt Hub, TradeSkill overlay & taint-safety hardening (CurseForge ID `1715781`) | [README](addons/GoldFinder/README.md) |
 | **BiSGearFinder** | Forever (`16001`) | `v0.1.0` — Class/spec Best-in-Slot browser (`/bgf`, `/bis`) with dungeon/raid/craft filters and optional `GoldFinder` `[ BiS BoEs ]` bridge | [README](addons/BiSGearFinder/README.md) |
-| **MeridianScout** | Forever (`16001`) | Read-only character state, active/completed quests, bind, and observed flight node exporter (`/meridianscout`) | [README](addons/MeridianScout/README.md) |
+| **KenHenRoster** | Multi-Client (Forever `16001`, Retail, Classic Era, TBC) | `v1.0.0` — Alt roster exporter (`/khr`, `KHR1:` / `KHR1J:` / JSON + Forever surnames) & Chroma-Key Portrait Studio (`/khr studio`) for [KenHen.Win](https://kenhen.win) | [README](addons/KenHenRoster/README.md) |
+| **MeridianScout** | Forever (`16001`) | `v0.1.0` — Read-only character state, active/completed quests, bind, and observed flight node exporter (`/meridianscout`) | [README](addons/MeridianScout/README.md) |
 | **ForeverProbe** | Forever (`16001`) | `v0.7.0` — Read-only Blizzard API, event & housing capture (`/fprobe`, `/fpevents`, `/fphouse`) powering `reference/` & `mcp/` | [README](addons/ForeverProbe/README.md) |
 | **AddonSmokeTest** | Classic Era (`20506`), Forever (`16001`) | `v0.0.1` — Minimal proof-of-life (`/smoketest`) | [TOC](addons/AddonSmokeTest/AddonSmokeTest.toc) |
 | **AdventurerPlates** | Forever (`16001`) | Discontinued (`v0.3.2`) — Reference implementation for Chomp pull-only comms and 3D model rendering; two-player sharing verified on build 70009 | [README](addons/AdventurerPlates/README.md) |

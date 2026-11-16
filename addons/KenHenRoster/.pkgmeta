@@ -1,0 +1,4 @@
+package-as: KenHenRoster
+
+ignore:
+  - tests

@@ -1,0 +1,12 @@
+## Interface: 16001, 120105, 11508, 20506
+## Title: KenHen Roster
+## Notes: Captures alt roster metadata (including WoW: Forever surnames) and exports KHR1/JSON strings or chroma-key portraits for KenHen.Win.
+## Author: KenHenChan
+## Version: 1.0.0
+## SavedVariables: KenHenRosterDB
+## X-Target-Client: Multi-Client (Forever, Retail, Classic Era, TBC Anniversary)
+## X-Tested-Build: 1.60.1.70862
+## X-Website: https://kenhen.win
+## X-License: MIT
+
+KenHenRoster.lua

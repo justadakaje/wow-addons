@@ -32,7 +32,7 @@ Pushing a release tag publishes that one addon. The workflow is
 | `goldfinder-v` | `addons/GoldFinder` |
 | `adventurerplates-v` | `addons/AdventurerPlates` (discontinued reference) |
 
-> **Note:** `BiSGearFinder` has listing copy in [curseforge/bisgearfinder.md](curseforge/bisgearfinder.md), and is not yet wired into `.github/workflows/release.yml`. For the standalone developer toolkit bundle (MCP server + API reference + `ForeverProbe`, not a CurseForge addon zip), use `scripts/package-devkit.ps1` (see [copilot-devkit.md](copilot-devkit.md)).
+> **Note:** `BiSGearFinder` (has listing copy in [curseforge/bisgearfinder.md](curseforge/bisgearfinder.md)), `MeridianScout`, and `KenHenRoster` are not yet wired into `.github/workflows/release.yml` and are packaged locally via `scripts/package-addon.ps1`. For the standalone developer toolkit bundle (MCP server + API reference + `ForeverProbe`, not a CurseForge addon zip), use `scripts/package-devkit.ps1` (see [copilot-devkit.md](copilot-devkit.md)).
 
 - **Use `-`, never `/`** in a tag: the packager puts the tag in the file name.
 - A tag containing **`beta`** uploads as Beta; **`alpha`** as Alpha; neither
