@@ -4,6 +4,19 @@ All notable changes to GoldFinder. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **UI Taint & Protected Action Hardening:**
+  - Parented floating TradeSkill profit badge (`GoldFinderTradeSkillBadgeFrame`), Mailbox `[ Collect Deals ]` button (`GoldFinderMailCollectBtn`), and AH tab panel (`GoldFinderAuctionTabPanel`) to `UIParent` instead of attaching child regions/frames directly to Blizzard's protected `ProfessionsFrame`, `TradeSkillFrame`, `InboxFrame`, or `AuctionHouseFrame` hierarchies.
+  - Updated `Tab.lua` `OpenInBuy` to hide GoldFinder's panel and follow `SelectBrowseResult` with `SendSearchQuery` / `RefreshCommoditySearchResults` rather than clicking `AuctionHouseFrame.Tabs[1]` under addon taint; fixed Lua multi-return truncation in `ns.GetCartTotals()` assignment.
+  - Replaced `HideUIPanel(SettingsPanel)` / `settingsPanel:Hide()` in `Config.lua` with a chat instruction to prevent mutating Blizzard's protected `UIPanel` stack.
+  - Switched `Broker.lua` tab selection to `LibStub("LibAHTab-1-0", true)` via `pcall(libAH.SetSelected, ...)`.
+  - Guarded `FCF_OpenNewWindow` calls in `Core.lua` with `InCombatLockdown()` checks (`C_RestrictedActions.InCombatLockdown` / `_G.InCombatLockdown`).
+  - Added `issecretvalue` and `tip:IsForbidden()` guards plus mutually exclusive `TooltipDataProcessor` vs legacy `OnTooltipSetItem` registration in `Tooltip.lua`.
+  - Added regression coverage in `tests/taint_safety_spec.lua`.
+
 ## [2.0.0] - 2026-11-13
 
 ### Added

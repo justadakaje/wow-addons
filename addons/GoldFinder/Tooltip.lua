@@ -124,30 +124,45 @@ local function AddPriceLines(tip, itemID)
     end
 end
 
-local function OnTooltipSetItem(tip)
-    local _, link = tip:GetItem()
-    if not link then return end
-    local itemID = tonumber(link:match("item:(%d+)"))
+local function IsSecretValue(val)
+    local isSecret = _G.issecretvalue
+    return val ~= nil and isSecret and isSecret(val)
+end
+
+local function OnTooltipSetItem(tip, data)
+    if not tip or (tip.IsForbidden and tip:IsForbidden()) then return end
+    local itemID
+    if type(data) == "table" and not IsSecretValue(data.id) then
+        itemID = tonumber(data.id)
+    end
+    if not itemID and type(tip.GetItem) == "function" then
+        local _, link = tip:GetItem()
+        if link and not IsSecretValue(link) and type(link) == "string" then
+            itemID = tonumber(link:match("item:(%d+)"))
+        end
+    end
     if itemID then
         AddPriceLines(tip, itemID)
     end
 end
 
--- Hook tooltips safely across modern TooltipDataProcessor and classic hooks
-if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum.TooltipDataType and Enum.TooltipDataType.Item then
+local function HookLegacyTooltip(tipFrame)
+    if not tipFrame or not tipFrame.HookScript then return end
+    if tipFrame.HasScript and not tipFrame:HasScript("OnTooltipSetItem") then return end
+    tipFrame:HookScript("OnTooltipSetItem", function(tip)
+        OnTooltipSetItem(tip)
+    end)
+end
+
+-- Hook tooltips safely across modern TooltipDataProcessor and classic hooks (never both)
+if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType and Enum.TooltipDataType.Item then
     TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, function(tip, data)
+        if not tip or (tip.IsForbidden and tip:IsForbidden()) then return end
         if tip == GameTooltip or tip == ItemRefTooltip then
-            local itemID = data and data.id
-            if itemID then
-                AddPriceLines(tip, itemID)
-            end
+            OnTooltipSetItem(tip, data)
         end
     end)
 else
-    if GameTooltip and GameTooltip.HookScript then
-        GameTooltip:HookScript("OnTooltipSetItem", OnTooltipSetItem)
-    end
-    if ItemRefTooltip and ItemRefTooltip.HookScript then
-        ItemRefTooltip:HookScript("OnTooltipSetItem", OnTooltipSetItem)
-    end
+    HookLegacyTooltip(GameTooltip)
+    HookLegacyTooltip(ItemRefTooltip)
 end

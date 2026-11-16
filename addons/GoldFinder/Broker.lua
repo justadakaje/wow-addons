@@ -103,8 +103,9 @@ local function InitBroker()
                 if IsShiftKeyDown() then
                     ns.ShowExportDialog()
                 else
-                    if AuctionHouseFrame and AuctionHouseFrame:IsShown() and LibAHTab then
-                        LibAHTab:SetSelectedTab(AuctionHouseFrame, "GOLDFINDER")
+                    local libAH = LibStub and LibStub("LibAHTab-1-0", true)
+                    if AuctionHouseFrame and AuctionHouseFrame:IsShown() and libAH and libAH.SetSelected then
+                        pcall(libAH.SetSelected, libAH, "GoldFinder")
                     else
                         ns.Print("Visit an Auction House to view deals. Shift-Click for CSV export.")
                     end

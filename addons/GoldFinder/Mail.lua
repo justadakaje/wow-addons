@@ -236,9 +236,19 @@ end
 ---------------------------------------------------------------------------
 -- MailFrame UI Integration
 
+local hookedMailFrames = setmetatable({}, { __mode = "k" })
+
+local function HideCollectButton()
+    if collectBtn then
+        collectBtn:Hide()
+    end
+end
+
 local function UpdateCollectButton()
     if not collectBtn then return end
-    if InboxFrame and not InboxFrame:IsShown() then
+    if not MailFrame
+        or (MailFrame.IsShown and not MailFrame:IsShown())
+        or (InboxFrame and InboxFrame.IsShown and not InboxFrame:IsShown()) then
         collectBtn:Hide()
         return
     end
@@ -260,12 +270,19 @@ local function CreateMailButtonOnce()
     if collectBtn or not MailFrame then return end
     if not (ns.IsMailCollectorEnabled and ns.IsMailCollectorEnabled()) then return end
 
-    -- Parent directly to InboxFrame so the button automatically hides on the Send Mail tab
-    local parent = InboxFrame or MailFrame
-    local btn = CreateFrame("Button", "GoldFinderMailCollectBtn", parent, "UIPanelButtonTemplate")
+    -- Parent to UIParent and anchor cleanly to InboxFrame/MailFrame so we never mutate Blizzard frame hierarchies
+    local anchor = InboxFrame or MailFrame
+    local btn = CreateFrame("Button", "GoldFinderMailCollectBtn", UIParent or anchor, "UIPanelButtonTemplate")
     btn:SetSize(125, 22)
     -- Position in top header area of the Inbox tab (below the Close button, away from mail items)
-    btn:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -48, -32)
+    btn:SetPoint("TOPRIGHT", anchor, "TOPRIGHT", -48, -32)
+    if btn.SetFrameStrata then
+        btn:SetFrameStrata((anchor.GetFrameStrata and anchor:GetFrameStrata()) or "HIGH")
+    end
+    if btn.SetFrameLevel then
+        local baseLevel = (anchor.GetFrameLevel and anchor:GetFrameLevel()) or 10
+        btn:SetFrameLevel(baseLevel + 10)
+    end
     btn:SetText("Collect Deals")
     btn:SetScript("OnClick", StartCollection)
     btn:SetScript("OnEnter", function(self)
@@ -283,13 +300,32 @@ local function CreateMailButtonOnce()
     end)
     btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    -- Safe post-hook on InboxFrame Show to sync deal count without taint
-    if InboxFrame and InboxFrame.Show then
-        hooksecurefunc(InboxFrame, "Show", function()
-            if collectBtn then
-                UpdateCollectButton()
-            end
-        end)
+    -- Safe post-hooks on InboxFrame/MailFrame Show and Hide to sync/hide without taint
+    if InboxFrame and not hookedMailFrames[InboxFrame] then
+        hookedMailFrames[InboxFrame] = true
+        if InboxFrame.Show then
+            hooksecurefunc(InboxFrame, "Show", function()
+                if collectBtn then
+                    UpdateCollectButton()
+                end
+            end)
+        end
+        if InboxFrame.Hide then
+            hooksecurefunc(InboxFrame, "Hide", HideCollectButton)
+        end
+    end
+    if MailFrame and not hookedMailFrames[MailFrame] then
+        hookedMailFrames[MailFrame] = true
+        if MailFrame.Show then
+            hooksecurefunc(MailFrame, "Show", function()
+                if collectBtn then
+                    UpdateCollectButton()
+                end
+            end)
+        end
+        if MailFrame.Hide then
+            hooksecurefunc(MailFrame, "Hide", HideCollectButton)
+        end
     end
 
     collectBtn = btn
@@ -362,5 +398,6 @@ mailFrameEvents:SetScript("OnEvent", function(self, event)
     elseif event == "MAIL_CLOSED" then
         isCollecting = false
         pendingCollection = {}
+        HideCollectButton()
     end
 end)

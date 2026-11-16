@@ -545,19 +545,48 @@ end
 local tradeSkillBadge = nil
 local currentRecipeID = nil
 
-local function GetOrCreateTradeSkillBadge(parentFrame)
-    if tradeSkillBadge and tradeSkillBadge:GetParent() == parentFrame then
-        return tradeSkillBadge
-    end
-    if not parentFrame then return nil end
+local tradeSkillBadgeFrame = nil
+local hookedTradeSkillHosts = setmetatable({}, { __mode = "k" })
 
-    -- Non-interactive read-only FontString anchored away from secure Create buttons (zero taint)
-    local fs = parentFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    fs:SetPoint("BOTTOMLEFT", parentFrame, "BOTTOMLEFT", 18, 12)
-    fs:SetJustifyH("LEFT")
-    fs:SetText("")
-    tradeSkillBadge = fs
-    return fs
+local function HideTradeSkillBadge()
+    if tradeSkillBadgeFrame then
+        tradeSkillBadgeFrame:Hide()
+    end
+end
+
+local function GetOrCreateTradeSkillBadge(hostFrame)
+    if not hostFrame then return nil end
+    if not tradeSkillBadgeFrame then
+        -- Parent to UIParent so we never attach child regions directly to ProfessionsFrame / TradeSkillFrame
+        local badgeFrame = CreateFrame("Frame", "GoldFinderTradeSkillBadgeFrame", UIParent or hostFrame)
+        badgeFrame:SetSize(420, 20)
+        local fs = badgeFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        fs:SetAllPoints(badgeFrame)
+        fs:SetJustifyH("LEFT")
+        fs:SetText("")
+        tradeSkillBadgeFrame = badgeFrame
+        tradeSkillBadge = fs
+    end
+
+    tradeSkillBadgeFrame:ClearAllPoints()
+    tradeSkillBadgeFrame:SetPoint("BOTTOMLEFT", hostFrame, "BOTTOMLEFT", 18, 12)
+    if tradeSkillBadgeFrame.SetFrameStrata then
+        tradeSkillBadgeFrame:SetFrameStrata((hostFrame.GetFrameStrata and hostFrame:GetFrameStrata()) or "HIGH")
+    end
+    if tradeSkillBadgeFrame.SetFrameLevel then
+        local baseLevel = (hostFrame.GetFrameLevel and hostFrame:GetFrameLevel()) or 10
+        tradeSkillBadgeFrame:SetFrameLevel(baseLevel + 10)
+    end
+
+    if not hookedTradeSkillHosts[hostFrame] then
+        hookedTradeSkillHosts[hostFrame] = true
+        if hooksecurefunc and hostFrame.Hide then
+            hooksecurefunc(hostFrame, "Hide", HideTradeSkillBadge)
+        end
+    end
+
+    tradeSkillBadgeFrame:Show()
+    return tradeSkillBadge
 end
 
 local function UpdateTradeSkillBadge(recipeID)
@@ -622,7 +651,13 @@ end
 local tsWatcher = CreateFrame("Frame")
 tsWatcher:RegisterEvent("TRADE_SKILL_SHOW")
 tsWatcher:RegisterEvent("TRADE_SKILL_DATA_SOURCE_CHANGED")
-tsWatcher:SetScript("OnEvent", function()
+tsWatcher:RegisterEvent("TRADE_SKILL_CLOSE")
+tsWatcher:SetScript("OnEvent", function(_, event)
+    if event == "TRADE_SKILL_CLOSE" then
+        currentRecipeID = nil
+        HideTradeSkillBadge()
+        return
+    end
     ns.InitTradeSkillOverlay()
     if currentRecipeID then
         UpdateTradeSkillBadge(currentRecipeID)

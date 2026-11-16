@@ -1163,11 +1163,9 @@ function ns.ToggleConfig(mode)
     if configFrame and configFrame:IsShown() then
         configFrame:Hide()
     elseif settingsPanel and settingsPanel:IsShown() and ns.settingsCategory then
-        if _G.HideUIPanel then
-            _G.HideUIPanel(settingsPanel)
-        else
-            settingsPanel:Hide()
-        end
+        -- Never call HideUIPanel(SettingsPanel) or settingsPanel:Hide() from addon code,
+        -- as mutating Blizzard's protected UIPanel stack taints UIParent / bag clicks.
+        ns.Print("Press Escape or click Close to exit Blizzard Game Options.")
     else
         ns.OpenConfig(mode)
     end

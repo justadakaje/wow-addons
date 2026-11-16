@@ -314,10 +314,49 @@ local function ShowDetails(owner)
     tip:Show()
 end
 
-local function BuildPanel()
-    panel = CreateFrame("Frame", nil, AuctionHouseFrame)
+local hookedAuctionHouse = false
+local ahCloseSync = nil
+
+local function SyncPanelLayer()
+    if not panel or not AuctionHouseFrame then return end
+    panel:ClearAllPoints()
     panel:SetPoint("TOPLEFT", AuctionHouseFrame, "TOPLEFT", 20, -76)
     panel:SetPoint("BOTTOMRIGHT", AuctionHouseFrame, "BOTTOMRIGHT", -20, 14)
+    if panel.SetFrameStrata then
+        panel:SetFrameStrata((AuctionHouseFrame.GetFrameStrata and AuctionHouseFrame:GetFrameStrata()) or "HIGH")
+    end
+    if panel.SetFrameLevel then
+        local baseLevel = (AuctionHouseFrame.GetFrameLevel and AuctionHouseFrame:GetFrameLevel()) or 10
+        panel:SetFrameLevel(baseLevel + 5)
+    end
+end
+
+local function HidePanel()
+    if panel then
+        panel:Hide()
+    end
+end
+
+local function BuildPanel()
+    -- Parent to UIParent rather than AuctionHouseFrame so our UI never taints Blizzard's AH frame tree
+    panel = CreateFrame("Frame", "GoldFinderAuctionTabPanel", UIParent or AuctionHouseFrame)
+    SyncPanelLayer()
+    panel:Hide()
+
+    if hooksecurefunc and panel.Show then
+        hooksecurefunc(panel, "Show", SyncPanelLayer)
+    end
+    if AuctionHouseFrame and not hookedAuctionHouse then
+        hookedAuctionHouse = true
+        if hooksecurefunc and AuctionHouseFrame.Hide then
+            hooksecurefunc(AuctionHouseFrame, "Hide", HidePanel)
+        end
+    end
+    if not ahCloseSync then
+        ahCloseSync = CreateFrame("Frame")
+        ahCloseSync:RegisterEvent("AUCTION_HOUSE_CLOSED")
+        ahCloseSync:SetScript("OnEvent", HidePanel)
+    end
 
     -- Results view: gold count, one sentence, then the table.
     ui.title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -379,7 +418,10 @@ local function BuildPanel()
     cartBtn:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_BOTTOMLEFT")
         GameTooltip:SetText("Staging Cart", 1, 0.82, 0)
-        local n, items, cost, profit = ns.GetCartTotals and ns.GetCartTotals() or 0, 0, 0, 0
+        local n, items, cost, profit = 0, 0, 0, 0
+        if ns.GetCartTotals then
+            n, items, cost, profit = ns.GetCartTotals()
+        end
         GameTooltip:AddLine(("Staged lots: %d (%d items)"):format(n or 0, items or 0), 1, 1, 1)
         if cost and cost > 0 then
             GameTooltip:AddDoubleLine("Total Cost:", ns.Money(cost), 0.8, 0.8, 0.8, 1, 1, 1)
@@ -932,14 +974,9 @@ OpenInBuy = function(d)
         ns.Warn("%s is still loading from the server. Click it again in a moment.", name)
         return
     end
-    -- Select Blizzard's Buy tab first, as a player would, so Blizzard sets
-    -- the title and tab highlight itself (v0.0.6 opened the view under the
-    -- GoldFinder title with no tab lit). Tabs[1] is Buy: the order Buy,
-    -- Sell, Auctions was measured in-client. Back then returns to Buy.
-    local buyTab = type(AuctionHouseFrame.Tabs) == "table" and AuctionHouseFrame.Tabs[1]
-    if buyTab and type(buyTab.Click) == "function" then
-        pcall(buyTab.Click, buyTab)
-    end
+    -- Hide GoldFinder's panel and navigate via SelectBrowseResult + search query
+    -- without clicking Blizzard's AuctionHouseFrame.Tabs[1] under addon taint.
+    HidePanel()
 
     local ok, err = pcall(AuctionHouseFrame.SelectBrowseResult, AuctionHouseFrame, {
         itemKey = key, minPrice = math.floor(d.now), totalQuantity = d.qty,
@@ -947,8 +984,17 @@ OpenInBuy = function(d)
     })
     if not ok then
         ns.Bad("Could not open %s in the Buy view: %s", name, tostring(err))
-    elseif not exact then
-        ns.Print("Opened %s by item ID. If no listings show, run a Full Scan and try again.", name)
+    else
+        -- AGENTS.md: follow SelectBrowseResult with SendSearchQuery (or commodity refresh)
+        -- so CommoditiesBuyFrame / ItemBuyFrame never stays stuck on "Searching...".
+        if C_AuctionHouse and C_AuctionHouse.SendSearchQuery then
+            pcall(C_AuctionHouse.SendSearchQuery, key, {}, false)
+        elseif C_AuctionHouse and C_AuctionHouse.RefreshCommoditySearchResults and d.itemID then
+            pcall(C_AuctionHouse.RefreshCommoditySearchResults, d.itemID)
+        end
+        if not exact then
+            ns.Print("Opened %s by item ID. If no listings show, run a Full Scan and try again.", name)
+        end
     end
 end
 

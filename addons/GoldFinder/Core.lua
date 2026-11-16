@@ -32,7 +32,11 @@ function ns.GetOrCreateChatWindow(name)
         return frame, idx
     end
 
-    if type(FCF_OpenNewWindow) == "function" then
+    local ra = _G.C_RestrictedActions
+    local inCombatFn = _G.InCombatLockdown
+    local inCombat = (ra and ra.InCombatLockdown and ra.InCombatLockdown())
+        or (inCombatFn and inCombatFn())
+    if not inCombat and type(FCF_OpenNewWindow) == "function" then
         local newFrame = FCF_OpenNewWindow(name)
         if newFrame then
             return newFrame
