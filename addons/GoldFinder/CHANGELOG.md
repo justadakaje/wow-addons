@@ -4,7 +4,7 @@ All notable changes to GoldFinder. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.0.1] - 2026-11-16
 
 ### Fixed
 
@@ -16,6 +16,15 @@ All notable changes to GoldFinder. Format follows
   - Guarded `FCF_OpenNewWindow` calls in `Core.lua` with `InCombatLockdown()` checks (`C_RestrictedActions.InCombatLockdown` / `_G.InCombatLockdown`).
   - Added `issecretvalue` and `tip:IsForbidden()` guards plus mutually exclusive `TooltipDataProcessor` vs legacy `OnTooltipSetItem` registration in `Tooltip.lua`.
   - Added regression coverage in `tests/taint_safety_spec.lua`.
+- **Smart Buy Parity Advisor Search & Multi-Output Math (`BuyHelper.lua`):**
+  - Dispatched `C_AuctionHouse.SendSearchQuery` (or `RefreshCommoditySearchResults`) immediately after `SelectBrowseResult` when clicking `[ Search <Alternative> ]` so right-hand Auction House listings load right away instead of hanging on `"Searching..."`.
+  - Fixed multi-output conversion calculations (e.g., `Heart of Fire -> 3x Elemental Fire`) to multiply output value by recipe quantity and show green `[Craft Profit]` guidance instead of false `[Do Not Craft] Save 0c` warnings.
+- **30-Day Price Chart Modal & Slash Command UX (`Core.lua`, `Tab.lua`, `Sparkline.lua`, `Info.lua`):**
+  - Added `ns.ResolveItemID` so `/gf chart <itemName|itemLink|itemID>` and `/gf alts` resolve plain-text item names across tracked items and crafting conversions (e.g., `/gf chart Elemental Fire`).
+  - Forwarded `Ctrl+Click` from watchlist star child buttons and captured modifier state on `OnMouseDown`/`OnMouseUp` across deal rows, added `Ctrl-Click` hints to conversion tooltips, raised `GoldFinderPriceChartModal` to `FULLSCREEN_DIALOG` strata with `Raise()`, and added fallback to all sightings when fewer than 2 fall within 30 days.
+  - Mirrored slash command output to `SELECTED_CHAT_FRAME` when dedicated chat-tab routing is enabled, added `/gf bark test` simulation, and surfaced `BarkScanner` state in diagnostic reports.
+- **Embedded Options Layout Parity (`Config.lua`):**
+  - Expanded Blizzard embedded Settings `scrollChild` height and adjusted bottom button offsets to prevent button collisions in Game Options > AddOns > GoldFinder.
 
 ## [2.0.0] - 2026-11-13
 
