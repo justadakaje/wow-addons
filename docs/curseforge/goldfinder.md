@@ -130,10 +130,10 @@ Full native translation and localized category filtering across 8 languages:
 | `/gf snipe [on\|off]` | Toggles live background Snipe Mode |
 | `/gf info` or `/gf about` | Opens the Journalator-style project info and diagnostics dashboard |
 | `/gf diag` | Prints runtime diagnostics and SavedVariables health summary |
-| `/gf chart <link\|id>` | Opens the interactive 30-day historical price chart modal |
-| `/gf bark [on\|off\|list]` | Toggles the Trade Chat Bark Scanner or lists recent bargains |
+| `/gf chart <name\|link\|id>` | Opens the interactive 30-day historical price chart modal |
+| `/gf bark [on\|off\|list\|test]` | Toggles the Trade Chat Bark Scanner, lists bargains, or simulates one |
 | `/gf cross` | Lists Neutral AH (15% cut) vs. Faction AH (5% cut) arbitrage deals |
-| `/gf alts [link\|id]` | Shows realm-wide alt inventory breakdown and `<3d` mail expiry alerts |
+| `/gf alts [name\|link\|id]` | Shows realm-wide alt inventory breakdown and `<3d` mail expiry alerts |
 | `/gf sound [list\|<name>]` | Lists or selects built-in and `LibSharedMedia-3.0` alert sounds |
 | `/gf chattab` | Toggles routing messages to a dedicated "GoldFinder" chat tab |
 | `/gf profile [export\|import]` | Opens the Base64 profile sharing dialog |

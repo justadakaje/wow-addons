@@ -67,16 +67,16 @@
 | Market Statistics & Scan Health | Scan Complete Chat Alerts |
 |:---:|:---:|
 | [![Market Stats Tooltip](assets/GoldFinder-AH-Tab-ScansHistoryTooltip.png)](assets/GoldFinder-AH-Tab-ScansHistoryTooltip.png) | [![Scan Notification](assets/AH-FullScan-GoldFinderChatAlert-MegaSnipe.png)](assets/AH-FullScan-GoldFinderChatAlert-MegaSnipe.png) |
-| **Options & Settings Window** | **Goblin Ledger P&L & Project Info** |
-| [![Options Window](assets/GoldFinder-Options.png)](assets/GoldFinder-Options.png) | [![Goblin Ledger P&L](assets/GoldFinder-GoblinLedgerP&L.png)](assets/GoldFinder-GoblinLedgerP&L.png) |
-
-[![GoldFinder Info & Diagnostics](assets/GoldFinder-InfoAbout.png)](assets/GoldFinder-InfoAbout.png)
 | *Scan history, evaluated items count, and threshold stats* | *Instant chat notification when high-margin deals and snipes are detected* |
 
-| Native AddOn List Categorization |
-|:---:|
-| [![AddOn List Categories](assets/AddOn%20List.png)](assets/AddOn%20List.png) |
-| *Cleanly organized under Blizzard's native `▼ Auctions` category alongside Auctionator* |
+| Options & Settings Window | Goblin Ledger P&L |
+|:---:|:---:|
+| [![Options Window](assets/GoldFinder-Options.png)](assets/GoldFinder-Options.png) | [![Goblin Ledger P&L](assets/GoldFinder-GoblinLedgerP&L.png)](assets/GoldFinder-GoblinLedgerP&L.png) |
+
+| Info & Diagnostics Dashboard | Native AddOn List Categorization |
+|:---:|:---:|
+| [![GoldFinder Info & Diagnostics](assets/GoldFinder-InfoAbout.png)](assets/GoldFinder-InfoAbout.png) | [![AddOn List Categories](assets/AddOn%20List.png)](assets/AddOn%20List.png) |
+| *In-game Markdown diagnostics & support vault* | *Cleanly organized under Blizzard's native `▼ Auctions` category alongside Auctionator* |
 
 ---
 
@@ -114,10 +114,10 @@ Full native translation and localized category filtering across 8 languages:
 | `/gf tour` | Starts the interactive 6-step feature onboarding walkthrough |
 | `/gf ledger` or `/gf pnl` | Opens the Realized Profit & Loss Goblin Ledger |
 | `/gf cart` | Opens the Multi-Item Quick-Buy Staging Cart |
-| `/gf chart` | Opens 30-day item price history charts (also `Ctrl-Click` on item rows) |
-| `/gf bark` | Toggles or inspects Trade/barter Bark Scanner alerts |
+| `/gf chart [name\|link\|id]` | Opens 30-day item price history charts (also `Ctrl-Click` on item rows) |
+| `/gf bark [on\|off\|list\|test]` | Toggles or inspects Trade/barter Bark Scanner alerts (or simulates one) |
 | `/gf cross` | Opens Cross-Market arbitrage comparison view |
-| `/gf alts` | Opens the Multi-Alt Hub and mail expiry (`<3d`) monitor |
+| `/gf alts [name\|link\|id]` | Opens the Multi-Alt Hub and mail expiry (`<3d`) monitor |
 | `/gf snipe [on\|off]` | Toggles live background Snipe Mode |
 | `/gf info` or `/gf about` | Opens the Journalator-style project info and diagnostics dashboard |
 | `/gf diag` | Prints runtime diagnostics and SavedVariables health summary |
