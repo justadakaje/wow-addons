@@ -244,6 +244,21 @@ local function HideCollectButton()
     end
 end
 
+local function SyncCollectButtonLayer()
+    if not collectBtn then return end
+    local anchor = InboxFrame or MailFrame
+    if not anchor then return end
+    collectBtn:ClearAllPoints()
+    collectBtn:SetPoint("TOPRIGHT", anchor, "TOPRIGHT", -48, -32)
+    if collectBtn.SetFrameStrata then
+        collectBtn:SetFrameStrata((ns.GetOverlayStrata and ns.GetOverlayStrata(anchor)) or "HIGH")
+    end
+    if collectBtn.SetFrameLevel then
+        local baseLevel = (anchor.GetFrameLevel and anchor:GetFrameLevel()) or 10
+        collectBtn:SetFrameLevel(baseLevel + 10)
+    end
+end
+
 local function UpdateCollectButton()
     if not collectBtn then return end
     if not MailFrame
@@ -252,6 +267,7 @@ local function UpdateCollectButton()
         collectBtn:Hide()
         return
     end
+    SyncCollectButtonLayer()
     collectBtn:Show()
     if isCollecting then return end
 
@@ -277,7 +293,7 @@ local function CreateMailButtonOnce()
     -- Position in top header area of the Inbox tab (below the Close button, away from mail items)
     btn:SetPoint("TOPRIGHT", anchor, "TOPRIGHT", -48, -32)
     if btn.SetFrameStrata then
-        btn:SetFrameStrata((anchor.GetFrameStrata and anchor:GetFrameStrata()) or "HIGH")
+        btn:SetFrameStrata((ns.GetOverlayStrata and ns.GetOverlayStrata(anchor)) or "HIGH")
     end
     if btn.SetFrameLevel then
         local baseLevel = (anchor.GetFrameLevel and anchor:GetFrameLevel()) or 10

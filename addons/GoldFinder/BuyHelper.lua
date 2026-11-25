@@ -571,7 +571,7 @@ local function GetOrCreateTradeSkillBadge(hostFrame)
     tradeSkillBadgeFrame:ClearAllPoints()
     tradeSkillBadgeFrame:SetPoint("BOTTOMLEFT", hostFrame, "BOTTOMLEFT", 18, 12)
     if tradeSkillBadgeFrame.SetFrameStrata then
-        tradeSkillBadgeFrame:SetFrameStrata((hostFrame.GetFrameStrata and hostFrame:GetFrameStrata()) or "HIGH")
+        tradeSkillBadgeFrame:SetFrameStrata((ns.GetOverlayStrata and ns.GetOverlayStrata(hostFrame)) or "HIGH")
     end
     if tradeSkillBadgeFrame.SetFrameLevel then
         local baseLevel = (hostFrame.GetFrameLevel and hostFrame:GetFrameLevel()) or 10
