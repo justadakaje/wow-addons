@@ -74,6 +74,7 @@ local function CreateRichMockFrame(frameType, name, parent)
         width = 800,
         height = 600,
         value = 0,
+        points = {},
         Instructions = CreateMockFontString(),
         GetParent = function(self) return self.parent end,
         SetParent = function(self, p) self.parent = p end,
@@ -98,8 +99,8 @@ local function CreateRichMockFrame(frameType, name, parent)
         SetHeight = function(self, h) self.height = h end,
         GetWidth = function(self) return self.width end,
         GetHeight = function(self) return self.height end,
-        SetPoint = function() end,
-        ClearAllPoints = function() end,
+        SetPoint = function(self, ...) self.points[#self.points + 1] = { ... } end,
+        ClearAllPoints = function(self) self.points = {} end,
         SetAllPoints = function() end,
         SetFrameStrata = function(self, s) self.strata = s end,
         GetFrameStrata = function(self) return self.strata end,
@@ -422,6 +423,10 @@ describe("GoldFinder Taint Safety & Forever 16001 Fixes", function()
                 assert.are.equal(_G.UIParent, badgeFrame:GetParent())
                 assert.are.equal("HIGH", badgeFrame:GetFrameStrata())
                 assert.is_true(badgeFrame:IsShown())
+                assert.is_not_nil(badgeFrame.points[1])
+                assert.are.equal("TOPLEFT", badgeFrame.points[1][1])
+                assert.are.equal(_G.ProfessionsFrame, badgeFrame.points[1][2])
+                assert.are.equal("BOTTOMLEFT", badgeFrame.points[1][3])
 
                 -- Hiding ProfessionsFrame hides the standalone badge
                 _G.ProfessionsFrame:Hide()

@@ -2,7 +2,7 @@
 ## Title: GoldFinder
 ## Notes: Adds a GoldFinder tab to the auction house. Shares the tab row with other auction house addons instead of fighting them for it.
 ## Author: KenHenChan
-## Version: 2.0.2
+## Version: 2.0.3
 ## IconTexture: Interface\AddOns\GoldFinder\assets\GoldFinder-Logo.png
 ## Category: Auctions
 ## Category-enUS: Auctions
