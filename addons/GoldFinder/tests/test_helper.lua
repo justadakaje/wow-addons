@@ -326,7 +326,7 @@ end
 function helper.createNamespace(overrides)
     local ns = {
         addonName = "GoldFinder",
-        version = "2.0.2",
+        version = "2.0.3",
         db = {
             items = {},
             scans = {},

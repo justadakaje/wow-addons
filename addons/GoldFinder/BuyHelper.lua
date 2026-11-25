@@ -558,24 +558,47 @@ local function GetOrCreateTradeSkillBadge(hostFrame)
     if not hostFrame then return nil end
     if not tradeSkillBadgeFrame then
         -- Parent to UIParent so we never attach child regions directly to ProfessionsFrame / TradeSkillFrame
-        local badgeFrame = CreateFrame("Frame", "GoldFinderTradeSkillBadgeFrame", UIParent or hostFrame)
-        badgeFrame:SetSize(420, 20)
+        local template = BackdropTemplateMixin and "BackdropTemplate" or nil
+        local badgeFrame = CreateFrame("Frame", "GoldFinderTradeSkillBadgeFrame", UIParent or hostFrame, template)
+        badgeFrame:SetSize(420, 26)
+        if badgeFrame.SetClampedToScreen then
+            badgeFrame:SetClampedToScreen(true)
+        end
+        if badgeFrame.SetBackdrop then
+            badgeFrame:SetBackdrop({
+                bgFile = "Interface\\Buttons\\WHITE8X8",
+                edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+                tile = true, tileSize = 8, edgeSize = 10,
+                insets = { left = 2, right = 2, top = 2, bottom = 2 },
+            })
+            badgeFrame:SetBackdropColor(0.05, 0.06, 0.09, 0.94)
+            badgeFrame:SetBackdropBorderColor(0.75, 0.60, 0.18, 0.95)
+        end
         local fs = badgeFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        fs:SetAllPoints(badgeFrame)
+        fs:SetPoint("LEFT", badgeFrame, "LEFT", 10, 0)
+        fs:SetPoint("RIGHT", badgeFrame, "RIGHT", -10, 0)
         fs:SetJustifyH("LEFT")
+        if fs.SetWordWrap then
+            fs:SetWordWrap(false)
+        end
         fs:SetText("")
         tradeSkillBadgeFrame = badgeFrame
         tradeSkillBadge = fs
     end
 
     tradeSkillBadgeFrame:ClearAllPoints()
-    tradeSkillBadgeFrame:SetPoint("BOTTOMLEFT", hostFrame, "BOTTOMLEFT", 18, 12)
+    tradeSkillBadgeFrame:SetHeight(26)
+    tradeSkillBadgeFrame:SetPoint("TOPLEFT", hostFrame, "BOTTOMLEFT", 4, -2)
+    tradeSkillBadgeFrame:SetPoint("TOPRIGHT", hostFrame, "BOTTOMRIGHT", -4, -2)
     if tradeSkillBadgeFrame.SetFrameStrata then
         tradeSkillBadgeFrame:SetFrameStrata((ns.GetOverlayStrata and ns.GetOverlayStrata(hostFrame)) or "HIGH")
     end
     if tradeSkillBadgeFrame.SetFrameLevel then
         local baseLevel = (hostFrame.GetFrameLevel and hostFrame:GetFrameLevel()) or 10
         tradeSkillBadgeFrame:SetFrameLevel(baseLevel + 10)
+    end
+    if tradeSkillBadgeFrame.SetScale and hostFrame.GetScale then
+        tradeSkillBadgeFrame:SetScale(hostFrame:GetScale() or 1)
     end
 
     if not hookedTradeSkillHosts[hostFrame] then

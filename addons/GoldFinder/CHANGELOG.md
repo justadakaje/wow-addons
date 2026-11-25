@@ -4,6 +4,14 @@ All notable changes to GoldFinder. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.3] - 2026-11-24
+
+### Fixed
+
+- **TradeSkill Craft Margin Overlay Collision (`BuyHelper.lua`):**
+  - Fixed the `GoldFinder Margin:` line overlapping Blizzard's `Create All` button and the bottom of the recipe list on the Professions / TradeSkill window (e.g. Tailoring). The badge was anchored inside the window's bottom-left corner with no background.
+  - `GoldFinderTradeSkillBadgeFrame` is now a 26px dark/gold footer strip docked directly below the Professions / TradeSkill window, spanning its width, with single-line text, promoted strata, and host scale sync. Added docking anchor assertions in `tests/taint_safety_spec.lua`.
+
 ## [2.0.2] - 2026-11-24
 
 ### Fixed
