@@ -323,11 +323,14 @@ local function SyncPanelLayer()
     panel:SetPoint("TOPLEFT", AuctionHouseFrame, "TOPLEFT", 20, -76)
     panel:SetPoint("BOTTOMRIGHT", AuctionHouseFrame, "BOTTOMRIGHT", -20, 14)
     if panel.SetFrameStrata then
-        panel:SetFrameStrata((AuctionHouseFrame.GetFrameStrata and AuctionHouseFrame:GetFrameStrata()) or "HIGH")
+        panel:SetFrameStrata((ns.GetOverlayStrata and ns.GetOverlayStrata(AuctionHouseFrame)) or "HIGH")
     end
     if panel.SetFrameLevel then
         local baseLevel = (AuctionHouseFrame.GetFrameLevel and AuctionHouseFrame:GetFrameLevel()) or 10
-        panel:SetFrameLevel(baseLevel + 5)
+        panel:SetFrameLevel(baseLevel + 10)
+    end
+    if panel.SetScale and AuctionHouseFrame.GetScale then
+        panel:SetScale(AuctionHouseFrame:GetScale() or 1)
     end
 end
 
@@ -343,9 +346,6 @@ local function BuildPanel()
     SyncPanelLayer()
     panel:Hide()
 
-    if hooksecurefunc and panel.Show then
-        hooksecurefunc(panel, "Show", SyncPanelLayer)
-    end
     if AuctionHouseFrame and not hookedAuctionHouse then
         hookedAuctionHouse = true
         if hooksecurefunc and AuctionHouseFrame.Hide then
@@ -912,7 +912,10 @@ local function BuildPanel()
     ui.footerText:SetPoint("RIGHT", ui.footer, "RIGHT")
     ui.footerText:SetJustifyH("RIGHT")
 
-    panel:SetScript("OnShow", function() ns.RefreshPanel() end)
+    panel:SetScript("OnShow", function()
+        SyncPanelLayer()
+        ns.RefreshPanel()
+    end)
     panel:SetScript("OnHide", function()
         if ui.searchBox then ui.searchBox:ClearFocus() end
     end)

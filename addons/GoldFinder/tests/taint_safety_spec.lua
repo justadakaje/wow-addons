@@ -360,6 +360,7 @@ describe("GoldFinder Taint Safety & Forever 16001 Fixes", function()
                 local btn = _G.GoldFinderMailCollectBtn
                 assert.is_not_nil(btn)
                 assert.are.equal(_G.UIParent, btn:GetParent())
+                assert.are.equal("HIGH", btn:GetFrameStrata())
                 assert.is_true(btn:IsShown())
 
                 -- Switching to Send Mail tab hides InboxFrame -> button hides cleanly
@@ -419,6 +420,7 @@ describe("GoldFinder Taint Safety & Forever 16001 Fixes", function()
                 local badgeFrame = _G.GoldFinderTradeSkillBadgeFrame
                 assert.is_not_nil(badgeFrame)
                 assert.are.equal(_G.UIParent, badgeFrame:GetParent())
+                assert.are.equal("HIGH", badgeFrame:GetFrameStrata())
                 assert.is_true(badgeFrame:IsShown())
 
                 -- Hiding ProfessionsFrame hides the standalone badge
@@ -560,10 +562,13 @@ describe("GoldFinder Taint Safety & Forever 16001 Fixes", function()
                 local panel = reg.frame
                 assert.is_not_nil(panel)
                 assert.are.equal(_G.UIParent, panel:GetParent())
+                assert.are.equal("HIGH", panel:GetFrameStrata())
                 assert.is_false(panel:IsShown())
 
                 panel:Show()
                 assert.is_true(panel:IsShown())
+                assert.are.equal("HIGH", panel:GetFrameStrata())
+                assert.are.equal("DIALOG", ns.GetOverlayStrata({ GetFrameStrata = function() return "HIGH" end }))
 
                 -- Closing AuctionHouseFrame hides standalone panel
                 _G.AuctionHouseFrame:Hide()

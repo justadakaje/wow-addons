@@ -99,6 +99,26 @@ function ns.Good(msg, ...)  emit("|cff40ff40", msg, ...) end
 function ns.Warn(msg, ...)  emit("|cffff9900", msg, ...) end
 function ns.Bad(msg, ...)   emit("|cffff4040", msg, ...) end
 
+local OVERLAY_NEXT_STRATA = {
+    WORLD             = "HIGH",
+    BACKGROUND        = "HIGH",
+    LOW               = "HIGH",
+    MEDIUM            = "HIGH",
+    HIGH              = "DIALOG",
+    DIALOG            = "FULLSCREEN_DIALOG",
+    FULLSCREEN        = "FULLSCREEN_DIALOG",
+    FULLSCREEN_DIALOG = "FULLSCREEN_DIALOG",
+    TOOLTIP           = "TOOLTIP",
+}
+
+function ns.GetOverlayStrata(hostFrame)
+    local hostStrata = hostFrame and hostFrame.GetFrameStrata and hostFrame:GetFrameStrata()
+    if type(hostStrata) == "string" and OVERLAY_NEXT_STRATA[hostStrata] then
+        return OVERLAY_NEXT_STRATA[hostStrata]
+    end
+    return "HIGH"
+end
+
 ns.debugTrace = false
 function ns.Trace(msg, ...)
     if ns.debugTrace then

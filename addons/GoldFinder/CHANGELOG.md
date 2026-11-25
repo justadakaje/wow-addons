@@ -4,6 +4,14 @@ All notable changes to GoldFinder. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.2] - 2026-11-24
+
+### Fixed
+
+- **Blank GoldFinder Auction House Tab & Companion Overlay Strata (`Core.lua`, `Tab.lua`, `Mail.lua`, `BuyHelper.lua`):**
+  - Fixed a regression introduced in `2.0.1` where `UIParent`-parented companion overlays (`GoldFinderAuctionTabPanel`, `GoldFinderMailCollectBtn`, and `GoldFinderTradeSkillBadgeFrame`) copied their host `UIPanel`'s `"MEDIUM"` strata instead of promoting above it, allowing Blizzard's `toplevel` `AuctionHouseFrame` background to render over the GoldFinder tab when clicked.
+  - Added `ns.GetOverlayStrata(hostFrame)` (`MEDIUM -> HIGH`, `HIGH -> DIALOG`, etc.), synced scale and `baseLevel + 10` inside `Tab.lua`'s `OnShow` handler (replacing `hooksecurefunc(panel, "Show", ...)`), synced `Mail.lua` button strata before `Show()`, and added strata regression assertions in `tests/taint_safety_spec.lua`.
+
 ## [2.0.1] - 2026-11-16
 
 ### Fixed
