@@ -13,3 +13,48 @@
 - **SavedVariables discipline:** never modify or delete the user's existing `WTF` data. Any new persistent structure needs a format version and a type check before it's trusted.
 - **Commits:** small, incremental, and reversible. State your assumptions before generating code, per the addon's own conventions if it has an `AGENTS.md` of its own (e.g. a forked addon keeps its own rules — this file governs addons authored directly in this repo). Auctionator is **All Rights Reserved** and must not be forked, modified, or read as a reference; GoldFinder is standalone and only needs to coexist with it.
 - **Check docs before starting work:** Read [docs/facts-build-69913.md](docs/facts-build-69913.md), [docs/facts-build-70009.md](docs/facts-build-70009.md), and [reference/README.md](reference/README.md) for verified WoW: Forever measurements and API dumps (if a local, gitignored `HANDOFF.md` exists in your working tree, consult it as well).
+
+## Project context (shared by Claude Code and Antigravity)
+
+*Section added 2026-11-26 from the README, docs and git history. The rules above are unchanged.*
+
+### Stack
+
+- Lua 5.1 addons with `.toc` files, one folder per addon under `addons/`. Default branch is **`master`**.
+- `mcp/`: the `wow-api` MCP server (TypeScript) that the API-verification rule above depends on. Both Claude Code and Antigravity need it attached; see `docs/copilot-devkit.md`.
+- `reference/`: API dumps captured by ForeverProbe; `docs/facts-build-*.md`: verified build measurements.
+- `.claude/skills/` (`wow-addon-partner`, `content-pack`): repo-local skills. Claude Code loads them automatically. *Inferred:* Antigravity doesn't, so read the relevant `SKILL.md` by hand when the task matches.
+
+### Build, test, release
+
+```bash
+node scripts/check-toc.js addons
+node scripts/check-lua.js addons
+bash scripts/run-tests.sh          # or: powershell -ExecutionPolicy Bypass -File scripts/run-tests.ps1  (Luacheck + Busted)
+cd mcp && npm ci && npm run build && node smoke.mjs
+```
+
+- CI: `.github/workflows/validate.yml` on push and PR.
+- Releases (`docs/releasing.md`): bump `## Version:` in the `.toc`, add a `CHANGELOG.md` entry, merge to `master` through a `release/<addon>-vX.Y.Z` PR, then push a tag such as `goldfinder-vX.Y.Z`. `release.yml` packages and uploads to CurseForge. Tags publish publicly, so tag only when Ken asks.
+
+### Key decisions
+
+- 2026-09-19: WoW: Forever Interface `16001` confirmed from shipped `.toc` files (see rules above).
+- 2026-11-08: Luacheck + Busted QA runner and GitHub Actions workflow; LF line endings enforced for shell scripts.
+- 2026-11-13: GoldFinder v2.0.0 feature suite (issues #60 to #63).
+- 2026-11-15: WoW: Forever Addon Copilot DevKit packager; KenHenRoster multi-client roster exporter; MeridianScout exporter; local handoff files and raw art untracked.
+- 2026-11-24: GoldFinder v2.0.2 (overlay strata above host panels) and v2.0.3 (TradeSkill margin badge docked below the Professions window).
+
+### In flight (as of 2026-11-26)
+
+- GoldFinder is at `2.0.3`. Backlog and bugs are tracked in GitHub Issues (`docs/goldfinder-backlog.md`).
+- Four open Dependabot PRs on `mcp/` dependencies: #64 (qs), #65 (`@modelcontextprotocol/sdk`), #66 (hono), #67 (`@hono/node-server`).
+
+## Working across Claude Code and Antigravity
+
+Both tools work in this repo, and neither can see the other's chat history. This file is the shared memory between them.
+
+- Read this file before starting. `CLAUDE.md` and `GEMINI.md` only point here.
+- When a session makes a decision a later session needs (a convention, a rejected approach, a version pin, a domain or config change), add a dated line under **Key decisions** in the same PR.
+- Update **In flight** when multi-session work starts or finishes.
+- Mark anything not verified against the code or history as *inferred*.
